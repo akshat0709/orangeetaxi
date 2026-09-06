@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { PreviewForm } from "@/components/content-page";
+export const Route = createFileRoute("/book")({ head: () => ({ meta: [{ title: "Book a Ride — Orange Taxi" }, { name: "description", content: "Book a premium electric ride with Orange Taxi." }, { property: "og:title", content: "Book a Ride — Orange Taxi" }, { property: "og:description", content: "The Orange Taxi booking experience is coming soon." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: () => <PreviewForm kind="book" /> });
