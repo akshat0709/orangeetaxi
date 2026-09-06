@@ -1,24 +1,79 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, BatteryCharging, BriefcaseBusiness, Check, Droplets, Leaf, ShieldCheck, Snowflake, Sparkles, UserRoundCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import heroImage from "@/assets/orange-taxi-hero.jpg";
+import interiorImage from "@/assets/orange-taxi-interior.jpg";
+import driverImage from "@/assets/orange-taxi-driver.jpg";
+import eveningImage from "@/assets/orange-taxi-evening.jpg";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({ meta: [
+    { title: "Orange Taxi — Premium Electric Rides" },
+    { name: "description", content: "Premium electric cars, professional drivers and thoughtful service—without the premium price." },
+    { property: "og:title", content: "Orange Taxi — Premium Electric Rides" },
+    { property: "og:description", content: "Premium comfort, thoughtful service and electric rides made accessible." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
+  ]}), component: HomePage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+const features = [
+  { icon: Droplets, title: "Complimentary Water", text: "A little refreshment, waiting when you arrive." },
+  { icon: Snowflake, title: "Pre-Cooled Cabin", text: "Step into a comfortable car, not a hot one." },
+  { icon: UserRoundCheck, title: "Professional Drivers", text: "Trained, courteous and committed to better service." },
+  { icon: Sparkles, title: "Premium Electric Vehicles", text: "Quiet, smooth and thoughtfully maintained." },
+];
+const moments = ["Your car arrives clean and ready.", "Your driver greets you professionally.", "A bottle of water is waiting.", "The cabin is cool and comfortable.", "Your journey is quiet and smooth.", "You arrive feeling taken care of."];
+const faqs = [
+  ["What is Orange Taxi?", "Orange Taxi is a premium electric ride service designed around comfort, thoughtful hospitality and everyday value."],
+  ["Are all Orange Taxi vehicles electric?", "Yes. Every Orange ride is designed to be served by our electric fleet."],
+  ["How is Orange Taxi different from regular cabs?", "We bring together a prepared vehicle, professional driver and considered service standards in every journey."],
+  ["What makes Orange Taxi premium?", "The details: a clean, pre-cooled cabin, complimentary water, a smooth electric ride and a courteous professional driver."],
+  ["How much does an Orange ride cost?", "Fares will be shown clearly before you confirm a ride. We aim to make premium service accessible for regular journeys."],
+  ["Where is Orange Taxi available?", "Launch locations will be announced soon. Join our updates to hear when Orange arrives in your city."],
+  ["How can I become an Orange driver?", "Visit our Drive With Us page to learn about the role and register your interest."],
+  ["Do you offer corporate transportation?", "Yes. Orange for Business is designed for employee travel, airport transfers, guest transport and centralized ride management."],
+];
+
+function HomePage() {
+  return <>
+    <section className="relative min-h-[calc(100svh-8rem)] overflow-hidden bg-night text-background">
+      <img src={heroImage} alt="Orange electric sedan travelling through a refined city boulevard" width={1920} height={1280} fetchPriority="high" className="absolute inset-0 size-full object-cover object-[62%_center]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_84%,transparent)_35%,transparent_72%)]" />
+      <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
+        <div className="max-w-2xl animate-gentle-rise">
+          <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">A better way to move</p>
+          <h1 className="display-serif text-[clamp(2.85rem,7vw,6.8rem)] leading-[0.92]">Premium rides.<br/><span className="text-primary">Without the premium price.</span></h1>
+          <p className="mt-7 max-w-xl text-base leading-7 text-background/75 md:text-lg">Premium electric cars, professional drivers and thoughtful service — designed to make every journey feel a little better.</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book a Ride <ArrowRight /></Link></Button><Button asChild size="lg" variant="light"><Link to="/experience">Explore the Orange Experience</Link></Button></div>
+        </div>
+      </div>
+      <div className="absolute bottom-0 right-0 hidden border-l border-t border-background/20 bg-night/70 px-7 py-5 backdrop-blur-md md:block"><p className="text-xs uppercase tracking-[0.14em] text-background/50">The Orange promise</p><p className="mt-1 text-sm font-semibold">Comfort in every detail</p></div>
+    </section>
+
+    <section className="py-24 md:py-32"><div className="section-shell"><SectionIntro eyebrow="The Orange difference" title="More than a ride." copy="It’s the little things that make a journey feel different." /><div className="mt-14 grid border-y border-border md:grid-cols-2 lg:grid-cols-4">{features.map(({icon:Icon,title,text}, i)=><article key={title} className="border-b border-border p-6 last:border-b-0 md:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0"><span className="grid size-11 place-items-center rounded-full bg-warm text-primary"><Icon className="size-5" /></span><p className="mt-12 text-xs text-muted-foreground">0{i+1}</p><h3 className="mt-3 text-lg font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p></article>)}</div></div></section>
+
+    <section className="bg-warm py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center"><div><SectionIntro eyebrow="The Orange experience" title="The premium experience, made everyday." copy="From the moment your car arrives to the moment you step out, every detail is considered." /><ol className="mt-10 grid gap-1">{moments.map((m,i)=><li key={m} className="grid grid-cols-[2.5rem_1fr] items-center border-t border-border py-4 text-sm"><span className="text-xs text-primary">0{i+1}</span><span className="font-semibold">{m}</span></li>)}</ol></div><figure className="overflow-hidden rounded-[var(--radius-xl)] shadow-soft"><img src={interiorImage} alt="Calm premium cabin with complimentary chilled water" width={1408} height={1056} loading="lazy" className="aspect-[4/3] size-full object-cover transition-transform duration-700 hover:scale-[1.02]" /></figure></div></section>
+
+    <section className="py-24 md:py-32"><div className="section-shell"><SectionIntro eyebrow="Everyday value" title="Premium shouldn’t mean overpriced." copy="Orange is designed to bring the care and comfort of a premium service into the rhythm of everyday travel." /><div className="mt-14 grid items-stretch gap-4 lg:grid-cols-3"><Comparison title="Everyday Cab" label="Gets you there" items={["Basic transportation","Standard service"]} /><Comparison featured title="Orange Taxi" label="Premium experience · Accessible price" items={["Premium electric vehicle","Thoughtful service","Professional driver"]} /><Comparison title="Luxury Chauffeur" label="An occasional indulgence" items={["Premium experience","Significantly higher price"]} /></div><p className="mt-7 text-center text-xs text-muted-foreground">Illustrative service comparison only. Fares vary by journey and location.</p></div></section>
+
+    <section className="bg-sage py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center"><figure className="relative overflow-hidden rounded-[var(--radius-xl)]"><img src={heroImage} alt="Premium orange electric vehicle on a quiet city road" width={1920} height={1280} loading="lazy" className="aspect-[5/4] size-full object-cover object-[65%_center]"/><figcaption className="absolute bottom-5 left-5 rounded-full bg-background/90 px-4 py-2 text-xs font-bold text-sage-foreground backdrop-blur">100% electric fleet</figcaption></figure><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-sage-foreground">Electric by nature</p><h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">Quiet rides.<br/>Cleaner cities.</h2><p className="mt-6 max-w-lg leading-7 text-sage-foreground">Every Orange ride is electric — giving you a quieter, smoother journey while helping build cleaner cities.</p><div className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-sage-foreground/15">{[[BatteryCharging,"100% Electric Fleet"],[Sparkles,"Quiet & Smooth"],[Leaf,"Lower Running Costs"],[ArrowRight,"Designed for the Future"]].map(([I,t])=>{const Icon=I as typeof Leaf; return <div key={t as string} className="bg-sage p-5"><Icon className="size-5"/><p className="mt-5 text-sm font-bold">{t as string}</p></div>})}</div></div></div></section>
+
+    <section className="bg-night py-24 text-background md:py-32"><div className="section-shell"><SectionIntro eyebrow="Our fleet" title="Meet your Orange." copy="One carefully considered class. Everything you need for a better everyday journey." light/><div className="mt-14 grid overflow-hidden rounded-xl border border-background/15 lg:grid-cols-[1.35fr_0.65fr]"><img src={eveningImage} alt="Orange premium electric sedan at an elegant evening destination" width={1920} height={1200} loading="lazy" className="h-full min-h-[26rem] w-full object-cover"/><div className="flex flex-col p-7 md:p-10"><p className="text-xs uppercase tracking-[0.16em] text-primary">Orange Premium</p><h3 className="display-serif mt-3 text-4xl">Premium EV sedan</h3><ul className="mt-8 space-y-4 text-sm text-background/70">{["Spacious cabin","Air conditioning","Complimentary water","Professional driver","Smooth electric ride"].map(x=><li key={x} className="flex items-center gap-3"><Check className="size-4 text-primary"/>{x}</li>)}</ul><Button asChild className="mt-10 lg:mt-auto"><Link to="/book">Book Orange Premium <ArrowRight/></Link></Button></div></div></div></section>
+
+    <section className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center"><div><SectionIntro eyebrow="The people behind every ride" title="Great rides start with great people." copy="We work with professionally trained drivers and focus on the kind of consistent service that earns your trust, journey after journey."/><div className="mt-8 flex flex-wrap gap-2">{["Professional training","Customer-first service","Safety-focused driving","Service standards","Fair performance model"].map(x=><span key={x} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">{x}</span>)}</div><Button asChild variant="charcoal" size="lg" className="mt-9"><Link to="/drive">Drive With Orange <ArrowRight/></Link></Button></div><figure className="overflow-hidden rounded-[var(--radius-xl)]"><img src={driverImage} alt="Professional Orange Taxi driver beside an orange electric car" width={1408} height={1600} loading="lazy" className="aspect-[4/5] size-full object-cover"/></figure></div></section>
+
+    <section className="bg-primary py-20 text-primary-foreground md:py-24"><div className="section-shell grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-end"><div><BriefcaseBusiness className="size-8"/><h2 className="display-serif mt-7 text-5xl leading-none md:text-6xl">Better rides for your business.</h2><p className="mt-5 max-w-lg leading-7 text-primary-foreground/80">Give your employees, clients and guests a more comfortable way to travel.</p><Button asChild variant="charcoal" size="lg" className="mt-8"><Link to="/business">Talk to Orange <ArrowRight/></Link></Button></div><div className="grid grid-cols-2 gap-px border border-primary-foreground/25 sm:grid-cols-3">{["Corporate bookings","Employee transportation","Airport transfers","Client transportation","Centralized billing","Ride management"].map((x,i)=><div key={x} className="min-h-28 p-5"><span className="text-xs text-primary-foreground/50">0{i+1}</span><p className="mt-4 text-sm font-bold">{x}</p></div>)}</div></div></section>
+
+    <section className="py-24 md:py-28"><div className="section-shell"><SectionIntro eyebrow="Simple from the start" title="How it works."/><div className="mt-12 grid border-y border-border md:grid-cols-3">{[["01","Book","Choose where you’re going."],["02","Ride","Your Orange arrives."],["03","Enjoy","Sit back and enjoy the experience."]].map(([n,t,d])=><div key={n} className="border-b border-border py-8 md:border-b-0 md:border-r md:px-8 md:first:pl-0 md:last:border-r-0"><span className="display-serif text-5xl text-primary">{n}</span><h3 className="mt-8 text-xl font-bold">{t}</h3><p className="mt-2 text-sm text-muted-foreground">{d}</p></div>)}</div></div></section>
+
+    <section className="bg-warm py-24"><div className="section-shell"><div className="max-w-4xl"><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">A first impression</p><blockquote className="display-serif mt-6 text-4xl leading-tight md:text-6xl">“Finally, a cab that feels premium without making you think twice about the price.”</blockquote><p className="mt-7 text-sm font-semibold">— Early Orange customer</p><p className="mt-2 text-xs text-muted-foreground">Placeholder testimonial for design preview. To be replaced with verified customer feedback.</p></div></div></section>
+
+    <section className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]"><SectionIntro eyebrow="Good to know" title="Questions, answered."/><Accordion type="single" collapsible className="border-t border-border">{faqs.map(([q,a],i)=><AccordionItem key={q} value={`faq-${i}`}><AccordionTrigger className="py-6 text-left text-base hover:no-underline">{q}</AccordionTrigger><AccordionContent className="max-w-2xl pb-6 leading-7 text-muted-foreground">{a}</AccordionContent></AccordionItem>)}</Accordion></div></section>
+
+    <section className="relative overflow-hidden py-28 text-background md:py-40"><img src={eveningImage} alt="Orange electric sedan ready for an evening journey" width={1920} height={1200} loading="lazy" className="absolute inset-0 size-full object-cover"/><div className="absolute inset-0 bg-night/70"/><div className="section-shell relative"><div className="max-w-2xl"><h2 className="display-serif text-5xl leading-none md:text-7xl">Your next ride deserves a little more.</h2><p className="mt-6 text-background/75">Premium comfort. Thoughtful service. Electric by nature.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book Your Orange <ArrowRight/></Link></Button><Button asChild variant="light" size="lg"><Link to="/drive">Drive With Orange</Link></Button></div></div></div></section>
+  </>;
 }
+
+function SectionIntro({eyebrow,title,copy,light=false}:{eyebrow:string;title:string;copy?:string;light?:boolean}) { return <div><p className={`text-xs font-bold uppercase tracking-[0.18em] ${light?"text-primary":"text-primary"}`}>{eyebrow}</p><h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{title}</h2>{copy&&<p className={`mt-5 max-w-xl leading-7 ${light?"text-background/65":"text-muted-foreground"}`}>{copy}</p>}</div> }
+function Comparison({title,label,items,featured=false}:{title:string;label:string;items:string[];featured?:boolean}) { return <article className={`flex min-h-72 flex-col rounded-lg border p-7 ${featured?"border-primary bg-primary text-primary-foreground shadow-brand-lg lg:-translate-y-4":"border-border bg-card"}`}><p className="text-xs font-bold uppercase tracking-[0.14em] opacity-60">{label}</p><h3 className="display-serif mt-3 text-3xl">{title}</h3><ul className="mt-auto space-y-3 pt-10 text-sm">{items.map(x=><li key={x} className="flex gap-3"><Check className="size-4 shrink-0"/>{x}</li>)}</ul></article> }
