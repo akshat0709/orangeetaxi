@@ -37,13 +37,13 @@ const faqs = [
 
 function HomePage() {
   return <>
-    <section className="relative min-h-[calc(100svh-4.5rem)] overflow-hidden bg-night text-background">
+    <section className="relative min-h-[calc(100svh-8rem)] overflow-hidden bg-night text-background">
       <img src={heroImage} alt="Orange electric sedan travelling through a refined city boulevard" width={1920} height={1280} fetchPriority="high" className="absolute inset-0 size-full object-cover object-[62%_center]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_84%,transparent)_35%,transparent_72%)]" />
-      <div className="section-shell relative flex min-h-[calc(100svh-4.5rem)] items-end py-14 md:items-center md:py-20">
+      <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
         <div className="max-w-2xl animate-gentle-rise">
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">A better way to move</p>
-          <h1 className="display-serif text-[clamp(3.25rem,7vw,6.8rem)] leading-[0.92]">Premium rides.<br/><span className="text-primary">Without the premium price.</span></h1>
+          <h1 className="display-serif text-[clamp(2.85rem,7vw,6.8rem)] leading-[0.92]">Premium rides.<br/><span className="text-primary">Without the premium price.</span></h1>
           <p className="mt-7 max-w-xl text-base leading-7 text-background/75 md:text-lg">Premium electric cars, professional drivers and thoughtful service — designed to make every journey feel a little better.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book a Ride <ArrowRight /></Link></Button><Button asChild size="lg" variant="light"><Link to="/experience">Explore the Orange Experience</Link></Button></div>
         </div>
