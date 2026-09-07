@@ -113,7 +113,12 @@ function PassengerPage() {
       ride_otp: otp,
     }).select("id, reference").single();
     
-    if (error) { toast.error("Booking failed — please try again."); setSubmitting(false); return; }
+    if (error) { 
+      console.error("Booking insert error:", error);
+      toast.error(`Booking failed: ${error.message}`); 
+      setSubmitting(false); 
+      return; 
+    }
     
     setBookingData({ id: (data as any).id, reference: (data as any).reference, otp });
     setStep(4);
