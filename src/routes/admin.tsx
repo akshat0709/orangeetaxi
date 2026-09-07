@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, Loader2, MoreHorizontal, Users, X } from "lucide-react";

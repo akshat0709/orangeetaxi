@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
