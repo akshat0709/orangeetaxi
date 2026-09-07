@@ -138,7 +138,7 @@ function DriverPage() {
         </div>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg"><Link to="/contact">Register Your Interest <ArrowRight /></Link></Button>
-          <Button asChild size="lg" variant="charcoal"><HandHeart className="size-4" /><Link to="/about">About Orange</Link></Button>
+          <Button asChild size="lg" variant="charcoal"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
         </div>
       </div>
     </div></section>
