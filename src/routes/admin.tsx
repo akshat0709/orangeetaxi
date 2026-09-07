@@ -80,7 +80,13 @@ function AdminPage() {
   };
 
   async function updateApplicationStatus(id: string, status: string, email?: string) {
-    await supabase.from("driver_applications").update({ status }).eq("id", id);
+    const { error } = await supabase.from("driver_applications").update({ status }).eq("id", id);
+    if (error) {
+      console.error("Update error:", error);
+      toast.error(`Error updating: ${error.message || "Unknown error"}`);
+      return;
+    }
+
     if (status === "approved" && email) {
       // Grant driver role via RPC
       const { data: result } = await supabase.rpc("admin_set_role" as any, { _email: email, _role: "driver", _grant: true });
