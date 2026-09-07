@@ -26,6 +26,7 @@ const signUpSchema = z.object({
   phone: z.string().min(7, "Enter a valid phone number"),
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.enum(["customer", "driver"]).default("customer"),
 });
 
 type SignInValues = z.infer<typeof signInSchema>;
@@ -60,7 +61,7 @@ function LoginPage() {
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName, phone: values.phone } },
+      options: { data: { full_name: values.fullName, phone: values.phone, role: values.role } },
     });
     if (error) { toast.error(error.message); setSubmitting(false); return; }
     if (data.user && !data.session) {
@@ -70,7 +71,8 @@ function LoginPage() {
       return;
     }
     toast.success("Account created! Welcome to Orange Taxi.");
-    navigate({ to: (redirect ?? "/book") as any });
+    const destination = redirect ?? (values.role === "driver" ? "/driver-console" : "/book");
+    navigate({ to: destination as any });
   }
 
   async function claimAdmin() {
@@ -95,7 +97,7 @@ function LoginPage() {
             {/* Tab toggle */}
             <div className="flex rounded-xl border border-border bg-muted p-1">
               {(["signin", "signup"] as const).map(m => (
-                <button key={m} onClick={() => setMode(m)}
+                <button key={m} type="button" onClick={() => setMode(m)}
                   className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
                   {m === "signin" ? "Sign In" : "Create Account"}
                 </button>
@@ -126,6 +128,16 @@ function LoginPage() {
             ) : (
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="mt-8 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 flex gap-3">
+                    <label className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border py-3 text-sm font-semibold transition-colors ${signUpForm.watch("role") === "customer" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+                      <input type="radio" value="customer" className="sr-only" {...signUpForm.register("role")} />
+                      Ride with Orange
+                    </label>
+                    <label className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border py-3 text-sm font-semibold transition-colors ${signUpForm.watch("role") === "driver" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+                      <input type="radio" value="driver" className="sr-only" {...signUpForm.register("role")} />
+                      Drive for Orange
+                    </label>
+                  </div>
                   <div className="col-span-2">
                     <Label htmlFor="su-name">Full Name</Label>
                     <Input id="su-name" placeholder="Priya Sharma" className="mt-1.5" {...signUpForm.register("fullName")} />
@@ -145,7 +157,7 @@ function LoginPage() {
                 <div>
                   <Label htmlFor="su-pass">Password</Label>
                   <div className="relative mt-1.5">
-                    <Input id="su-pass" type={showPass ? "text" : "password"} placeholder="Min 8 characters" className="pr-10" {...signUpForm.register("password")} />
+                    <Input id="su-pass" type={showPass ? "text" : "password"} placeholder="••••••••" className="pr-10" {...signUpForm.register("password")} />
                     <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
