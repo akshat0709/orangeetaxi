@@ -98,7 +98,22 @@ function DriverConsolePage() {
 
   async function loadData() {
     if (!user) return;
-    const { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).single();
+    let { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).single();
+    
+    // Auto-create driver profile if role is granted but profile is missing
+    if (!driverData && (role === "driver" || role === "admin")) {
+      const { data: appData } = await supabase.from("driver_applications").select("*").eq("email", user.email).single();
+      const { data: newDriver } = await supabase.from("drivers").insert({
+        user_id: user.id,
+        full_name: appData?.full_name || user.email?.split("@")[0] || "New Driver",
+        city: appData?.city || "Delhi NCR",
+        phone: appData?.phone || "",
+        vehicle_model: "Orange Go",
+        vehicle_number: "Unassigned"
+      }).select().single();
+      driverData = newDriver;
+    }
+
     if (!driverData) { setLoading(false); return; }
     setDriver(driverData as DriverProfile);
 

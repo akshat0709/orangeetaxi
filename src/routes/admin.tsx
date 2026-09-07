@@ -81,6 +81,12 @@ function AdminPage() {
 
   async function updateApplicationStatus(id: string, status: string, email?: string) {
     await supabase.from("driver_applications").update({ status }).eq("id", id);
+    if (status === "approved" && email) {
+      // Grant driver role via RPC
+      const { data: result } = await supabase.rpc("admin_set_role" as any, { _email: email, _role: "driver", _grant: true });
+      if (result !== "ok") toast.error(`Could not grant driver role: ${result}`);
+      else toast.success("Driver role granted! Have them log in and go online.");
+    }
     toast.success(`Application ${status}`);
     loadAll();
   }
@@ -154,9 +160,9 @@ function AdminPage() {
                         <td className="px-4 py-3">
                           {b.status === "searching" ? (
                             <Select onValueChange={v => assignDriver(b.id, v)}>
-                              <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Assign driver" /></SelectTrigger>
+                              <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Assign driver" /></SelectTrigger>
                               <SelectContent>
-                                {drivers.filter(d => d.is_online).map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>)}
+                                {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name} {d.is_online ? '(Online)' : '(Offline)'}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           ) : (
