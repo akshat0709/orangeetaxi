@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeIndianRupee, Check, ClipboardCheck, Gauge, GraduationCap, HandHeart, HeartPulse, ShieldCheck, TrendingUp, Trophy } from "lucide-react";
+import { ArrowRight, BadgeIndianRupee, Check, CheckCircle, ClipboardCheck, Gauge, GraduationCap, HandHeart, HeartPulse, Loader2, ShieldCheck, TrendingUp, Trophy } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import driverAppImage from "@/assets/orange-taxi-driver-app.jpg";
 import driverImage from "@/assets/orange-taxi-driver.jpg";
 
@@ -128,23 +138,111 @@ function DriverPage() {
           {requirements.map((x) => <li key={x} className="flex items-center gap-3"><Check className="size-4 text-primary" />{x}</li>)}
         </ul>
       </div>
-      <div className="rounded-xl border border-border bg-warm p-7 md:p-9">
-        <ClipboardCheck className="size-7 text-primary" />
-        <h3 className="display-serif mt-5 text-3xl">Applications open soon.</h3>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">Driver onboarding will begin when Orange launches in your city. Register your interest and we'll reach out as soon as applications open.</p>
-        <div className="mt-6 rounded-lg border border-border bg-background p-5">
-          <p className="text-sm font-bold">Preview only</p>
-          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">No applications or personal details are being collected yet. This page will connect directly to the Orange driver onboarding system at launch.</p>
-        </div>
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg"><Link to="/contact">Register Your Interest <ArrowRight /></Link></Button>
-          <Button asChild size="lg" variant="charcoal"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
-        </div>
-      </div>
+      <DriverApplicationForm />
     </div></section>
   </>;
+}
+
+const appSchema = z.object({
+  full_name: z.string().min(2, "Enter your full name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z.string().min(7, "Enter a valid phone number"),
+  city: z.string().min(2, "Enter your city"),
+  licence_number: z.string().min(4, "Enter your licence number"),
+  experience_years: z.coerce.number().min(0).max(50),
+  owns_vehicle: z.boolean().default(false),
+  message: z.string().optional(),
+});
+type AppValues = z.infer<typeof appSchema>;
+
+function DriverApplicationForm() {
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const form = useForm<AppValues>({ resolver: zodResolver(appSchema), defaultValues: { owns_vehicle: false, experience_years: 0 } });
+
+  async function onSubmit(values: AppValues) {
+    setSubmitting(true);
+    const { error } = await supabase.from("driver_applications").insert({
+      full_name: values.full_name,
+      email: values.email,
+      phone: values.phone,
+      city: values.city,
+      licence_number: values.licence_number,
+      experience_years: values.experience_years,
+      owns_vehicle: values.owns_vehicle,
+      message: values.message ?? "",
+    });
+    if (error) { toast.error("Something went wrong — please try again."); setSubmitting(false); return; }
+    setSubmitted(true);
+    toast.success("Application submitted!");
+  }
+
+  if (submitted) {
+    return (
+      <div className="flex flex-col items-center rounded-xl border border-border bg-warm p-9 text-center">
+        <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><CheckCircle className="size-7" /></span>
+        <h3 className="display-serif mt-6 text-3xl">Application received.</h3>
+        <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Thank you for applying to drive with Orange. We'll review your application and be in touch within a few working days.</p>
+        <Button asChild size="lg" variant="charcoal" className="mt-8"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border border-border bg-warm p-7 md:p-9">
+      <ClipboardCheck className="size-7 text-primary" />
+      <h3 className="display-serif mt-5 text-3xl">Apply to drive.</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">Tell us a bit about yourself and we'll be in touch.</p>
+
+      <div className="mt-7 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <Label htmlFor="da-name">Full Name</Label>
+            <Input id="da-name" placeholder="Rajesh Kumar" className="mt-1.5 bg-background" {...form.register("full_name")} />
+            {form.formState.errors.full_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.full_name.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="da-email">Email</Label>
+            <Input id="da-email" type="email" placeholder="you@example.com" className="mt-1.5 bg-background" {...form.register("email")} />
+            {form.formState.errors.email && <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="da-phone">Phone</Label>
+            <Input id="da-phone" type="tel" placeholder="+91 98765 43210" className="mt-1.5 bg-background" {...form.register("phone")} />
+            {form.formState.errors.phone && <p className="mt-1 text-xs text-destructive">{form.formState.errors.phone.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="da-city">City</Label>
+            <Input id="da-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
+            {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="da-exp">Years Driving</Label>
+            <Input id="da-exp" type="number" min={0} max={50} placeholder="3" className="mt-1.5 bg-background" {...form.register("experience_years")} />
+          </div>
+          <div className="col-span-2">
+            <Label htmlFor="da-licence">Licence Number</Label>
+            <Input id="da-licence" placeholder="DL-1420100012345" className="mt-1.5 bg-background" {...form.register("licence_number")} />
+            {form.formState.errors.licence_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.licence_number.message}</p>}
+          </div>
+          <div className="col-span-2 flex items-center gap-3">
+            <Checkbox id="da-vehicle" onCheckedChange={(v) => form.setValue("owns_vehicle", !!v)} />
+            <Label htmlFor="da-vehicle" className="cursor-pointer font-normal">I own a vehicle that meets Orange's EV standards</Label>
+          </div>
+          <div className="col-span-2">
+            <Label htmlFor="da-msg">Anything else you'd like us to know? <span className="text-muted-foreground">(optional)</span></Label>
+            <Textarea id="da-msg" rows={3} placeholder="Tell us about your experience or why you'd like to join Orange..." className="mt-1.5 resize-none bg-background" {...form.register("message")} />
+          </div>
+        </div>
+        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+          {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Submit Application <ArrowRight className="size-4" /></>}
+        </Button>
+      </div>
+    </form>
+  );
 }
 
 function Intro({ eyebrow, title, copy }: { eyebrow: string; title: string; copy?: string }) {
   return <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p><h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{title}</h2>{copy && <p className="mt-5 max-w-xl leading-7 text-muted-foreground">{copy}</p>}</div>;
 }
+

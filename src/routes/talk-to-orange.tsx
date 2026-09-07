@@ -1,0 +1,366 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Bot, BriefcaseBusiness, Check, Loader2, MessageCircle, Send, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/talk-to-orange")({
+  head: () => ({ meta: [
+    { title: "Talk to Orange — Orange Taxi" },
+    { name: "description", content: "Corporate enquiries, pricing information and our AI booking assistant." },
+    { property: "og:title", content: "Talk to Orange — Orange Taxi" },
+    { property: "og:type", content: "website" },
+  ]}),
+  component: TalkToOrangePage,
+});
+
+interface VehicleCategory { code: string; name: string; tagline: string; seats: number; base_fare: number; per_km: number; minimum_fare: number; }
+interface PricingSettings { tax_percent: number; platform_fee: number; currency: string; demo_note: string; surge_enabled: boolean; surge_multiplier: number; }
+
+const enquirySchema = z.object({
+  company_name: z.string().min(2, "Enter your company name"),
+  contact_name: z.string().min(2, "Enter your name"),
+  email: z.string().email("Enter a valid email"),
+  phone: z.string().min(7, "Enter a valid phone number"),
+  city: z.string().min(2, "Enter your city"),
+  team_size: z.string().min(1, "Select team size"),
+  requirement: z.string().min(1, "Select a requirement"),
+  message: z.string().optional(),
+});
+type EnquiryValues = z.infer<typeof enquirySchema>;
+
+const SAMPLE_DISTANCES = [5, 10, 20];
+function sampleFare(v: VehicleCategory, km: number) {
+  return Math.max(v.minimum_fare, v.base_fare + v.per_km * km);
+}
+
+// AI Chat
+interface Message { role: "user" | "assistant"; content: string; }
+const GEMINI_KEY = import.meta.env["VITE_GEMINI_API_KEY"] as string | undefined;
+const SYSTEM_PROMPT = `You are an AI booking assistant for Orange Taxi, a premium electric ride service in Delhi NCR (Delhi, Gurugram, Noida, Ghaziabad, Faridabad, and IGI Airport).
+
+Service details:
+- Orange Go: ₹49 base + ₹12/km, min ₹99, 4 seats, economy EV hatchback
+- Orange Sedan: ₹59 base + ₹15/km, min ₹129, 4 seats, premium EV sedan
+- Orange XL: ₹79 base + ₹20/km, min ₹179, 6-7 seats, for groups & airport runs
+
+Booking: customers sign up at /login, then book at /book
+Drivers: apply at /drive
+Business enquiries: /talk-to-orange
+Admin: /admin
+
+Be helpful, concise and friendly. Use Indian Rupee (₹) symbol. If asked to calculate a fare, use the formulas above. Always recommend booking through the website.`;
+
+async function callGemini(messages: Message[]): Promise<string> {
+  const contents = messages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
+    }),
+  });
+  if (!res.ok) throw new Error("AI unavailable");
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't generate a response.";
+}
+
+function TalkToOrangePage() {
+  const [vehicles, setVehicles] = useState<VehicleCategory[]>([]);
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
+  const [enquiryDone, setEnquiryDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "Hi! I'm your Orange Taxi assistant. Ask me about fares, booking, or anything about our service! 🚕" }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const form = useForm<EnquiryValues>({ resolver: zodResolver(enquirySchema) });
+
+  useEffect(() => {
+    async function fetchData() {
+      const [{ data: v }, { data: p }] = await Promise.all([
+        supabase.from("vehicle_categories").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("pricing_settings").select("*").eq("id", 1).single(),
+      ]);
+      setVehicles((v as VehicleCategory[]) ?? []);
+      if (p) setPricing(p as unknown as PricingSettings);
+    }
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function onSubmit(values: EnquiryValues) {
+    setSubmitting(true);
+    const { error } = await supabase.from("corporate_enquiries").insert({
+      company_name: values.company_name,
+      contact_name: values.contact_name,
+      email: values.email,
+      phone: values.phone,
+      city: values.city,
+      team_size: values.team_size,
+      requirement: values.requirement,
+      message: values.message ?? "",
+    });
+    if (error) { toast.error("Submission failed — please try again."); setSubmitting(false); return; }
+
+    // Fire optional webhook
+    const webhookUrl = import.meta.env["VITE_ENQUIRY_WEBHOOK_URL"];
+    if (webhookUrl) {
+      fetch(webhookUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) }).catch(() => {});
+    }
+
+    setEnquiryDone(true);
+    toast.success("Enquiry sent! We'll be in touch soon.");
+    setSubmitting(false);
+  }
+
+  async function sendChat() {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+    const newMessages: Message[] = [...messages, { role: "user", content: text }];
+    setMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      if (!GEMINI_KEY) throw new Error("no key");
+      const reply = await callGemini(newMessages);
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: "I'm not available right now. Please call us or use the enquiry form above — we'd love to help! 🟠" }]);
+    }
+    setChatLoading(false);
+  }
+
+  return <>
+    {/* Hero */}
+    <section className="relative overflow-hidden bg-night py-24 text-background md:py-32">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklab,var(--primary)_15%,transparent),transparent_60%)]" />
+      <div className="section-shell relative">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Talk to Orange</p>
+        <h1 className="display-serif mt-5 text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.92]">Better rides<br /><span className="text-primary">for your business.</span></h1>
+        <p className="mt-7 max-w-lg text-base leading-7 text-background/70 md:text-lg">Employee transport, client transfers, airport runs — tell us what you need and we'll build a solution around your team.</p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          {["Corporate bookings", "Employee transportation", "Airport transfers", "Client transportation", "Centralized billing"].map(x => (
+            <span key={x} className="flex items-center gap-2 rounded-full border border-background/20 px-4 py-2 text-xs font-semibold text-background/80"><Check className="size-3 text-primary" />{x}</span>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* Enquiry form */}
+    <section className="py-24 md:py-32">
+      <div className="section-shell grid gap-16 lg:grid-cols-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Corporate enquiry</p>
+          <h2 className="display-serif mt-4 text-5xl leading-none">Get in touch.</h2>
+          <p className="mt-5 max-w-md leading-7 text-muted-foreground">Fill in the form and we'll get back to you within one business day. All enquiries are reviewed by our team.</p>
+          <div className="mt-10 space-y-5 border-t border-border pt-8">
+            {[["📧", "orangeetaxi@gmail.com", "Email"], ["🚕", "Delhi NCR", "Operating area"], ["⚡", "100% electric fleet", "Fleet type"]].map(([icon, val, label]) => (
+              <div key={label} className="flex items-center gap-4">
+                <span className="text-2xl">{icon}</span>
+                <div><p className="text-sm font-semibold">{val}</p><p className="text-xs text-muted-foreground">{label}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {enquiryDone ? (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-warm p-10 text-center">
+            <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><BriefcaseBusiness className="size-7" /></span>
+            <h3 className="display-serif mt-6 text-3xl">Enquiry received.</h3>
+            <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Thanks for reaching out! Our team will be in touch within one business day at your email address.</p>
+            <Button onClick={() => { setEnquiryDone(false); form.reset(); }} variant="ghost" className="mt-6">Send another enquiry</Button>
+          </div>
+        ) : (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-2xl border border-border bg-warm p-7 md:p-9">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="cq-company">Company Name</Label>
+                <Input id="cq-company" placeholder="Acme Corp" className="mt-1.5 bg-background" {...form.register("company_name")} />
+                {form.formState.errors.company_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.company_name.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="cq-contact">Your Name</Label>
+                <Input id="cq-contact" placeholder="Priya Sharma" className="mt-1.5 bg-background" {...form.register("contact_name")} />
+                {form.formState.errors.contact_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.contact_name.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="cq-city">City</Label>
+                <Input id="cq-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
+                {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="cq-email">Work Email</Label>
+                <Input id="cq-email" type="email" placeholder="priya@acme.com" className="mt-1.5 bg-background" {...form.register("email")} />
+                {form.formState.errors.email && <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="cq-phone">Phone</Label>
+                <Input id="cq-phone" type="tel" placeholder="+91 98765 43210" className="mt-1.5 bg-background" {...form.register("phone")} />
+                {form.formState.errors.phone && <p className="mt-1 text-xs text-destructive">{form.formState.errors.phone.message}</p>}
+              </div>
+              <div>
+                <Label>Team Size</Label>
+                <Select onValueChange={v => form.setValue("team_size", v)}>
+                  <SelectTrigger className="mt-1.5 bg-background"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {["1–10", "11–50", "51–200", "200+"].map(s => <SelectItem key={s} value={s}>{s} employees</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.team_size && <p className="mt-1 text-xs text-destructive">{form.formState.errors.team_size.message}</p>}
+              </div>
+              <div>
+                <Label>Requirement</Label>
+                <Select onValueChange={v => form.setValue("requirement", v)}>
+                  <SelectTrigger className="mt-1.5 bg-background"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {["Employee transportation", "Airport transfers", "Client transportation", "Corporate bookings", "Centralized billing", "Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.requirement && <p className="mt-1 text-xs text-destructive">{form.formState.errors.requirement.message}</p>}
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="cq-msg">Message <span className="text-muted-foreground">(optional)</span></Label>
+                <Textarea id="cq-msg" rows={4} placeholder="Tell us more about your transport needs..." className="mt-1.5 resize-none bg-background" {...form.register("message")} />
+              </div>
+            </div>
+            <Button type="submit" size="lg" className="mt-6 w-full" disabled={submitting}>
+              {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Send Enquiry <ArrowRight className="size-4" /></>}
+            </Button>
+          </form>
+        )}
+      </div>
+    </section>
+
+    {/* Pricing Sheet */}
+    <section className="bg-warm py-24 md:py-32">
+      <div className="section-shell">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pricing</p>
+        <h2 className="display-serif mt-4 text-5xl leading-none">Clear fares. No surprises.</h2>
+        <p className="mt-5 max-w-xl leading-7 text-muted-foreground">Our fares are calculated on base + distance. The table below shows sample totals for common journey lengths.</p>
+
+        <div className="mt-12 overflow-hidden rounded-2xl border border-border bg-background">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-6 py-4 text-left font-semibold">Vehicle</th>
+                  <th className="px-6 py-4 text-left font-semibold">Seats</th>
+                  <th className="px-6 py-4 text-left font-semibold">Base fare</th>
+                  <th className="px-6 py-4 text-left font-semibold">Per km</th>
+                  <th className="px-6 py-4 text-left font-semibold">Min. fare</th>
+                  {SAMPLE_DISTANCES.map(d => <th key={d} className="px-6 py-4 text-left font-semibold text-primary">{d} km</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {vehicles.map((v, i) => (
+                  <tr key={v.code} className={i === 1 ? "bg-primary/5" : ""}>
+                    <td className="px-6 py-5">
+                      <p className="font-bold">{v.name}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{v.tagline}</p>
+                    </td>
+                    <td className="px-6 py-5 text-muted-foreground">{v.seats}</td>
+                    <td className="px-6 py-5 font-semibold">₹{v.base_fare}</td>
+                    <td className="px-6 py-5 font-semibold">₹{v.per_km}</td>
+                    <td className="px-6 py-5 text-muted-foreground">₹{v.minimum_fare}</td>
+                    {SAMPLE_DISTANCES.map(d => (
+                      <td key={d} className="px-6 py-5 font-bold text-primary">₹{Math.round(sampleFare(v, d))}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {pricing && (
+            <div className="border-t border-border px-6 py-4">
+              <p className="text-xs text-muted-foreground">
+                {pricing.surge_enabled && <span className="mr-4 rounded bg-amber-100 px-2 py-0.5 text-amber-700">Surge active: {pricing.surge_multiplier}×</span>}
+                {pricing.tax_percent > 0 && <span className="mr-4">+{pricing.tax_percent}% tax applies</span>}
+                {pricing.platform_fee > 0 && <span className="mr-4">+₹{pricing.platform_fee} platform fee</span>}
+                Fares shown are estimates. Actual fares may vary by traffic and demand. {pricing.demo_note}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+
+    {/* AI Chat widget */}
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      {chatOpen && (
+        <div className="flex h-[480px] w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-brand-lg animate-gentle-rise">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid size-8 place-items-center rounded-full bg-primary-foreground/20"><Bot className="size-4 text-primary-foreground" /></div>
+              <div>
+                <p className="text-xs font-bold text-primary-foreground">Orange Assistant</p>
+                <p className="text-[10px] text-primary-foreground/60">AI-powered · always available</p>
+              </div>
+            </div>
+            <button onClick={() => setChatOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground"><X className="size-4" /></button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-5 ${m.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-3">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="border-t border-border p-3 flex gap-2">
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendChat())}
+              placeholder={GEMINI_KEY ? "Ask me anything..." : "AI assistant coming soon..."}
+              disabled={!GEMINI_KEY || chatLoading}
+              className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            />
+            <button onClick={sendChat} disabled={!GEMINI_KEY || chatLoading || !chatInput.trim()}
+              className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground transition-opacity disabled:opacity-40 hover:bg-primary/90">
+              <Send className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle bubble */}
+      <button onClick={() => setChatOpen(p => !p)}
+        className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-brand-lg transition-transform hover:scale-105 active:scale-95">
+        {chatOpen ? <X className="size-6" /> : <MessageCircle className="size-6" />}
+      </button>
+    </div>
+  </>;
+}
