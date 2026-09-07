@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X } from "lucide-react";
+import { ArrowRight, BatteryCharging, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,10 +21,14 @@ interface Booking {
   vehicle_name: string; payment_method: string;
   created_at: string; completed_at: string | null;
   distance_km: number; rating: number | null;
+  ride_otp?: string;
 }
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
   rating: number; total_rides: number; city: string;
+}
+interface ServiceArea {
+  name: string; lat: number; lng: number;
 }
 
 const STATUS_FLOW: Record<string, { label: string; next: string; nextLabel: string } | null> = {
@@ -47,13 +52,14 @@ function DriverConsolePage() {
   const navigate = useNavigate();
 
   const [driver, setDriver] = useState<DriverProfile | null>(null);
+  const [areas, setAreas] = useState<Record<string, ServiceArea>>({});
   const [activeRides, setActiveRides] = useState<Booking[]>([]);
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
 
-  // Redirect if not driver
   useEffect(() => {
     if (!authLoading) {
       if (!user) { navigate({ to: "/login", search: { redirect: "/driver-console" } }); return; }
@@ -67,35 +73,52 @@ function DriverConsolePage() {
   useEffect(() => {
     if (!user) return;
     loadData();
-
-    // Realtime subscription for new ride requests
     const channel = supabase.channel("driver-bookings")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => loadData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
+  // Live location sharing
+  useEffect(() => {
+    if (!driver || !driver.is_online) return;
+    const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        await supabase.from("drivers").update({
+          current_lat: pos.coords.latitude,
+          current_lng: pos.coords.longitude,
+          location_updated_at: new Date().toISOString()
+        }).eq("id", driver.id);
+      },
+      (err) => console.warn("Location sharing error:", err),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [driver?.is_online, driver?.id]);
+
   async function loadData() {
     if (!user) return;
-    // Get driver profile
     const { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).single();
     if (!driverData) { setLoading(false); return; }
     setDriver(driverData as DriverProfile);
 
-    // Active rides assigned to this driver
+    // Fetch areas for coordinates
+    const { data: areaData } = await supabase.from("service_areas").select("*");
+    const areaMap: Record<string, ServiceArea> = {};
+    (areaData || []).forEach((a: any) => areaMap[a.name] = a);
+    setAreas(areaMap);
+
     const { data: active } = await supabase.from("bookings").select("*")
       .eq("driver_id", driverData.id)
       .in("status", ["accepted", "arrived", "in_progress"])
       .order("created_at", { ascending: false });
     setActiveRides((active as Booking[]) ?? []);
 
-    // Open requests (searching) in driver's city — pick up to 5
     const { data: requests } = await supabase.from("bookings").select("*")
       .eq("status", "searching").is("driver_id", null)
       .order("created_at", { ascending: false }).limit(5);
     setNewRequests((requests as Booking[]) ?? []);
 
-    // Recent completed rides
     const { data: recent } = await supabase.from("bookings").select("*")
       .eq("driver_id", driverData.id).eq("status", "completed")
       .order("completed_at", { ascending: false }).limit(20);
@@ -121,15 +144,19 @@ function DriverConsolePage() {
     loadData();
   }
 
-  async function declineRide(bookingId: string) {
-    // Just remove from new requests display (no DB change needed — driver simply doesn't accept)
-    setNewRequests(prev => prev.filter(r => r.id !== bookingId));
-    toast.info("Ride skipped");
-  }
-
   async function advanceStatus(booking: Booking) {
     const flow = STATUS_FLOW[booking.status];
     if (!flow) return;
+    
+    // OTP Check if trying to start ride
+    if (flow.next === "in_progress") {
+      const enteredOtp = otpInputs[booking.id];
+      if (enteredOtp !== booking.ride_otp) {
+        toast.error("Incorrect OTP. Please check with the customer.");
+        return;
+      }
+    }
+
     const updates: Record<string, string | number | null> = { status: flow.next };
     if (flow.next === "arrived") updates.arrived_at = new Date().toISOString();
     if (flow.next === "in_progress") updates.started_at = new Date().toISOString();
@@ -144,37 +171,33 @@ function DriverConsolePage() {
     loadData();
   }
 
-  // Earnings
-  const weeklyEarnings = recentRides.filter(r => {
-    const d = new Date(r.completed_at ?? "");
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return d >= weekAgo;
-  }).reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
-
-  const monthlyEarnings = recentRides.reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
-  const avgRating = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0);
-
-  if (authLoading || loading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
+  function getNavUrl(areaName: string) {
+    const a = areas[areaName];
+    if (!a) return "#";
+    return `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=driving`;
   }
+
+  if (authLoading || loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
 
   if (!driver) {
     return (
       <section className="min-h-screen py-24">
         <div className="section-shell text-center">
           <h1 className="display-serif text-5xl">Driver profile not found</h1>
-          <p className="mt-4 text-muted-foreground">Your account hasn't been set up as a driver yet. Please wait for admin approval after applying.</p>
+          <p className="mt-4 text-muted-foreground">Your account hasn't been set up as a driver yet.</p>
           <Button asChild className="mt-8"><Link to="/drive">Apply to Drive <ArrowRight /></Link></Button>
         </div>
       </section>
     );
   }
 
+  const weeklyEarnings = recentRides.filter(r => new Date(r.completed_at ?? "") >= new Date(Date.now() - 7 * 24 * 3600000)).reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
+  const monthlyEarnings = recentRides.reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
+  const avgRating = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
+
   return (
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
-        {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Driver Console</p>
@@ -188,15 +211,6 @@ function DriverConsolePage() {
           </button>
         </div>
 
-        {/* KPIs */}
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard icon={Wallet} label="This week" value={`₹${Math.round(weeklyEarnings)}`} />
-          <KpiCard icon={TrendingUp} label="This month" value={`₹${Math.round(monthlyEarnings)}`} />
-          <KpiCard icon={CheckCircle} label="Total rides" value={driver.total_rides.toString()} />
-          <KpiCard icon={Star} label="Rating" value={avgRating > 0 ? avgRating.toFixed(1) : driver.rating.toFixed(1)} />
-        </div>
-
-        {/* Tabs */}
         <Tabs defaultValue="rides" className="mt-10">
           <TabsList className="mb-6">
             <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
@@ -204,10 +218,9 @@ function DriverConsolePage() {
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
           </TabsList>
 
-          {/* ACTIVE RIDES */}
           <TabsContent value="rides">
             {activeRides.length === 0 ? (
-              <EmptyState icon={Navigation} title="No active rides" text="Accept a ride request to get started. Make sure you're online!" />
+              <EmptyState icon={Navigation} title="No active rides" text="Accept a ride request to get started." />
             ) : (
               <div className="space-y-4">
                 {activeRides.map(ride => {
@@ -227,18 +240,38 @@ function DriverConsolePage() {
                             <span className="text-border">→</span>
                             <Navigation className="size-4 text-primary" />{ride.drop_area}
                           </div>
-                          <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><BatteryCharging className="size-3 text-primary" />{ride.vehicle_name}</span>
-                            <span className="flex items-center gap-1"><Wallet className="size-3 text-primary" />₹{Math.round(ride.estimated_fare)} · {ride.payment_method}</span>
-                            <span>{Math.round(ride.distance_km)} km</span>
+                        </div>
+                      </div>
+
+                      {ride.status === "accepted" && (
+                        <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
+                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.pickup_area)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Pickup</a></Button>
+                          <Button onClick={() => advanceStatus(ride)} className="flex-1">Mark Arrived <Check className="ml-2 size-4" /></Button>
+                        </div>
+                      )}
+
+                      {ride.status === "arrived" && (
+                        <div className="mt-6 border-t border-border pt-4 text-center">
+                          <p className="text-sm font-semibold mb-3">Ask customer for the 6-digit OTP</p>
+                          <div className="flex flex-col items-center gap-4">
+                            <InputOTP maxLength={6} value={otpInputs[ride.id] || ""} onChange={(val) => setOtpInputs(p => ({ ...p, [ride.id]: val }))}>
+                              <InputOTPGroup>
+                                {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} className="size-10 text-lg" />)}
+                              </InputOTPGroup>
+                            </InputOTP>
+                            <Button onClick={() => advanceStatus(ride)} disabled={otpInputs[ride.id]?.length !== 6} className="w-full sm:w-auto">
+                              Verify & Start Ride <ArrowRight className="ml-2 size-4" />
+                            </Button>
                           </div>
                         </div>
-                        {flow && (
-                          <Button size="sm" onClick={() => advanceStatus(ride)} className="shrink-0">
-                            {flow.nextLabel} <Check className="size-3" />
-                          </Button>
-                        )}
-                      </div>
+                      )}
+
+                      {ride.status === "in_progress" && (
+                        <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
+                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.drop_area)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Drop-off</a></Button>
+                          <Button onClick={() => advanceStatus(ride)} className="flex-1 bg-green-600 hover:bg-green-700">Complete Ride <CheckCircle className="ml-2 size-4" /></Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -246,93 +279,36 @@ function DriverConsolePage() {
             )}
           </TabsContent>
 
-          {/* NEW REQUESTS */}
           <TabsContent value="requests">
-            {!driver.is_online && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                You're offline. Go online to receive ride requests.
-              </div>
-            )}
-            {newRequests.length === 0 ? (
-              <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." />
-            ) : (
+            {!driver.is_online && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">You're offline. Go online to receive ride requests.</div>}
+            {newRequests.length === 0 ? <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." /> :
               <div className="space-y-4">
                 {newRequests.map(ride => (
                   <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 text-sm font-bold">
-                          <MapPin className="size-4 text-primary" />{ride.pickup_area}
-                          <span className="text-muted-foreground">→</span>
-                          <Navigation className="size-4 text-primary" />{ride.drop_area}
-                        </div>
-                        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="font-bold text-primary">₹{Math.round(ride.estimated_fare)}</span>
-                          <span>{Math.round(ride.distance_km)} km</span>
-                          <span>{ride.vehicle_name}</span>
-                          <span>{ride.payment_method}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">{new Date(ride.created_at).toLocaleTimeString()}</p>
+                        <div className="flex items-center gap-2 text-sm font-bold"><MapPin className="size-4 text-primary" />{ride.pickup_area} <span className="text-muted-foreground">→</span> <Navigation className="size-4 text-primary" />{ride.drop_area}</div>
+                        <div className="mt-2 text-xs text-muted-foreground space-x-4"><span className="font-bold text-primary">₹{Math.round(ride.estimated_fare)}</span><span>{Math.round(ride.distance_km)} km</span><span>{ride.vehicle_name}</span></div>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => declineRide(ride.id)}><X className="size-4" /></Button>
-                        <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept <Check className="size-3" /></Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setNewRequests(p => p.filter(r => r.id !== ride.id))}><X className="size-4" /></Button>
+                        <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept</Button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
+            }
           </TabsContent>
 
-          {/* EARNINGS */}
           <TabsContent value="earnings">
             <div className="grid gap-4 lg:grid-cols-3 mb-8">
-              <EarningsCard label="This week" amount={weeklyEarnings} rides={recentRides.filter(r => { const d = new Date(r.completed_at ?? ""); const now = new Date(); return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); }).length} />
-              <EarningsCard label="This month" amount={monthlyEarnings} rides={recentRides.length} />
+              <div className="rounded-xl border border-border bg-background p-6"><p className="text-xs font-bold uppercase text-muted-foreground">This week</p><p className="mt-3 text-3xl font-bold">₹{Math.round(weeklyEarnings)}</p></div>
+              <div className="rounded-xl border border-border bg-background p-6"><p className="text-xs font-bold uppercase text-muted-foreground">This month</p><p className="mt-3 text-3xl font-bold">₹{Math.round(monthlyEarnings)}</p></div>
               <div className="rounded-xl border border-border bg-background p-6">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Average Rating</p>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="text-3xl font-bold">{avgRating > 0 ? avgRating.toFixed(1) : driver.rating.toFixed(1)}</span>
-                  <span className="mb-1 text-sm text-muted-foreground">/ 5</span>
-                </div>
-                <div className="mt-2 flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className={`size-4 ${i < Math.round(avgRating || driver.rating) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-                  ))}
-                </div>
+                <p className="text-xs font-bold uppercase text-muted-foreground">Avg Rating</p>
+                <div className="mt-3 flex items-end gap-2"><span className="text-3xl font-bold">{avgRating.toFixed(1)}</span><span className="mb-1 text-sm">/ 5</span></div>
               </div>
-            </div>
-
-            {/* Recent rides table */}
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-6 py-4">
-                <h3 className="font-semibold">Recent Rides</h3>
-              </div>
-              {recentRides.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">No completed rides yet.</p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {recentRides.map(ride => (
-                    <div key={ride.id} className="flex items-center justify-between gap-4 px-6 py-4 text-sm">
-                      <div>
-                        <p className="font-semibold">{ride.pickup_area} → {ride.drop_area}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {ride.completed_at ? new Date(ride.completed_at).toLocaleDateString() : "—"} · {Math.round(ride.distance_km)} km
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 shrink-0">
-                        {ride.rating && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <Star className="size-3 fill-primary text-primary" />{ride.rating}
-                          </div>
-                        )}
-                        <span className="font-bold text-primary">₹{Math.round(ride.final_fare ?? ride.estimated_fare)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -341,32 +317,6 @@ function DriverConsolePage() {
   );
 }
 
-function KpiCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-background p-5">
-      <Icon className="size-5 text-primary" />
-      <p className="mt-3 text-2xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function EarningsCard({ label, amount, rides }: { label: string; amount: number; rides: number }) {
-  return (
-    <div className="rounded-xl border border-border bg-background p-6">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-3 text-3xl font-bold">₹{Math.round(amount)}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{rides} ride{rides !== 1 ? "s" : ""}</p>
-    </div>
-  );
-}
-
-function EmptyState({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
-  return (
-    <div className="flex flex-col items-center rounded-xl border border-dashed border-border py-16 text-center">
-      <Icon className="size-10 text-muted-foreground/40" />
-      <p className="mt-4 font-semibold">{title}</p>
-      <p className="mt-2 max-w-xs text-sm text-muted-foreground">{text}</p>
-    </div>
-  );
+function EmptyState({ icon: Icon, title, text }: any) {
+  return <div className="flex flex-col items-center rounded-xl border border-dashed py-16 text-center"><Icon className="size-10 text-muted-foreground/40" /><p className="mt-4 font-semibold">{title}</p><p className="mt-2 text-sm text-muted-foreground">{text}</p></div>;
 }

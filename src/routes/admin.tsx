@@ -14,14 +14,14 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; }
+interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; }
 interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; }
 interface Enquiry { id: string; company_name: string; contact_name: string; email: string; phone: string; city: string; team_size: string; requirement: string; message: string; status: string; created_at: string; }
 interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; }
 
 const STATUS_BADGE: Record<string, string> = {
-  searching: "bg-amber-100 text-amber-700",
   accepted: "bg-blue-100 text-blue-700",
+  arrived: "bg-violet-100 text-violet-700",
   in_progress: "bg-orange-100 text-orange-700",
   completed: "bg-green-100 text-green-700",
   cancelled: "bg-red-100 text-red-700",
@@ -81,17 +81,6 @@ function AdminPage() {
 
   async function updateApplicationStatus(id: string, status: string, email?: string) {
     await supabase.from("driver_applications").update({ status }).eq("id", id);
-
-    if (status === "approved" && email) {
-      // Grant driver role via RPC
-      const { data: result } = await supabase.rpc("admin_set_role" as any, { _email: email, _role: "driver", _grant: true });
-      if (result !== "ok") toast.error(`Could not grant driver role: ${result}`);
-      else {
-        // Create driver profile if not exists — basic placeholder
-        toast.success("Driver role granted. Have the driver log into /driver-console to set up their profile.");
-      }
-    }
-
     toast.success(`Application ${status}`);
     loadAll();
   }
@@ -147,7 +136,7 @@ function AdminPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
-                      {["Reference", "Route", "Vehicle", "Fare", "Status", "Driver", "Date", "Actions"].map(h => (
+                      {["Ref", "Route", "Vehicle", "Fare", "Status", "Driver", "OTP", "Actions"].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">{h}</th>
                       ))}
                     </tr>
@@ -160,7 +149,7 @@ function AdminPage() {
                         <td className="px-4 py-3 text-xs text-muted-foreground">{b.vehicle_name}</td>
                         <td className="px-4 py-3 font-semibold text-primary">₹{Math.round(b.estimated_fare)}</td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status.replace("_", " ")}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status.replace("_", " ")}</span>
                         </td>
                         <td className="px-4 py-3">
                           {b.status === "searching" ? (
@@ -174,7 +163,7 @@ function AdminPage() {
                             <span className="text-xs text-muted-foreground">{b.driver_id ? drivers.find(d => d.id === b.driver_id)?.full_name ?? "Assigned" : "—"}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{b.ride_otp || "—"}</td>
                         <td className="px-4 py-3">
                           {["searching", "accepted"].includes(b.status) && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:bg-destructive/10"
