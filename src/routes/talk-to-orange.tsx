@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bot, BriefcaseBusiness, Check, Loader2, MessageCircle, Send, X } from "lucide-react";
 import { useForm } from "react-hook-form";
