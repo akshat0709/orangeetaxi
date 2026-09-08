@@ -11,7 +11,10 @@ export interface AuthState {
   signOut: () => Promise<void>;
 }
 
-async function fetchRole(userId: string): Promise<AppRole> {
+async function fetchRole(userId: string, email?: string): Promise<AppRole> {
+  // Hardcode admin access for the owner's email
+  if (email === "orangeetaxi@gmail.com") return "admin";
+
   // Priority: admin > driver > customer
   const { data } = await supabase
     .from("user_roles")
@@ -35,7 +38,7 @@ export function useAuth(): AuthState {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        const r = await fetchRole(session.user.id);
+        const r = await fetchRole(session.user.id, session.user.email);
         setRole(r);
       }
       setLoading(false);
@@ -45,7 +48,7 @@ export function useAuth(): AuthState {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        const r = await fetchRole(session.user.id);
+        const r = await fetchRole(session.user.id, session.user.email);
         setRole(r);
       } else {
         setRole(null);
