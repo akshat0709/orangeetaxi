@@ -15,8 +15,8 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as BusinessRouteImport } from './routes/business'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as DriverConsoleRouteImport } from './routes/driver-console'
 import { Route as DriveRouteImport } from './routes/drive'
+import { Route as DriverConsoleRouteImport } from './routes/driver-console'
 import { Route as ElectricRouteImport } from './routes/electric'
 import { Route as ExperienceRouteImport } from './routes/experience'
 import { Route as LoginRouteImport } from './routes/login'
@@ -55,14 +55,14 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DriverConsoleRoute = DriverConsoleRouteImport.update({
-  id: '/driver-console',
-  path: '/driver-console',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DriveRoute = DriveRouteImport.update({
   id: '/drive',
   path: '/drive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DriverConsoleRoute = DriverConsoleRouteImport.update({
+  id: '/driver-console',
+  path: '/driver-console',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ElectricRoute = ElectricRouteImport.update({
@@ -108,8 +108,8 @@ export interface FileRoutesByFullPath {
   '/book': typeof BookRoute
   '/business': typeof BusinessRoute
   '/contact': typeof ContactRoute
-  '/driver-console': typeof DriverConsoleRoute
   '/drive': typeof DriveRoute
+  '/driver-console': typeof DriverConsoleRoute
   '/electric': typeof ElectricRoute
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
@@ -125,8 +125,8 @@ export interface FileRoutesByTo {
   '/book': typeof BookRoute
   '/business': typeof BusinessRoute
   '/contact': typeof ContactRoute
-  '/driver-console': typeof DriverConsoleRoute
   '/drive': typeof DriveRoute
+  '/driver-console': typeof DriverConsoleRoute
   '/electric': typeof ElectricRoute
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
@@ -143,8 +143,8 @@ export interface FileRoutesById {
   '/book': typeof BookRoute
   '/business': typeof BusinessRoute
   '/contact': typeof ContactRoute
-  '/driver-console': typeof DriverConsoleRoute
   '/drive': typeof DriveRoute
+  '/driver-console': typeof DriverConsoleRoute
   '/electric': typeof ElectricRoute
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
@@ -162,8 +162,8 @@ export interface FileRouteTypes {
     | '/book'
     | '/business'
     | '/contact'
-    | '/driver-console'
     | '/drive'
+    | '/driver-console'
     | '/electric'
     | '/experience'
     | '/login'
@@ -179,8 +179,8 @@ export interface FileRouteTypes {
     | '/book'
     | '/business'
     | '/contact'
-    | '/driver-console'
     | '/drive'
+    | '/driver-console'
     | '/electric'
     | '/experience'
     | '/login'
@@ -196,8 +196,8 @@ export interface FileRouteTypes {
     | '/book'
     | '/business'
     | '/contact'
-    | '/driver-console'
     | '/drive'
+    | '/driver-console'
     | '/electric'
     | '/experience'
     | '/login'
@@ -214,8 +214,8 @@ export interface RootRouteChildren {
   BookRoute: typeof BookRoute
   BusinessRoute: typeof BusinessRoute
   ContactRoute: typeof ContactRoute
-  DriverConsoleRoute: typeof DriverConsoleRoute
   DriveRoute: typeof DriveRoute
+  DriverConsoleRoute: typeof DriverConsoleRoute
   ElectricRoute: typeof ElectricRoute
   ExperienceRoute: typeof ExperienceRoute
   LoginRoute: typeof LoginRoute
@@ -227,21 +227,111 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': { id: '/'; path: '/'; fullPath: '/'; preLoaderRoute: typeof IndexRouteImport; parentRoute: typeof rootRouteImport }
-    '/about': { id: '/about'; path: '/about'; fullPath: '/about'; preLoaderRoute: typeof AboutRouteImport; parentRoute: typeof rootRouteImport }
-    '/admin': { id: '/admin'; path: '/admin'; fullPath: '/admin'; preLoaderRoute: typeof AdminRouteImport; parentRoute: typeof rootRouteImport }
-    '/book': { id: '/book'; path: '/book'; fullPath: '/book'; preLoaderRoute: typeof BookRouteImport; parentRoute: typeof rootRouteImport }
-    '/business': { id: '/business'; path: '/business'; fullPath: '/business'; preLoaderRoute: typeof BusinessRouteImport; parentRoute: typeof rootRouteImport }
-    '/contact': { id: '/contact'; path: '/contact'; fullPath: '/contact'; preLoaderRoute: typeof ContactRouteImport; parentRoute: typeof rootRouteImport }
-    '/driver-console': { id: '/driver-console'; path: '/driver-console'; fullPath: '/driver-console'; preLoaderRoute: typeof DriverConsoleRouteImport; parentRoute: typeof rootRouteImport }
-    '/drive': { id: '/drive'; path: '/drive'; fullPath: '/drive'; preLoaderRoute: typeof DriveRouteImport; parentRoute: typeof rootRouteImport }
-    '/electric': { id: '/electric'; path: '/electric'; fullPath: '/electric'; preLoaderRoute: typeof ElectricRouteImport; parentRoute: typeof rootRouteImport }
-    '/experience': { id: '/experience'; path: '/experience'; fullPath: '/experience'; preLoaderRoute: typeof ExperienceRouteImport; parentRoute: typeof rootRouteImport }
-    '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
-    '/privacy': { id: '/privacy'; path: '/privacy'; fullPath: '/privacy'; preLoaderRoute: typeof PrivacyRouteImport; parentRoute: typeof rootRouteImport }
-    '/support': { id: '/support'; path: '/support'; fullPath: '/support'; preLoaderRoute: typeof SupportRouteImport; parentRoute: typeof rootRouteImport }
-    '/talk-to-orange': { id: '/talk-to-orange'; path: '/talk-to-orange'; fullPath: '/talk-to-orange'; preLoaderRoute: typeof TalkToOrangeRouteImport; parentRoute: typeof rootRouteImport }
-    '/terms': { id: '/terms'; path: '/terms'; fullPath: '/terms'; preLoaderRoute: typeof TermsRouteImport; parentRoute: typeof rootRouteImport }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book': {
+      id: '/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof BookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business': {
+      id: '/business'
+      path: '/business'
+      fullPath: '/business'
+      preLoaderRoute: typeof BusinessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/drive': {
+      id: '/drive'
+      path: '/drive'
+      fullPath: '/drive'
+      preLoaderRoute: typeof DriveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/driver-console': {
+      id: '/driver-console'
+      path: '/driver-console'
+      fullPath: '/driver-console'
+      preLoaderRoute: typeof DriverConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/electric': {
+      id: '/electric'
+      path: '/electric'
+      fullPath: '/electric'
+      preLoaderRoute: typeof ElectricRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experience': {
+      id: '/experience'
+      path: '/experience'
+      fullPath: '/experience'
+      preLoaderRoute: typeof ExperienceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/talk-to-orange': {
+      id: '/talk-to-orange'
+      path: '/talk-to-orange'
+      fullPath: '/talk-to-orange'
+      preLoaderRoute: typeof TalkToOrangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -252,8 +342,8 @@ const rootRouteChildren: RootRouteChildren = {
   BookRoute: BookRoute,
   BusinessRoute: BusinessRoute,
   ContactRoute: ContactRoute,
-  DriverConsoleRoute: DriverConsoleRoute,
   DriveRoute: DriveRoute,
+  DriverConsoleRoute: DriverConsoleRoute,
   ElectricRoute: ElectricRoute,
   ExperienceRoute: ExperienceRoute,
   LoginRoute: LoginRoute,
@@ -262,7 +352,6 @@ const rootRouteChildren: RootRouteChildren = {
   TalkToOrangeRoute: TalkToOrangeRoute,
   TermsRoute: TermsRoute,
 }
-
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()

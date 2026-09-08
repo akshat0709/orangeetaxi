@@ -40,6 +40,7 @@ export type Database = {
           rating: number | null
           reference: string
           review: string
+          ride_otp: string
           scheduled_at: string | null
           sos_raised: boolean
           started_at: string | null
@@ -74,6 +75,7 @@ export type Database = {
           rating?: number | null
           reference?: string
           review?: string
+          ride_otp?: string
           scheduled_at?: string | null
           sos_raised?: boolean
           started_at?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           rating?: number | null
           reference?: string
           review?: string
+          ride_otp?: string
           scheduled_at?: string | null
           sos_raised?: boolean
           started_at?: string | null
@@ -224,9 +227,12 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          current_lat: number | null
+          current_lng: number | null
           full_name: string
           id: string
           is_online: boolean
+          location_updated_at: string | null
           phone: string
           rating: number
           status: string
@@ -240,9 +246,12 @@ export type Database = {
         Insert: {
           city?: string
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
           full_name: string
           id?: string
           is_online?: boolean
+          location_updated_at?: string | null
           phone?: string
           rating?: number
           status?: string
@@ -256,9 +265,12 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
+          current_lat?: number | null
+          current_lng?: number | null
           full_name?: string
           id?: string
           is_online?: boolean
+          location_updated_at?: string | null
           phone?: string
           rating?: number
           status?: string
