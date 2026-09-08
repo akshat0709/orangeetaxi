@@ -79,9 +79,27 @@ function PassengerPage() {
         supabase.from("service_areas").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("pricing_settings").select("*").eq("id", 1).single(),
       ]);
-      setVehicles((v as VehicleCategory[]) ?? []);
-      setAreas((a as ServiceArea[]) ?? []);
+      const vData = (v as VehicleCategory[]) ?? [];
+      const aData = (a as ServiceArea[]) ?? [];
+      setVehicles(vData);
+      setAreas(aData);
       if (p) setPricingSettings({ tax_percent: (p as any).tax_percent, platform_fee: (p as any).platform_fee });
+
+      const aiBookingStr = sessionStorage.getItem("ai_booking");
+      if (aiBookingStr) {
+        try {
+          const ai = JSON.parse(aiBookingStr);
+          const selVeh = vData.find(x => x.code === ai.vehicle);
+          const pArea = aData.find(x => x.name.toLowerCase() === ai.pickup?.toLowerCase());
+          const dArea = aData.find(x => x.name.toLowerCase() === ai.drop?.toLowerCase());
+          if (selVeh) setSelectedVehicle(selVeh);
+          if (pArea) setPickupId(pArea.id);
+          if (dArea) setDropId(dArea.id);
+          if (selVeh && pArea && dArea) setStep(3);
+          sessionStorage.removeItem("ai_booking");
+        } catch {}
+      }
+
       setLoading(false);
     }
     fetchData();

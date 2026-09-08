@@ -45,19 +45,22 @@ function sampleFare(v: VehicleCategory, km: number) {
 // AI Chat
 interface Message { role: "user" | "assistant"; content: string; }
 const GEMINI_KEY = import.meta.env["VITE_GEMINI_API_KEY"] as string | undefined;
-const SYSTEM_PROMPT = `You are an AI booking assistant for Orange Taxi, a premium electric ride service in Delhi NCR (Delhi, Gurugram, Noida, Ghaziabad, Faridabad, and IGI Airport).
+const SYSTEM_PROMPT = `You are Orangee, a highly helpful AI booking assistant for Orange Taxi, a premium electric ride service in Delhi NCR.
 
-Service details:
-- Orange Go: ₹49 base + ₹12/km, min ₹99, 4 seats, economy EV hatchback
-- Orange Sedan: ₹59 base + ₹15/km, min ₹129, 4 seats, premium EV sedan
-- Orange XL: ₹79 base + ₹20/km, min ₹179, 6-7 seats, for groups & airport runs
+Service areas: Delhi, Gurugram, Noida, Ghaziabad, Faridabad, IGI Airport.
+Vehicles:
+- orange_go: ₹49 base + ₹12/km, min ₹99, 4 seats, economy EV
+- orange_sedan: ₹59 base + ₹15/km, min ₹129, 4 seats, premium EV
+- orange_xl: ₹79 base + ₹20/km, min ₹179, 6-7 seats, SUV
 
-Booking: customers sign up at /login, then book at /book
-Drivers: apply at /drive
-Business enquiries: /talk-to-orange
-Admin: /admin
+If the user wants to book a taxi:
+1. Ask for their pickup location, drop-off location, desired vehicle type, and pickup time.
+2. Ensure their locations match our service areas. Ensure vehicle matches one of our 3 codes.
+3. DO NOT generate the booking command until you have ALL 4 pieces of information clearly confirmed.
+4. Once you have all 4, reply EXACTLY with this JSON block on a new line, and nothing else after it:
+BOOKING_COMMAND: {"pickup": "...", "drop": "...", "vehicle": "...", "time": "..."}
 
-Be helpful, concise and friendly. Use Indian Rupee (₹) symbol. If asked to calculate a fare, use the formulas above. Always recommend booking through the website.`;
+Be friendly, concise, and proactive. Use ₹ for currency.`;
 
 async function callGemini(messages: Message[]): Promise<string> {
   const contents = messages.map(m => ({
@@ -132,6 +135,8 @@ function TalkToOrangePage() {
     setSubmitting(false);
   }
 
+  const navigate = useNavigate();
+
   async function sendChat() {
     const text = chatInput.trim();
     if (!text || chatLoading) return;
@@ -141,7 +146,15 @@ function TalkToOrangePage() {
     setChatLoading(true);
     try {
       if (!GEMINI_KEY) throw new Error("no key");
-      const reply = await callGemini(newMessages);
+      let reply = await callGemini(newMessages);
+      
+      const bookingMatch = reply.match(/BOOKING_COMMAND:\s*({.*})/);
+      if (bookingMatch) {
+        sessionStorage.setItem("ai_booking", bookingMatch[1]);
+        reply = reply.replace(/BOOKING_COMMAND:\s*({.*})/, "\n\nAwesome! I have your details. Redirecting you to confirm and book your ride now... 🚕");
+        setTimeout(() => navigate({ to: "/book" }), 2500);
+      }
+
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "I'm not available right now. Please call us or use the enquiry form above — we'd love to help! 🟠" }]);
