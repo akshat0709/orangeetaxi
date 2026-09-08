@@ -21,11 +21,23 @@ async function fetchRole(userId: string, email?: string): Promise<AppRole> {
     .select("role")
     .eq("user_id", userId);
 
-  if (!data || data.length === 0) return "customer";
-  const roles = data.map((r) => r.role);
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("driver")) return "driver";
-  return "customer";
+  let determinedRole: AppRole = "customer";
+
+  if (data && data.length > 0) {
+    const roles = data.map((r) => r.role);
+    if (roles.includes("admin")) determinedRole = "admin";
+    else if (roles.includes("driver")) determinedRole = "driver";
+  }
+
+  // Fallback: If roles table was wiped, check if they exist in the drivers table
+  if (determinedRole === "customer") {
+    const { data: driverData } = await supabase.from("drivers").select("id").eq("user_id", userId).maybeSingle();
+    if (driverData) {
+      determinedRole = "driver";
+    }
+  }
+
+  return determinedRole;
 }
 
 export function useAuth(): AuthState {
