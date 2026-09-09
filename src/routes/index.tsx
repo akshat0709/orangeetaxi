@@ -55,7 +55,7 @@ function HomePage() {
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">Mahindra BE.6 · Exclusive Fleet</p>
           <h1 className="display-serif text-[clamp(2.85rem,7vw,6.8rem)] leading-[0.92]">Premium rides.<br/><span className="text-primary">Without the premium price.</span></h1>
           <p className="mt-7 max-w-xl text-base leading-7 text-background/75 md:text-lg">India's finest electric SUV — with LED screens, premium audio and daily newspapers — designed to make every journey extraordinary.</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book a Ride <ArrowRight /></Link></Button><Button asChild size="lg" variant="light"><Link to="/experience">Explore the Orange Experience</Link></Button></div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book a Ride <ArrowRight /></Link></Button><Button asChild size="lg" className="bg-white text-neutral-900 hover:bg-white/90"><Link to="/experience">Explore the Orange Experience</Link></Button></div>
         </div>
       </div>
       <div className="absolute bottom-0 right-0 hidden border-l border-t border-background/20 bg-night/70 px-7 py-5 backdrop-blur-md md:block"><p className="text-xs uppercase tracking-[0.14em] text-background/50">Exclusive fleet</p><p className="mt-1 text-sm font-semibold">Mahindra BE.6 · Signature Orange</p></div>
