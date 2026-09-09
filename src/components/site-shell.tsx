@@ -1,9 +1,10 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { LogOut, Menu, MoveUpRight, Settings, User } from "lucide-react";
+import { LogOut, Menu, Moon, MoveUpRight, Settings, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
 
 const nav = [
@@ -20,6 +21,7 @@ export function Brand() {
 
 export function SiteHeader() {
   const { user, role, loading, signOut } = useAuth();
+  const { isDark, toggle } = useTheme();
   const router = useRouter();
 
   async function handleSignOut() {
@@ -39,6 +41,14 @@ export function SiteHeader() {
         {!loading && role === "admin" && (
           <Link to="/admin" className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
         )}
+        {/* Theme Toggle */}
+        <button
+          onClick={toggle}
+          aria-label="Toggle theme"
+          className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+        </button>
         {!loading && user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -81,7 +91,16 @@ export function SiteHeader() {
         <SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu"><Menu /></Button></SheetTrigger>
         <SheetContent className="w-[88%] bg-background p-7 sm:max-w-md">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <Brand />
+          <div className="flex items-center justify-between">
+            <Brand />
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="grid size-9 place-items-center rounded-full border border-border text-muted-foreground"
+            >
+              {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+          </div>
           <nav className="mt-16 flex flex-col" aria-label="Mobile navigation">
             <SheetClose asChild><Link to="/" className="border-b border-border py-4 text-xl font-semibold">Home</Link></SheetClose>
             {nav.map(([label, to]) => <SheetClose key={to} asChild><Link to={to} className="border-b border-border py-4 text-xl font-semibold">{label}</Link></SheetClose>)}
@@ -105,6 +124,7 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+
   return <footer className="bg-night py-16 text-background">
     <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
       <div><div className="flex items-center gap-2.5"><span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span><span className="text-sm font-bold tracking-[0.14em]">ORANGE TAXI</span></div><p className="mt-5 max-w-xs text-sm leading-7 text-background/60">Premium comfort. Thoughtful service. Electric by nature.</p></div>
