@@ -147,16 +147,26 @@ function DriverConsolePage() {
   async function toggleOnline() {
     if (!driver) return;
     setToggling(true);
-    await supabase.from("drivers").update({ is_online: !driver.is_online }).eq("id", driver.id);
-    setDriver(prev => prev ? { ...prev, is_online: !prev.is_online } : prev);
-    toast.success(driver.is_online ? "You're now offline" : "You're now online — ready for rides!");
+    const newStatus = !driver.is_online;
+    const { error } = await supabase.from("drivers").update({ is_active: newStatus, is_online: newStatus }).eq("id", driver.id);
+    if (!error) {
+      setDriver(prev => prev ? { ...prev, is_online: newStatus } : prev);
+      toast.success(newStatus ? "You're now online — ready for rides!" : "You're now offline");
+    } else {
+      toast.error("Could not update status");
+    }
     setToggling(false);
   }
 
   async function acceptRide(bookingId: string) {
     if (!driver) return;
-    const { error } = await supabase.from("bookings").update({ driver_id: driver.id, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", bookingId);
-    if (error) { toast.error("Could not accept ride"); return; }
+    // Prevent accepting more than one ride at a time
+    if (activeRides.length > 0) {
+      toast.error("You already have an active ride. Complete it before accepting a new one.");
+      return;
+    }
+    const { error } = await supabase.from("bookings").update({ driver_id: driver.id, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "searching");
+    if (error) { toast.error("Could not accept ride — it may have been taken by another driver."); return; }
     toast.success("Ride accepted!");
     loadData();
   }
