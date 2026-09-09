@@ -209,3 +209,19 @@
   .animate-delay-1 { animation-delay: 100ms; }
   .animate-delay-2 { animation-delay: 200ms; }
 }
+
+/*
+ * Dark mode text-on-dark-background fix.
+ *
+ * The design uses `text-background` to mean "light text on dark sections".
+ * In light mode: --background is cream/white — correct contrast on bg-night.
+ * In dark mode: --background becomes dark charcoal — invisible on bg-night!
+ *
+ * Fix: scope --background to always be light inside dark-surface sections,
+ * so text-background renders as cream regardless of the active theme.
+ */
+.dark .bg-night,
+.dark footer {
+  --background: oklch(0.95 0.008 65);
+}
+
