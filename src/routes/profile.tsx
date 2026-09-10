@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check } from "lucide-react";
+import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,38 @@ function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [savedOnce, setSavedOnce] = useState(false);
+
+  // Guardian contact state
+  const [guardianName, setGuardianName] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianSavedOnce, setGuardianSavedOnce] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const s = localStorage.getItem("orange_guardian_contact");
+      if (s) {
+        const p = JSON.parse(s);
+        if (p.name) setGuardianName(p.name);
+        if (p.phone) setGuardianPhone(p.phone);
+      }
+    } catch (e) {}
+  }, []);
+
+  function handleSaveGuardian() {
+    if (!guardianName.trim() || !guardianPhone.trim()) {
+      toast.error("Please enter both guardian name and phone number");
+      return;
+    }
+    const contact = { name: guardianName.trim(), phone: guardianPhone.trim() };
+    localStorage.setItem("orange_guardian_contact", JSON.stringify(contact));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("guardian_contact_updated", { detail: contact }));
+    }
+    toast.success("Guardian emergency contact saved!");
+    setGuardianSavedOnce(true);
+    setTimeout(() => setGuardianSavedOnce(false), 2000);
+  }
 
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
@@ -142,67 +174,118 @@ function ProfilePage() {
       <div className="section-shell py-10">
         <div className="grid gap-10 lg:grid-cols-[340px_1fr] lg:items-start">
 
-          {/* Profile Card */}
-          <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
-            {profileLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="size-7 animate-spin text-primary" />
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col items-center text-center">
-                  <div className="grid size-24 place-items-center rounded-full bg-primary text-3xl font-bold text-primary-foreground shadow-lg">
-                    {getInitials(fullName || user.email?.split("@")[0] || "")}
+          <div className="space-y-6">
+            {/* Profile Card */}
+            <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+              {profileLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="size-7 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="grid size-24 place-items-center rounded-full bg-primary text-3xl font-bold text-primary-foreground shadow-lg">
+                      {getInitials(fullName || user.email?.split("@")[0] || "")}
+                    </div>
+                    <p className="mt-4 text-lg font-bold text-foreground">
+                      {fullName || user.email?.split("@")[0]}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
-                  <p className="mt-4 text-lg font-bold text-foreground">
-                    {fullName || user.email?.split("@")[0]}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+
+                  <div className="mt-8 space-y-5">
+                    <div>
+                      <Label htmlFor="fullName" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <User className="size-3" /> Full Name
+                      </Label>
+                      <Input
+                        id="fullName"
+                        className="mt-1.5"
+                        placeholder="Your full name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Phone className="size-3" /> Phone
+                      </Label>
+                      <Input
+                        id="phone"
+                        className="mt-1.5"
+                        placeholder="+91 98765 43210"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Mail className="size-3" /> Email
+                      </Label>
+                      <Input className="mt-1.5 cursor-not-allowed opacity-60" value={user.email ?? ""} readOnly />
+                    </div>
+                    <Button className="w-full" onClick={handleSave} disabled={saving}>
+                      {saving ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : savedOnce ? (
+                        <><Check className="size-4" /> Saved</>
+                      ) : (
+                        <><Save className="size-4" /> Save Profile</>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Guardian & Emergency Safety Card */}
+            <div className="rounded-2xl border border-amber-500/30 bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-border pb-3">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
+                  <ShieldAlert className="size-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-foreground">Guardian Emergency Contact</p>
+                  <p className="text-[11px] text-muted-foreground">1-tap call & live tracking alerts during rides</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <Label htmlFor="guardianName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Guardian Name / Relationship
+                  </Label>
+                  <Input
+                    id="guardianName"
+                    className="mt-1.5"
+                    placeholder="e.g. Mom, Brother, Rohit"
+                    value={guardianName}
+                    onChange={(e) => setGuardianName(e.target.value)}
+                  />
                 </div>
 
-                <div className="mt-8 space-y-5">
-                  <div>
-                    <Label htmlFor="fullName" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <User className="size-3" /> Full Name
-                    </Label>
-                    <Input
-                      id="fullName"
-                      className="mt-1.5"
-                      placeholder="Your full name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Phone className="size-3" /> Phone
-                    </Label>
-                    <Input
-                      id="phone"
-                      className="mt-1.5"
-                      placeholder="+91 98765 43210"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Mail className="size-3" /> Email
-                    </Label>
-                    <Input className="mt-1.5 cursor-not-allowed opacity-60" value={user.email ?? ""} readOnly />
-                  </div>
-                  <Button className="w-full" onClick={handleSave} disabled={saving}>
-                    {saving ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : savedOnce ? (
-                      <><Check className="size-4" /> Saved</>
-                    ) : (
-                      <><Save className="size-4" /> Save Profile</>
-                    )}
-                  </Button>
+                <div>
+                  <Label htmlFor="guardianPhone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Guardian Phone Number
+                  </Label>
+                  <Input
+                    id="guardianPhone"
+                    className="mt-1.5 font-mono"
+                    placeholder="e.g. +91 98765 43210"
+                    value={guardianPhone}
+                    onChange={(e) => setGuardianPhone(e.target.value)}
+                  />
                 </div>
-              </>
-            )}
+
+                <Button
+                  variant="outline"
+                  className="w-full border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs font-bold mt-1"
+                  onClick={handleSaveGuardian}
+                >
+                  {guardianSavedOnce ? <><Check className="size-3.5" /> Guardian Saved</> : "Save Guardian Contact"}
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Tabs */}

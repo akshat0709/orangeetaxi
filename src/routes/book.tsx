@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { MapPicker } from "@/components/map-picker";
+import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
@@ -459,6 +460,37 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
   const activeDriverPhone = driverInfo?.phone && driverInfo.phone.trim() !== "" ? driverInfo.phone.trim() : "+91 98100 12345";
   const cleanDialPhone = activeDriverPhone.replace(/[^0-9+]/g, "");
 
+  const [guardianModalOpen, setGuardianModalOpen] = useState(false);
+  const [guardianContact, setGuardianContact] = useState<{ name: string; phone: string } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const s = localStorage.getItem("orange_guardian_contact");
+        return s ? JSON.parse(s) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail) setGuardianContact(e.detail);
+      else {
+        try {
+          const s = localStorage.getItem("orange_guardian_contact");
+          if (s) setGuardianContact(JSON.parse(s));
+        } catch (err) {}
+      }
+    };
+    window.addEventListener("guardian_contact_updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("guardian_contact_updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
   return <div className="flex flex-col py-2">
     <div className="flex items-center gap-4 border-b border-background/10 pb-6">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/20 text-primary"><CheckCircle className="size-6" /></span>
@@ -558,6 +590,52 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
         <p className="mt-3 text-sm text-background/60">Matching you with the nearest {vehicle.name}...</p>
       </div>
     )}
+
+    {/* Guardian Call & Safety Shield Card */}
+    <div className="mt-5 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
+          <ShieldAlert className="size-5" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-300">
+              Guardian Shield & SOS
+            </p>
+            <span className="rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-semibold px-2 py-0.5">
+              24/7 Safety
+            </span>
+          </div>
+          <p className="text-xs text-background/70 mt-0.5">
+            {guardianContact
+              ? `Guardian: ${guardianContact.name} (${guardianContact.phone})`
+              : "Set emergency contact for 1-tap guardian call & live ride alerts"}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => setGuardianModalOpen(true)}
+          className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-md active:scale-95 transition-all"
+        >
+          <PhoneCall className="size-3.5 animate-pulse" />
+          <span>Guardian Call</span>
+        </Button>
+      </div>
+    </div>
+
+    {/* Guardian Safety Modal Dialog */}
+    <GuardianSafetyModal
+      open={guardianModalOpen}
+      onOpenChange={setGuardianModalOpen}
+      bookingData={bookingData}
+      driverInfo={driverInfo}
+      pickup={pickup}
+      drop={drop}
+      vehicle={vehicle}
+    />
 
     {/* Live Map (only if driver coords exist) */}
     {driverInfo?.current_lat && driverInfo?.current_lng && (
