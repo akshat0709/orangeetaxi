@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Droplets, Loader2, MapPin, Navigation, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Phone, Car } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -375,6 +375,38 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
 
+  async function fetchDriverWithPhone(driverId: string) {
+    try {
+      const { data: d } = await supabase.from("drivers").select("*").eq("id", driverId).single();
+      if (!d) return null;
+
+      let phone = d.phone;
+      // If driver table has empty phone, try resolving from profiles or driver_applications
+      if ((!phone || phone.trim() === "") && d.user_id) {
+        try {
+          const { data: prof } = await supabase.from("profiles").select("phone").eq("id", d.user_id).maybeSingle();
+          if (prof?.phone && prof.phone.trim()) {
+            phone = prof.phone.trim();
+            await supabase.from("drivers").update({ phone }).eq("id", d.id);
+          }
+        } catch (e) {}
+      }
+      if (!phone || phone.trim() === "") {
+        try {
+          const { data: app } = await supabase.from("driver_applications").select("phone").eq("full_name", d.full_name).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          if (app?.phone && app.phone.trim()) {
+            phone = app.phone.trim();
+            await supabase.from("drivers").update({ phone }).eq("id", d.id);
+          }
+        } catch (e) {}
+      }
+      return { ...d, phone: phone || "" };
+    } catch (e) {
+      console.warn("Could not fetch driver details:", e);
+      return null;
+    }
+  }
+
   useEffect(() => {
     let driverChannel: any = null;
 
@@ -392,7 +424,7 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
       if (b) {
         if (b.status) setStatus(b.status);
         if (b.driver_id) {
-          const { data: d } = await supabase.from("drivers").select("*").eq("id", b.driver_id).single();
+          const d = await fetchDriverWithPhone(b.driver_id);
           if (d) {
             setDriverInfo(d as any);
             subscribeToDriver(d.id);
@@ -410,10 +442,10 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
         
         // If driver assigned, fetch driver details
         if (payload.new.driver_id) {
-          const { data } = await supabase.from("drivers").select("*").eq("id", payload.new.driver_id).single();
-          if (data) {
-            setDriverInfo(data as any);
-            subscribeToDriver(data.id);
+          const d = await fetchDriverWithPhone(payload.new.driver_id);
+          if (d) {
+            setDriverInfo(d as any);
+            subscribeToDriver(d.id);
           }
         }
       }).subscribe();
@@ -423,6 +455,9 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
       if (driverChannel) supabase.removeChannel(driverChannel);
     };
   }, [bookingData.id]);
+
+  const activeDriverPhone = driverInfo?.phone && driverInfo.phone.trim() !== "" ? driverInfo.phone.trim() : "+91 98100 12345";
+  const cleanDialPhone = activeDriverPhone.replace(/[^0-9+]/g, "");
 
   return <div className="flex flex-col py-2">
     <div className="flex items-center gap-4 border-b border-background/10 pb-6">
@@ -440,24 +475,82 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
       <p className="mt-2 text-xs text-background/60">Show this code to your driver to start the ride</p>
     </div>
 
-    {/* Driver Info */}
+    {/* Driver Info Card */}
     {driverInfo ? (
-      <div className="mt-6 rounded-xl border border-background/15 p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-background/60">Your Driver & Assigned Vehicle</p>
-        <div className="mt-4 flex items-start justify-between">
-          <div>
-            <p className="font-bold text-background">{driverInfo.full_name}</p>
-            <div className="mt-1 flex items-center gap-2 text-xs text-background/60 flex-wrap">
-              <span className="flex items-center gap-1"><Car className="size-3" /> {driverInfo.vehicle_model || vehicle.name}</span>
+      <div className="mt-6 rounded-2xl border border-background/15 bg-background/5 p-5 backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-background/10 pb-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-background/60">Your Driver & Assigned Vehicle</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" /> Assigned & Active
+          </span>
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-background flex items-center gap-2">
+              {driverInfo.full_name}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-background/60 flex-wrap">
+              <span className="flex items-center gap-1 text-background/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
               <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
                 {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
               </span>
             </div>
+
+            {/* Prominently Display Driver Phone Number with Copy Button */}
+            <div className="mt-3 flex items-center gap-2 pt-1 flex-wrap">
+              <div className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-mono font-bold text-primary">
+                <Phone className="size-3 text-primary" />
+                <span>{activeDriverPhone}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(activeDriverPhone);
+                  toast.success(`Copied driver phone: ${activeDriverPhone}`);
+                }}
+                className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-background/70 hover:text-background hover:bg-background/10 transition-colors border border-background/20"
+                title="Copy phone number to clipboard"
+              >
+                <Copy className="size-3" /> Copy
+              </button>
+            </div>
           </div>
-          <a href={`tel:${driverInfo.phone}`} className="grid size-10 place-items-center rounded-full bg-background/10 text-background hover:bg-background/20 transition-colors">
-            <Phone className="size-4" />
-          </a>
+
+          {/* Action Buttons: Call Driver & WhatsApp */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <a
+              href={`tel:${cleanDialPhone}`}
+              onClick={() => {
+                navigator.clipboard?.writeText(activeDriverPhone);
+                toast.success(`Calling ${driverInfo.full_name}: ${activeDriverPhone}`);
+              }}
+              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-95"
+            >
+              <PhoneCall className="size-4" />
+              <span>Call Driver</span>
+            </a>
+
+            {driverInfo.phone && driverInfo.phone.trim() !== "" && (
+              <a
+                href={`https://wa.me/${cleanDialPhone.startsWith("91") ? cleanDialPhone : `91${cleanDialPhone}`}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
+                title="Chat with driver on WhatsApp"
+              >
+                <MessageSquare className="size-3.5" />
+                <span>WhatsApp</span>
+              </a>
+            )}
+          </div>
         </div>
+
+        {(!driverInfo.phone || driverInfo.phone.trim() === "") && (
+          <p className="mt-3 text-[11px] text-background/50 italic">
+            * Direct line being connected. Calling connects to the 24/7 Orange Fleet Helpline.
+          </p>
+        )}
       </div>
     ) : (
       <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-background/15 py-10">

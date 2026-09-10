@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Search, Users, Wallet, X, Zap } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -562,6 +562,27 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
                         {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "⚠️ No car assigned"}
                       </span>
                     </span>
+                    <span className="text-muted-foreground text-xs">·</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPhone = prompt(`Enter phone number for ${d.full_name}:`, d.phone || "");
+                        if (newPhone !== null && newPhone.trim() !== "") {
+                          supabase.from("drivers").update({ phone: newPhone.trim() }).eq("id", d.id).then(({ error }) => {
+                            if (error) toast.error("Could not update phone: " + error.message);
+                            else {
+                              toast.success("Driver phone updated!");
+                              onRefresh();
+                            }
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-primary transition-colors underline cursor-pointer"
+                      title="Click to edit driver phone number"
+                    >
+                      <Phone className="size-3" />
+                      <span>{d.phone || "Add Phone ✏️"}</span>
+                    </button>
                   </div>
                 </div>
               </div>
