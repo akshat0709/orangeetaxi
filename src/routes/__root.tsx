@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -122,6 +123,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Analytics />
       <Toaster richColors position="top-right" />
       <SiteHeader />
       <main><Outlet /></main>
@@ -129,4 +131,5 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
 
