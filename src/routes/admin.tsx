@@ -177,15 +177,18 @@ function AdminPage() {
                             <span className="text-xs text-muted-foreground">{b.driver_id ? drivers.find(d => d.id === b.driver_id)?.full_name ?? "Assigned" : "—"}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{b.ride_otp || "—"}</td>
                         <td className="px-4 py-3">
-                          {["searching", "accepted"].includes(b.status) && (
+                          <span className="font-mono text-sm font-bold text-primary">{b.ride_otp || "—"}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {["searching", "accepted", "arrived", "in_progress"].includes(b.status) && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:bg-destructive/10"
                               onClick={async () => { await supabase.from("bookings").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", b.id); toast.success("Booking cancelled"); loadAll(); }}>
                               Cancel
                             </Button>
                           )}
                         </td>
+
                       </tr>
                     ))}
                   </tbody>
