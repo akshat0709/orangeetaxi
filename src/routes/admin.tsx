@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, Loader2, MoreHorizontal, Users, X } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, Search, Users, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -281,49 +281,147 @@ function AdminPage() {
 
           {/* DRIVERS */}
           <TabsContent value="drivers">
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-6 py-4">
-                <h3 className="font-semibold">All Drivers</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      {["Name", "City", "Vehicle", "Status", "Rating", "Rides", "Actions"].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {drivers.map(d => (
-                      <tr key={d.id} className="hover:bg-muted/30">
-                        <td className="px-4 py-3 font-semibold">{d.full_name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{d.city}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{d.vehicle_model || "—"} {d.vehicle_number && `· ${d.vehicle_number}`}</td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.is_online ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
-                            {d.is_online ? "Online" : "Offline"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{d.rating.toFixed(1)} ⭐</td>
-                        <td className="px-4 py-3">{d.total_rides}</td>
-                        <td className="px-4 py-3">
-                          <Button size="sm" variant="ghost" className="text-xs"
-                            onClick={async () => { await supabase.from("drivers").update({ status: d.status === "active" ? "inactive" : "active" }).eq("id", d.id); loadAll(); }}>
-                            {d.status === "active" ? "Deactivate" : "Activate"}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {drivers.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No drivers yet. Approve a driver application to add them.</p>}
-              </div>
-            </div>
+            <DriverAnalyticsPanel drivers={drivers} bookings={bookings} onRefresh={loadAll} />
           </TabsContent>
+
         </Tabs>
       </div>
     </section>
+  );
+}
+
+function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Driver[]; bookings: any[]; onRefresh: () => void }) {
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const filtered = drivers.filter(d =>
+    d.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    d.city?.toLowerCase().includes(search.toLowerCase()) ||
+    d.vehicle_number?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function driverBookings(driverId: string) {
+    return bookings.filter(b => b.driver_id === driverId && b.status === "completed");
+  }
+
+  function driverStats(driverId: string) {
+    const rides = driverBookings(driverId);
+    const total = rides.reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    const upi   = rides.filter(b => b.payment_method === "upi").reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    const cash  = rides.filter(b => b.payment_method === "cash").reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayRides = rides.filter(b => new Date(b.completed_at ?? "") >= today);
+    const todayTotal = todayRides.reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    return { count: rides.length, total, upi, cash, todayTotal, todayCount: todayRides.length };
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          placeholder="Search drivers by name, city or vehicle number..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="py-10 text-center text-sm text-muted-foreground">No drivers found.</p>
+      )}
+
+      {/* Driver cards */}
+      {filtered.map(d => {
+        const stats = driverStats(d.id);
+        const isExpanded = expanded === d.id;
+        const rides = driverBookings(d.id);
+
+        return (
+          <div key={d.id} className="rounded-xl border border-border bg-background overflow-hidden">
+            {/* Driver header */}
+            <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                  {d.full_name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold">{d.full_name}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${d.is_online ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                      {d.is_online ? "● Online" : "Offline"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{d.city} · {d.vehicle_model || "—"} {d.vehicle_number && `· ${d.vehicle_number}`}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" className="text-xs"
+                  onClick={async () => { await supabase.from("drivers").update({ status: d.status === "active" ? "inactive" : "active" }).eq("id", d.id); onRefresh(); }}>
+                  {d.status === "active" ? "Deactivate" : "Activate"}
+                </Button>
+                <button onClick={() => setExpanded(isExpanded ? null : d.id)} className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors">
+                  {isExpanded ? <><ChevronUp className="size-3" /> Hide</> : <><ChevronDown className="size-3" /> View Analytics</>}
+                </button>
+              </div>
+            </div>
+
+            {/* Analytics row — always visible */}
+            <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4 lg:grid-cols-6">
+              {[
+                { label: "Total Rides", value: stats.count },
+                { label: "Total Earned", value: `₹${Math.round(stats.total)}` },
+                { label: "UPI", value: `₹${Math.round(stats.upi)}`, color: "text-blue-600" },
+                { label: "Cash", value: `₹${Math.round(stats.cash)}`, color: "text-green-600" },
+                { label: "Today's Rides", value: stats.todayCount },
+                { label: "Today Earned", value: `₹${Math.round(stats.todayTotal)}`, color: "text-primary" },
+              ].map(s => (
+                <div key={s.label} className="bg-background px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">{s.label}</p>
+                  <p className={`mt-1 text-lg font-bold ${s.color ?? ""}`}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Expandable ride history */}
+            {isExpanded && (
+              <div className="border-t border-border">
+                <div className="px-6 py-3 bg-muted/30">
+                  <p className="text-xs font-bold uppercase text-muted-foreground">Ride History ({rides.length} completed)</p>
+                </div>
+                {rides.length === 0 ? (
+                  <p className="px-6 py-6 text-sm text-muted-foreground">No completed rides yet.</p>
+                ) : (
+                  <div className="divide-y divide-border max-h-72 overflow-y-auto">
+                    {rides.slice(0, 50).map(b => (
+                      <div key={b.id} className="flex items-center justify-between px-6 py-3 gap-4 text-sm hover:bg-muted/20">
+                        <div>
+                          <p className="font-mono text-xs font-bold text-muted-foreground">{b.reference}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{b.pickup_area} → {b.drop_area}</p>
+                          <p className="text-xs text-muted-foreground">{b.completed_at ? new Date(b.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                            {b.payment_method?.toUpperCase()}
+                          </span>
+                          <span className="font-bold text-primary">₹{Math.round(b.final_fare ?? b.estimated_fare)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

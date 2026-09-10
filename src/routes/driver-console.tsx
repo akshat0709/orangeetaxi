@@ -218,9 +218,22 @@ function DriverConsolePage() {
     );
   }
 
-  const weeklyEarnings = recentRides.filter(r => new Date(r.completed_at ?? "") >= new Date(Date.now() - 7 * 24 * 3600000)).reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
-  const monthlyEarnings = recentRides.reduce((sum, r) => sum + (r.final_fare ?? r.estimated_fare), 0);
-  const avgRating = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
+  // Earnings calculations — daily, weekly, monthly split by payment method
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayRides   = recentRides.filter(r => new Date(r.completed_at ?? "") >= today);
+  const todayTotal   = todayRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const todayUPI     = todayRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const todayCash    = todayRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const weekStart    = new Date(Date.now() - 7 * 24 * 3600000);
+  const weeklyRides  = recentRides.filter(r => new Date(r.completed_at ?? "") >= weekStart);
+  const weeklyEarnings = weeklyRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const weekUPI      = weeklyRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const monthlyEarnings = recentRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const monthUPI     = recentRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
+
 
   return (
     <section className="min-h-screen bg-warm py-10">
@@ -329,13 +342,99 @@ function DriverConsolePage() {
           </TabsContent>
 
           <TabsContent value="earnings">
-            <div className="grid gap-4 lg:grid-cols-3 mb-8">
-              <div className="rounded-xl border border-border bg-background p-6"><p className="text-xs font-bold uppercase text-muted-foreground">This week</p><p className="mt-3 text-3xl font-bold">₹{Math.round(weeklyEarnings)}</p></div>
-              <div className="rounded-xl border border-border bg-background p-6"><p className="text-xs font-bold uppercase text-muted-foreground">This month</p><p className="mt-3 text-3xl font-bold">₹{Math.round(monthlyEarnings)}</p></div>
-              <div className="rounded-xl border border-border bg-background p-6">
-                <p className="text-xs font-bold uppercase text-muted-foreground">Avg Rating</p>
-                <div className="mt-3 flex items-end gap-2"><span className="text-3xl font-bold">{avgRating.toFixed(1)}</span><span className="mb-1 text-sm">/ 5</span></div>
+            {/* Today's breakdown */}
+            <div className="mb-6">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Today</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-muted-foreground">Total Earned</p>
+                  <p className="mt-2 text-3xl font-bold">₹{Math.round(todayTotal)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{todayRides.length} ride{todayRides.length !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 p-5">
+                  <p className="text-xs font-semibold text-blue-600">via UPI</p>
+                  <p className="mt-2 text-3xl font-bold text-blue-700">₹{Math.round(todayUPI)}</p>
+                  <p className="mt-1 text-xs text-blue-500">{todayRides.filter(r => r.payment_method === "upi").length} rides</p>
+                </div>
+                <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-5">
+                  <p className="text-xs font-semibold text-green-600">via Cash</p>
+                  <p className="mt-2 text-3xl font-bold text-green-700">₹{Math.round(todayCash)}</p>
+                  <p className="mt-1 text-xs text-green-500">{todayRides.filter(r => r.payment_method === "cash").length} rides</p>
+                </div>
               </div>
+            </div>
+
+            {/* Weekly breakdown */}
+            <div className="mb-6">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">This Week</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-muted-foreground">Total</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weeklyEarnings)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{weeklyRides.length} rides</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-blue-600">UPI</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weekUPI)}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-green-600">Cash</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weekCash)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly breakdown */}
+            <div className="mb-8">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">This Month</p>
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-muted-foreground">Total</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(monthlyEarnings)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{recentRides.length} rides</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-blue-600">UPI</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(monthUPI)}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-green-600">Cash</p>
+                  <p className="mt-2 text-2xl font-bold">₹{Math.round(monthCash)}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-5">
+                  <p className="text-xs font-semibold text-muted-foreground">Avg Rating</p>
+                  <p className="mt-2 text-2xl font-bold">{avgRating.toFixed(1)} ⭐</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ride history */}
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Ride History</p>
+              {recentRides.length === 0
+                ? <EmptyState icon={TrendingUp} title="No completed rides yet" text="Completed rides will appear here." />
+                : <div className="space-y-2">
+                    {recentRides.map(ride => (
+                      <div key={ride.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-5 py-4 gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <MapPin className="size-3 shrink-0 text-primary" />
+                            <span className="truncate">{ride.pickup_area} → {ride.drop_area}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {ride.completed_at ? new Date(ride.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                            {ride.payment_method?.toUpperCase()}
+                          </span>
+                          <span className="font-bold text-primary">₹{Math.round(ride.final_fare ?? ride.estimated_fare)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+              }
             </div>
           </TabsContent>
         </Tabs>
