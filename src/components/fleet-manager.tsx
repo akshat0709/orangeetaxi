@@ -45,7 +45,7 @@ export interface FleetVehicle {
   updated_at?: string;
 }
 
-const DEFAULT_SAMPLE_FLEET: FleetVehicle[] = [
+export const DEFAULT_SAMPLE_FLEET: FleetVehicle[] = [
   {
     id: "v-1001",
     plate_number: "DL 01 EV 1001",

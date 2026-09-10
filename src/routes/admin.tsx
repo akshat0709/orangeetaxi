@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { FleetManager } from "@/components/fleet-manager";
+import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
+
 
 
 export const Route = createFileRoute("/admin")({
@@ -341,6 +342,126 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [fleetVehicles, setFleetVehicles] = useState<any[]>([]);
+  const [customEntryDriverId, setCustomEntryDriverId] = useState<string | null>(null);
+
+  async function loadFleet() {
+    try {
+      const { data } = await supabase.from("fleet_vehicles").select("*").order("plate_number");
+      if (data && data.length > 0) {
+        setFleetVehicles(data);
+      } else {
+        const stored = localStorage.getItem("orange_fleet_vehicles");
+        if (stored) {
+          setFleetVehicles(JSON.parse(stored));
+        } else {
+          setFleetVehicles(DEFAULT_SAMPLE_FLEET);
+        }
+      }
+    } catch (e) {
+      setFleetVehicles(DEFAULT_SAMPLE_FLEET);
+    }
+  }
+
+  useEffect(() => {
+    loadFleet();
+    const ch = supabase.channel("admin-fleet-drivers-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "fleet_vehicles" }, () => loadFleet())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  async function updateFleetVehicleInDbOrLocal(v: any) {
+    try {
+      await supabase.from("fleet_vehicles").update({
+        status: v.status,
+        assigned_driver_id: v.assigned_driver_id,
+        assigned_at: v.assigned_at,
+        bay_number: v.bay_number,
+        updated_at: new Date().toISOString()
+      }).eq("id", v.id);
+    } catch (e) {}
+
+    const stored = localStorage.getItem("orange_fleet_vehicles");
+    if (stored) {
+      try {
+        const list = JSON.parse(stored);
+        const updated = list.map((item: any) => (item.id === v.id || item.plate_number === v.plate_number) ? { ...item, ...v } : item);
+        localStorage.setItem("orange_fleet_vehicles", JSON.stringify(updated));
+      } catch (e) {}
+    }
+  }
+
+  async function assignBayVehicleToDriver(vehicle: any, driver: Driver) {
+    // 1. If driver already has an older vehicle in fleet, return it to bay
+    const olderVeh = fleetVehicles.find(v => v.assigned_driver_id === driver.id && v.id !== vehicle.id);
+    if (olderVeh) {
+      const olderParked = {
+        ...olderVeh,
+        status: "in_bay",
+        assigned_driver_id: null,
+        assigned_at: null,
+        bay_number: olderVeh.bay_number || "Bay A-1"
+      };
+      await updateFleetVehicleInDbOrLocal(olderParked);
+      toast.info(`🅿️ Older car ${olderVeh.plate_number} parked back in ${olderParked.bay_number}.`);
+    }
+
+    // 2. Mark selected vehicle as assigned
+    const assigned = {
+      ...vehicle,
+      status: "assigned",
+      assigned_driver_id: driver.id,
+      assigned_at: new Date().toISOString()
+    };
+    await updateFleetVehicleInDbOrLocal(assigned);
+
+    // 3. Update driver in Supabase
+    await supabase.from("drivers").update({
+      vehicle_number: vehicle.plate_number,
+      vehicle_model: vehicle.model
+    }).eq("id", driver.id);
+
+    toast.success(`🚗 ${vehicle.plate_number} assigned to ${driver.full_name}! Customer rides & driver console updated.`);
+    setEditingVehicleId(null);
+    loadFleet();
+    onRefresh();
+  }
+
+  async function unassignDriverVehicle(driver: Driver) {
+    const currVeh = fleetVehicles.find(v => v.assigned_driver_id === driver.id || v.plate_number === driver.vehicle_number);
+    if (currVeh) {
+      const parked = {
+        ...currVeh,
+        status: "in_bay",
+        assigned_driver_id: null,
+        assigned_at: null,
+        bay_number: currVeh.bay_number || "Bay A-1"
+      };
+      await updateFleetVehicleInDbOrLocal(parked);
+    }
+
+    await supabase.from("drivers").update({
+      vehicle_number: "Unassigned"
+    }).eq("id", driver.id);
+
+    toast.success(`🅿️ ${driver.full_name}'s car unassigned and parked in bay.`);
+    setEditingVehicleId(null);
+    loadFleet();
+    onRefresh();
+  }
+
+  async function assignCustomVehicle(plate: string, model: string, driver: Driver) {
+    await supabase.from("drivers").update({
+      vehicle_number: plate,
+      vehicle_model: model
+    }).eq("id", driver.id);
+
+    toast.success(`Vehicle ${plate} assigned to ${driver.full_name}!`);
+    setEditingVehicleId(null);
+    onRefresh();
+  }
+
 
   const filtered = drivers.filter(d =>
     d.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -441,85 +562,146 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
             </div>
 
             {/* Daily Vehicle Assignment Form */}
-            {isEditingVehicle && (
-              <div className="border-t border-border bg-primary/5 p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                    <Car className="size-4" /> Daily Vehicle Assignment — {d.full_name}
-                  </p>
-                  <span className="text-[11px] text-muted-foreground">Updates customer booking screens & driver console in real-time</span>
-                </div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  <div className="sm:col-span-4">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Vehicle Model</label>
-                    <input
-                      type="text"
-                      defaultValue={d.vehicle_model || "Mahindra BE.6"}
-                      id={`model-${d.id}`}
-                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                      placeholder="e.g. Mahindra BE.6"
-                    />
-                  </div>
-                  <div className="sm:col-span-5">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Plate Number (Today's Car)</label>
-                    <input
-                      type="text"
-                      defaultValue={d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : ""}
-                      id={`plate-${d.id}`}
-                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                      placeholder="e.g. DL 01 EV 8092"
-                    />
-                  </div>
-                  <div className="sm:col-span-3 flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 h-9 text-xs font-semibold"
-                      onClick={async () => {
-                        const m = (document.getElementById(`model-${d.id}`) as HTMLInputElement)?.value;
-                        const p = (document.getElementById(`plate-${d.id}`) as HTMLInputElement)?.value;
-                        if (!p?.trim()) {
-                          toast.error("Please enter a vehicle plate number");
-                          return;
-                        }
-                        const { error } = await supabase.from("drivers").update({
-                          vehicle_model: m?.trim() || "Mahindra BE.6",
-                          vehicle_number: p.trim().toUpperCase()
-                        }).eq("id", d.id);
-                        if (error) {
-                          toast.error("Could not assign vehicle: " + error.message);
-                          return;
-                        }
-                        toast.success(`Vehicle ${p.trim().toUpperCase()} assigned to ${d.full_name}! Updated across all active bookings.`);
-                        setEditingVehicleId(null);
-                        onRefresh();
-                      }}
-                    >
-                      Save Vehicle
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-9 text-xs" onClick={() => setEditingVehicleId(null)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-                {/* Quick sample plate buttons for fast admin operation */}
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">Quick Sample Plates:</span>
-                  {["DL 01 EV 2001", "DL 01 EV 2002", "DL 01 EV 2003", "HR 26 EV 5010"].map(plate => (
-                    <button
-                      key={plate}
-                      type="button"
-                      onClick={() => {
-                        const el = document.getElementById(`plate-${d.id}`) as HTMLInputElement;
-                        if (el) el.value = plate;
-                      }}
-                      className="rounded border border-border bg-background px-2 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                    >
-                      {plate}
+            {isEditingVehicle && (() => {
+              const bayVehicles = fleetVehicles.filter(v => v.status === "in_bay");
+
+              return (
+                <div className="border-t border-border bg-primary/5 p-5 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                        <Car className="size-4" /> Daily Vehicle Assignment — {d.full_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Select an available vehicle from the bay. Updates customer booking screens & driver console in real-time.
+                      </p>
+                    </div>
+                    <button onClick={() => setEditingVehicleId(null)} className="text-muted-foreground hover:text-foreground">
+                      <X className="size-4" />
                     </button>
-                  ))}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm space-y-3">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <ParkingSquare className="size-3.5 text-blue-600" />
+                          Vehicles in Bay Available to Assign ({bayVehicles.length})
+                        </span>
+                        {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
+                          <span className="text-[11px] font-normal text-muted-foreground">
+                            Current: <strong className="font-mono text-primary">{d.vehicle_number}</strong>
+                          </span>
+                        )}
+                      </label>
+
+                      <div className="mt-2 flex flex-col sm:flex-row gap-2.5">
+                        <select
+                          id={`select-bay-veh-${d.id}`}
+                          defaultValue=""
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                        >
+                          <option value="">-- Choose a Vehicle Currently in Bay --</option>
+                          {bayVehicles.map(v => (
+                            <option key={v.id || v.plate_number} value={v.id || v.plate_number}>
+                              {v.plate_number} · {v.model} — 🅿️ {v.bay_number || "Bay A-1"} (🔋 {v.battery_percentage}%)
+                            </option>
+                          ))}
+                          {bayVehicles.length === 0 && (
+                            <option disabled value="">No vehicles currently in bay. Register one or park one back.</option>
+                          )}
+                        </select>
+
+                        <Button
+                          size="sm"
+                          className="h-10 px-5 text-xs font-semibold gap-1.5 shrink-0"
+                          onClick={async () => {
+                            const selectEl = document.getElementById(`select-bay-veh-${d.id}`) as HTMLSelectElement;
+                            const selectedVal = selectEl?.value;
+                            if (!selectedVal) {
+                              toast.error("Please select a vehicle from the bay dropdown");
+                              return;
+                            }
+                            const selectedVeh = fleetVehicles.find(v => (v.id === selectedVal || v.plate_number === selectedVal));
+                            if (!selectedVeh) return;
+
+                            await assignBayVehicleToDriver(selectedVeh, d);
+                          }}
+                        >
+                          <Check className="size-3.5" /> Assign Selected Car
+                        </Button>
+
+                        {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-10 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 gap-1.5"
+                            onClick={async () => {
+                              await unassignDriverVehicle(d);
+                            }}
+                          >
+                            <ParkingSquare className="size-3.5" /> Return Current Car to Bay
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                      <Zap className="size-3 text-emerald-600 shrink-0" />
+                      Assigning a car moves it out of the bay. If {d.full_name} already has an assigned vehicle, the older one is automatically parked back in the bay.
+                    </p>
+
+                    {/* Manual entry fallback */}
+                    <div className="pt-2 border-t border-border/70">
+                      <button
+                        type="button"
+                        onClick={() => setCustomEntryDriverId(customEntryDriverId === d.id ? null : d.id)}
+                        className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                      >
+                        {customEntryDriverId === d.id ? "▲ Close manual plate entry" : "▼ Need to enter custom / external plate manually?"}
+                      </button>
+
+                      {customEntryDriverId === d.id && (
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end bg-muted/40 p-3 rounded-lg border border-border">
+                          <div className="sm:col-span-5">
+                            <label className="text-[10px] uppercase font-semibold text-muted-foreground">Model</label>
+                            <input
+                              id={`manual-model-${d.id}`}
+                              defaultValue={d.vehicle_model || "Mahindra BE.6"}
+                              className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div className="sm:col-span-4">
+                            <label className="text-[10px] uppercase font-semibold text-muted-foreground">Plate Number</label>
+                            <input
+                              id={`manual-plate-${d.id}`}
+                              placeholder="e.g. DL 01 EV 9999"
+                              className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div className="sm:col-span-3">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="w-full h-8 text-xs font-semibold"
+                              onClick={async () => {
+                                const m = (document.getElementById(`manual-model-${d.id}`) as HTMLInputElement)?.value;
+                                const p = (document.getElementById(`manual-plate-${d.id}`) as HTMLInputElement)?.value;
+                                if (!p?.trim()) { toast.error("Please enter a plate number"); return; }
+                                await assignCustomVehicle(p.trim().toUpperCase(), m?.trim() || "Mahindra BE.6", d);
+                              }}
+                            >
+                              Assign Custom Plate
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
+
 
 
             {/* Analytics row — always visible */}
