@@ -10,8 +10,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { MapPicker } from "@/components/map-picker";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export const Route = createFileRoute("/book")({
   head: () => ({ meta: [
@@ -68,6 +71,9 @@ function PassengerPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory | null>(null);
   const [pickupId, setPickupId] = useState("");
   const [dropId, setDropId] = useState("");
+  // GPS locations (used when Maps key is available)
+  const [pickupGPS, setPickupGPS] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [dropGPS, setDropGPS] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
   const [submitting, setSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<{ id: string; reference: string; otp: string } | null>(null);
@@ -84,6 +90,32 @@ function PassengerPage() {
       setVehicles(vData);
       setAreas(aData);
       if (p) setPricingSettings({ tax_percent: (p as any).tax_percent, platform_fee: (p as any).platform_fee });
+
+      // ✅ BOOKING PERSISTENCE FIX: Check for existing active booking
+      if (user) {
+        const { data: activeBooking } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("customer_id", user.id)
+          .in("status", ["searching", "accepted", "arrived", "in_progress"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeBooking) {
+          // Restore full state from the active booking
+          const veh = vData.find((x: any) => x.code === activeBooking.vehicle_code) || vData.find((x: any) => x.name === activeBooking.vehicle_name);
+          const pArea = aData.find((x: any) => x.name === activeBooking.pickup_area);
+          const dArea = aData.find((x: any) => x.name === activeBooking.drop_area);
+          if (veh) setSelectedVehicle(veh);
+          if (pArea) setPickupId(pArea.id);
+          if (dArea) setDropId(dArea.id);
+          setBookingData({ id: activeBooking.id, reference: activeBooking.reference, otp: activeBooking.ride_otp });
+          setStep(4);
+          setLoading(false);
+          return;
+        }
+      }
 
       const aiBookingStr = sessionStorage.getItem("ai_booking");
       if (aiBookingStr) {
@@ -103,12 +135,18 @@ function PassengerPage() {
       setLoading(false);
     }
     fetchData();
-  }, []);
+  }, [user]);
 
-  const pickup = areas.find(a => a.id === pickupId);
-  const drop = areas.find(a => a.id === dropId);
+  // Resolve pickup/drop from either area ID or GPS location
+  const pickup = pickupGPS
+    ? { name: pickupGPS.name, lat: pickupGPS.lat, lng: pickupGPS.lng }
+    : areas.find(a => a.id === pickupId);
+  const drop = dropGPS
+    ? { name: dropGPS.name, lat: dropGPS.lat, lng: dropGPS.lng }
+    : areas.find(a => a.id === dropId);
   const distKm = pickup && drop ? Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)) : 0;
   const fareBreakdown = selectedVehicle && distKm > 0 ? calcFare(selectedVehicle, distKm, pricingSettings) : null;
+
 
   async function confirmBooking() {
     if (!user) { navigate({ to: "/login", search: { redirect: "/book" } }); return; }
@@ -183,7 +221,7 @@ function PassengerPage() {
           <div className="rounded-xl border border-background/15 bg-background/5 p-7">
             {loading ? <div className="flex justify-center py-16"><Loader2 className="size-8 animate-spin text-primary" /></div> :
              step === 1 ? <Step1Vehicles vehicles={vehicles} selected={selectedVehicle} onSelect={setSelectedVehicle} onNext={() => { if (!user) { navigate({ to: "/login", search: { redirect: "/book" } }); return; } setStep(2); }} /> :
-             step === 2 ? <Step2Journey areas={areas} pickupId={pickupId} dropId={dropId} onPickup={setPickupId} onDrop={setDropId} distKm={distKm} fareBreakdown={fareBreakdown} selectedVehicle={selectedVehicle!} onBack={() => setStep(1)} onNext={() => setStep(3)} /> :
+             step === 2 ? <Step2Journey areas={areas} pickupId={pickupId} dropId={dropId} onPickup={setPickupId} onDrop={setDropId} pickupGPS={pickupGPS} dropGPS={dropGPS} onPickupGPS={setPickupGPS} onDropGPS={setDropGPS} distKm={distKm} fareBreakdown={fareBreakdown} selectedVehicle={selectedVehicle!} onBack={() => setStep(1)} onNext={() => setStep(3)} mapsKey={GOOGLE_MAPS_KEY} /> :
              step === 3 ? <Step3Confirm selectedVehicle={selectedVehicle!} pickup={pickup!} drop={drop!} fareBreakdown={fareBreakdown!} distKm={distKm} paymentMethod={paymentMethod} onPaymentChange={setPaymentMethod} onBack={() => setStep(2)} onConfirm={confirmBooking} submitting={submitting} /> :
              <Step4Confirmed bookingData={bookingData!} pickup={pickup!} drop={drop!} vehicle={selectedVehicle!} fare={fareBreakdown!.total} />}
           </div>
@@ -223,8 +261,55 @@ function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
   </div>;
 }
 
-function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, distKm, fareBreakdown, selectedVehicle, onBack, onNext }: any) {
-  const canProceed = pickupId && dropId && pickupId !== dropId;
+function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dropGPS, onPickupGPS, onDropGPS, distKm, fareBreakdown, selectedVehicle, onBack, onNext, mapsKey }: any) {
+  const [subStep, setSubStep] = useState<"pickup" | "drop">("pickup");
+  const hasPickup = pickupGPS || pickupId;
+  const hasDrop = dropGPS || dropId;
+  const canProceed = hasPickup && hasDrop && (pickupId !== dropId || (pickupGPS && dropGPS));
+
+  // If Maps key is available, use full GPS map flow
+  if (mapsKey) {
+    if (subStep === "pickup") {
+      return (
+        <MapPicker
+          label="Pickup location"
+          placeholder="Search or drag map to your pickup..."
+          apiKey={mapsKey}
+          onBack={onBack}
+          onConfirm={(loc) => { onPickupGPS(loc); setSubStep("drop"); }}
+        />
+      );
+    }
+    return (
+      <div>
+        {/* Pickup confirmed banner */}
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+          <MapPin className="size-4 shrink-0 text-primary" />
+          <span className="truncate font-medium text-background">{pickupGPS?.name}</span>
+          <button onClick={() => setSubStep("pickup")} className="ml-auto shrink-0 text-xs text-primary underline">Change</button>
+        </div>
+        <MapPicker
+          label="Drop-off location"
+          placeholder="Search or drag map to your destination..."
+          apiKey={mapsKey}
+          onBack={() => setSubStep("pickup")}
+          onConfirm={(loc) => { onDropGPS(loc); }}
+        />
+        {fareBreakdown && distKm > 0 && (
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate</p>
+            <p className="mt-2 text-3xl font-bold text-background">₹{Math.round(fareBreakdown.total)}</p>
+            <p className="mt-1 text-xs text-background/50">~{Math.round(distKm)} km · approx {Math.round(distKm / 0.5)} min</p>
+          </div>
+        )}
+        {hasDrop && (
+          <Button size="lg" className="mt-4 w-full" onClick={onNext}>Review & Confirm <ArrowRight /></Button>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: area dropdown (no Maps key)
   return <div>
     <p className="text-sm font-semibold text-background">Set your journey — {selectedVehicle.name}</p>
     <div className="mt-5 space-y-4">
@@ -256,6 +341,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, distKm, fareB
     </div>
   </div>;
 }
+
 
 function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, paymentMethod, onPaymentChange, onBack, onConfirm, submitting }: any) {
   return <div>
