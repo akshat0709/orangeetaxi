@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, Search, Users, X } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Search, Users, X, Zap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { FleetManager } from "@/components/fleet-manager";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Orange Taxi" }] }),
@@ -43,6 +45,14 @@ function AdminPage() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      return p.get("tab") || "bookings";
+    }
+    return "bookings";
+  });
+
 
   useEffect(() => {
     if (!authLoading) {
@@ -123,21 +133,37 @@ function AdminPage() {
         <h1 className="display-serif mt-2 text-4xl">Orange Operations</h1>
 
         {/* KPIs */}
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiCard label="Total Bookings" value={stats.totalBookings} sub={`${stats.activeBookings} active`} icon={Car} />
           <KpiCard label="Revenue" value={`₹${Math.round(stats.totalRevenue)}`} sub={`${stats.completedBookings} completed`} icon={BadgeCheck} />
           <KpiCard label="Drivers Online" value={stats.onlineDrivers} sub={`of ${drivers.length} total`} icon={Users} />
+          <KpiCard label="Orange Fleet" value="Mahindra BE.6" sub="Bay & battery tracking" icon={ParkingSquare} />
           <KpiCard label="Pending" value={stats.pendingApplications + stats.newEnquiries} sub={`${stats.pendingApplications} apps · ${stats.newEnquiries} enquiries`} icon={MoreHorizontal} />
         </div>
 
         {/* Main tabs */}
-        <Tabs defaultValue="bookings" className="mt-10">
+        <Tabs
+          value={activeTab}
+          onValueChange={val => {
+            setActiveTab(val);
+            if (typeof window !== "undefined") {
+              const u = new URL(window.location.href);
+              u.searchParams.set("tab", val);
+              window.history.replaceState(null, "", u.toString());
+            }
+          }}
+          className="mt-10"
+        >
           <TabsList className="mb-6 flex flex-wrap gap-1">
             <TabsTrigger value="bookings">Bookings <CountBadge n={stats.activeBookings} /></TabsTrigger>
+            <TabsTrigger value="fleet" className="gap-1.5 font-semibold">
+              <ParkingSquare className="size-3.5 text-primary" /> Fleet & Bays
+            </TabsTrigger>
+            <TabsTrigger value="drivers">Drivers</TabsTrigger>
             <TabsTrigger value="applications">Applications <CountBadge n={stats.pendingApplications} color="amber" /></TabsTrigger>
             <TabsTrigger value="enquiries">Enquiries <CountBadge n={stats.newEnquiries} color="blue" /></TabsTrigger>
-            <TabsTrigger value="drivers">Drivers</TabsTrigger>
           </TabsList>
+
 
           {/* BOOKINGS */}
           <TabsContent value="bookings">
@@ -298,6 +324,12 @@ function AdminPage() {
           <TabsContent value="drivers">
             <DriverAnalyticsPanel drivers={drivers} bookings={bookings} onRefresh={loadAll} />
           </TabsContent>
+
+          {/* FLEET & BAYS */}
+          <TabsContent value="fleet">
+            <FleetManager drivers={drivers} onRefresh={loadAll} />
+          </TabsContent>
+
 
         </Tabs>
       </div>
