@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, BriefcaseBusiness, Car, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Search, Users, X, Zap } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Search, Users, Wallet, X, Zap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
+import { CashSettlementManager } from "@/components/cash-settlement-manager";
+
 
 
 
@@ -53,6 +55,18 @@ function AdminPage() {
     }
     return "bookings";
   });
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      if (typeof window !== "undefined") {
+        const p = new URLSearchParams(window.location.search);
+        const t = p.get("tab");
+        if (t) setActiveTab(t);
+      }
+    };
+    window.addEventListener("popstate", handleUrlChange);
+    return () => window.removeEventListener("popstate", handleUrlChange);
+  }, []);
 
 
   useEffect(() => {
@@ -160,10 +174,14 @@ function AdminPage() {
             <TabsTrigger value="fleet" className="gap-1.5 font-semibold">
               <ParkingSquare className="size-3.5 text-primary" /> Fleet & Bays
             </TabsTrigger>
+            <TabsTrigger value="cash" className="gap-1.5 font-semibold">
+              <Banknote className="size-3.5 text-emerald-600" /> Cash Settlements
+            </TabsTrigger>
             <TabsTrigger value="drivers">Drivers</TabsTrigger>
             <TabsTrigger value="applications">Applications <CountBadge n={stats.pendingApplications} color="amber" /></TabsTrigger>
             <TabsTrigger value="enquiries">Enquiries <CountBadge n={stats.newEnquiries} color="blue" /></TabsTrigger>
           </TabsList>
+
 
 
           {/* BOOKINGS */}
@@ -330,6 +348,12 @@ function AdminPage() {
           <TabsContent value="fleet">
             <FleetManager drivers={drivers} onRefresh={loadAll} />
           </TabsContent>
+
+          {/* CASH SETTLEMENTS */}
+          <TabsContent value="cash">
+            <CashSettlementManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+          </TabsContent>
+
 
 
         </Tabs>

@@ -79,6 +79,9 @@ export function SiteHeader() {
                   <DropdownMenuItem asChild>
                     <Link to="/admin" search={{ tab: "fleet" }}>Fleet & Bays</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" search={{ tab: "cash" }}>Cash Settlements</Link>
+                  </DropdownMenuItem>
                 </>
               )}
 

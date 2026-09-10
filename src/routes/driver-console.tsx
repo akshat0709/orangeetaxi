@@ -2,7 +2,8 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, Banknote, BatteryCharging, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,6 +59,7 @@ function DriverConsolePage() {
   const [activeRides, setActiveRides] = useState<Booking[]>([]);
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
+  const [settlements, setSettlements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
@@ -78,9 +80,20 @@ function DriverConsolePage() {
     const channel = supabase.channel("driver-bookings")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "driver_cash_settlements" }, () => loadData())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const handleStorageUpdate = () => loadData();
+    window.addEventListener("storage", handleStorageUpdate);
+    window.addEventListener("cash_settlements_updated", handleStorageUpdate);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("storage", handleStorageUpdate);
+      window.removeEventListener("cash_settlements_updated", handleStorageUpdate);
+    };
   }, [user]);
+
 
   // Live location sharing
   useEffect(() => {
@@ -139,10 +152,36 @@ function DriverConsolePage() {
 
     const { data: recent } = await supabase.from("bookings").select("*")
       .eq("driver_id", driverData.id).eq("status", "completed")
-      .order("completed_at", { ascending: false }).limit(20);
+      .order("completed_at", { ascending: false }).limit(100);
     setRecentRides((recent as Booking[]) ?? []);
 
+    try {
+      const { data: settleData } = await supabase
+        .from("driver_cash_settlements")
+        .select("*")
+        .eq("driver_id", driverData.id)
+        .order("created_at", { ascending: false });
+      if (settleData) {
+        setSettlements(settleData);
+      } else {
+        const stored = localStorage.getItem("orange_cash_settlements");
+        if (stored) {
+          const all = JSON.parse(stored);
+          setSettlements(all.filter((s: any) => s.driver_id === driverData.id));
+        }
+      }
+    } catch (e) {
+      const stored = localStorage.getItem("orange_cash_settlements");
+      if (stored) {
+        try {
+          const all = JSON.parse(stored);
+          setSettlements(all.filter((s: any) => s.driver_id === driverData.id));
+        } catch (err) {}
+      }
+    }
+
     setLoading(false);
+
   }
 
   async function toggleOnline() {
@@ -235,6 +274,15 @@ function DriverConsolePage() {
   const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
   const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
 
+  // Cash calculations & Admin settlement balance
+  const totalCashCollected = recentRides
+    .filter(r => r.payment_method === "cash")
+    .reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+
+  const totalCashSubmitted = settlements
+    .reduce((s, x) => s + Number(x.amount), 0);
+
+  const currentCashHolding = Math.max(0, totalCashCollected - totalCashSubmitted);
 
   return (
     <section className="min-h-screen bg-warm py-10">
@@ -253,8 +301,18 @@ function DriverConsolePage() {
                   {driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "No car assigned today"}
                 </span>
               </span>
+              <span className="text-muted-foreground text-xs">·</span>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                currentCashHolding > 0
+                  ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+              }`}>
+                <Banknote className="size-3.5" />
+                <span>Cash in Hand: <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong></span>
+              </span>
             </div>
           </div>
+
 
           <button onClick={toggleOnline} disabled={toggling}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
@@ -354,8 +412,70 @@ function DriverConsolePage() {
           </TabsContent>
 
           <TabsContent value="earnings">
+            {/* Cash in Hand & Admin Handover Card */}
+            <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50">
+                    <Banknote className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Cash in Hand (To Be Handed Over to Admin)
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Physical cash collected from riders. Reduces automatically when Admin records collection.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
+                  <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
+                    ₹{Math.round(currentCashHolding)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-lg border border-border bg-background p-3.5">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase">Total Cash Collected (Rides)</p>
+                  <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Math.round(totalCashCollected)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">From all completed cash rides</p>
+                </div>
+
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3.5 dark:border-emerald-950 dark:bg-emerald-950/20">
+                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Cash Deposited with Admin</p>
+                  <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">₹{Math.round(totalCashSubmitted)}</p>
+                  <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">{settlements.length} verified handover{settlements.length !== 1 ? "s" : ""}</p>
+                </div>
+              </div>
+
+              {settlements.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-amber-200/70 dark:border-amber-900/40">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    Recent Handover Receipts from Admin
+                  </p>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {settlements.slice(0, 5).map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
+                        <div className="flex items-center gap-2">
+                          <Check className="size-3.5 text-emerald-600" />
+                          <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(s.amount)}</span>
+                          <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Today's breakdown */}
             <div className="mb-6">
+
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Today</p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
