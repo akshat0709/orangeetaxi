@@ -221,7 +221,7 @@ function PassengerPage() {
           <div className="rounded-xl border border-background/15 bg-background/5 p-7">
             {loading ? <div className="flex justify-center py-16"><Loader2 className="size-8 animate-spin text-primary" /></div> :
              step === 1 ? <Step1Vehicles vehicles={vehicles} selected={selectedVehicle} onSelect={setSelectedVehicle} onNext={() => { if (!user) { navigate({ to: "/login", search: { redirect: "/book" } }); return; } setStep(2); }} /> :
-             step === 2 ? <Step2Journey areas={areas} pickupId={pickupId} dropId={dropId} onPickup={setPickupId} onDrop={setDropId} pickupGPS={pickupGPS} dropGPS={dropGPS} onPickupGPS={setPickupGPS} onDropGPS={setDropGPS} distKm={distKm} fareBreakdown={fareBreakdown} selectedVehicle={selectedVehicle!} onBack={() => setStep(1)} onNext={() => setStep(3)} mapsKey={GOOGLE_MAPS_KEY} /> :
+             step === 2 ? <Step2Journey areas={areas} pickupId={pickupId} dropId={dropId} onPickup={setPickupId} onDrop={setDropId} pickupGPS={pickupGPS} dropGPS={dropGPS} onPickupGPS={setPickupGPS} onDropGPS={setDropGPS} distKm={distKm} fareBreakdown={fareBreakdown} selectedVehicle={selectedVehicle!} onBack={() => setStep(1)} onNext={() => setStep(3)} /> :
              step === 3 ? <Step3Confirm selectedVehicle={selectedVehicle!} pickup={pickup!} drop={drop!} fareBreakdown={fareBreakdown!} distKm={distKm} paymentMethod={paymentMethod} onPaymentChange={setPaymentMethod} onBack={() => setStep(2)} onConfirm={confirmBooking} submitting={submitting} /> :
              <Step4Confirmed bookingData={bookingData!} pickup={pickup!} drop={drop!} vehicle={selectedVehicle!} fare={fareBreakdown!.total} />}
           </div>
@@ -261,85 +261,73 @@ function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
   </div>;
 }
 
-function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dropGPS, onPickupGPS, onDropGPS, distKm, fareBreakdown, selectedVehicle, onBack, onNext, mapsKey }: any) {
+function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dropGPS, onPickupGPS, onDropGPS, distKm, fareBreakdown, selectedVehicle, onBack, onNext }: any) {
   const [subStep, setSubStep] = useState<"pickup" | "drop">("pickup");
-  const hasPickup = pickupGPS || pickupId;
-  const hasDrop = dropGPS || dropId;
-  const canProceed = hasPickup && hasDrop && (pickupId !== dropId || (pickupGPS && dropGPS));
+  const hasPickup = !!(pickupGPS || pickupId);
+  const hasDrop = !!(dropGPS || dropId);
 
-  // If Maps key is available, use full GPS map flow
-  if (mapsKey) {
-    if (subStep === "pickup") {
-      return (
-        <MapPicker
-          label="Pickup location"
-          placeholder="Search or drag map to your pickup..."
-          apiKey={mapsKey}
-          onBack={onBack}
-          onConfirm={(loc) => { onPickupGPS(loc); setSubStep("drop"); }}
-        />
-      );
-    }
+  if (subStep === "pickup") {
     return (
-      <div>
-        {/* Pickup confirmed banner */}
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
-          <MapPin className="size-4 shrink-0 text-primary" />
-          <span className="truncate font-medium text-background">{pickupGPS?.name}</span>
-          <button onClick={() => setSubStep("pickup")} className="ml-auto shrink-0 text-xs text-primary underline">Change</button>
-        </div>
-        <MapPicker
-          label="Drop-off location"
-          placeholder="Search or drag map to your destination..."
-          apiKey={mapsKey}
-          onBack={() => setSubStep("pickup")}
-          onConfirm={(loc) => { onDropGPS(loc); }}
-        />
-        {fareBreakdown && distKm > 0 && (
-          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate</p>
-            <p className="mt-2 text-3xl font-bold text-background">₹{Math.round(fareBreakdown.total)}</p>
-            <p className="mt-1 text-xs text-background/50">~{Math.round(distKm)} km · approx {Math.round(distKm / 0.5)} min</p>
-          </div>
-        )}
-        {hasDrop && (
-          <Button size="lg" className="mt-4 w-full" onClick={onNext}>Review & Confirm <ArrowRight /></Button>
-        )}
-      </div>
+      <MapPicker
+        label="Pickup location"
+        placeholder="Search street, landmark, or drag map..."
+        areas={areas}
+        initialLocation={pickupGPS}
+        onBack={onBack}
+        onConfirm={(loc) => {
+          onPickupGPS(loc);
+          setSubStep("drop");
+        }}
+      />
     );
   }
 
-  // Fallback: area dropdown (no Maps key)
-  return <div>
-    <p className="text-sm font-semibold text-background">Set your journey — {selectedVehicle.name}</p>
-    <div className="mt-5 space-y-4">
-      <div>
-        <Label className="text-background/70">Pickup location</Label>
-        <Select value={pickupId} onValueChange={onPickup}>
-          <SelectTrigger className="mt-1.5 border-background/20 bg-background/10 text-background"><MapPin className="mr-2 size-4 text-primary" /><SelectValue placeholder="Select pickup area" /></SelectTrigger>
-          <SelectContent>{areas.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}{a.is_airport ? " ✈️" : ""}</SelectItem>)}</SelectContent>
-        </Select>
+  return (
+    <div className="space-y-4">
+      {/* Pickup confirmed banner */}
+      <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/15 p-3.5 text-xs text-background">
+        <MapPin className="size-4 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] uppercase font-bold tracking-wider text-primary">Pickup Confirmed</p>
+          <p className="truncate font-medium text-background">{pickupGPS?.name || "Selected Pickup"}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSubStep("pickup")}
+          className="shrink-0 text-xs font-semibold text-primary underline hover:text-primary/80"
+        >
+          Change
+        </button>
       </div>
-      <div>
-        <Label className="text-background/70">Drop-off location</Label>
-        <Select value={dropId} onValueChange={onDrop}>
-          <SelectTrigger className="mt-1.5 border-background/20 bg-background/10 text-background"><Navigation className="mr-2 size-4 text-primary" /><SelectValue placeholder="Select drop area" /></SelectTrigger>
-          <SelectContent>{areas.filter((a: any) => a.id !== pickupId).map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}{a.is_airport ? " ✈️" : ""}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
+
+      <MapPicker
+        label="Drop-off destination"
+        placeholder="Search destination, hotel, or drag map..."
+        areas={areas}
+        initialLocation={dropGPS}
+        onBack={() => setSubStep("pickup")}
+        onConfirm={(loc) => {
+          onDropGPS(loc);
+        }}
+      />
+
       {fareBreakdown && distKm > 0 && (
-        <div className="rounded-lg border border-primary/30 bg-primary/10 p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate</p>
-          <p className="mt-3 text-3xl font-bold text-background">₹{Math.round(fareBreakdown.total)}</p>
-          <p className="mt-1 text-xs text-background/50">~{Math.round(distKm)} km · approx {Math.round(distKm / 0.5)} min</p>
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate ({selectedVehicle?.name})</p>
+            <span className="text-[11px] text-background/60">~{Math.round(distKm * 10) / 10} km · approx {Math.max(1, Math.round(distKm / 0.5))} min ride</span>
+          </div>
+          <p className="mt-2 text-3xl font-bold text-background font-mono">₹{Math.round(fareBreakdown.total)}</p>
         </div>
       )}
+
+      {hasDrop && (
+        <Button size="lg" className="mt-2 w-full" onClick={onNext}>
+          Review & Confirm <ArrowRight />
+        </Button>
+      )}
     </div>
-    <div className="mt-6 flex gap-3">
-      <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
-      <Button size="lg" className="flex-1" disabled={!canProceed} onClick={onNext}>Review & Confirm <ArrowRight /></Button>
-    </div>
-  </div>;
+  );
 }
 
 
