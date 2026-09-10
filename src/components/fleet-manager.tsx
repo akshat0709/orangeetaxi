@@ -103,7 +103,111 @@ const DEFAULT_SAMPLE_FLEET: FleetVehicle[] = [
   },
 ];
 
+const STANDARD_BAYS = [
+  "Bay A-1",
+  "Bay A-2",
+  "Bay A-3",
+  "Bay A-4",
+  "Bay B-1",
+  "Bay B-2",
+  "Bay B-3",
+  "Bay B-4",
+  "Charging Bay 1",
+  "Charging Bay 2",
+  "Charging Bay 3",
+  "Fast DC Charger",
+  "Inspection Bay",
+  "Washing Bay",
+];
+
+function BayDropdown({ currentBay, onSelect }: { currentBay: string; onSelect: (bay: string) => void }) {
+  const [isCustom, setIsCustom] = useState(false);
+  const [customValue, setCustomValue] = useState("");
+
+  if (isCustom) {
+    return (
+      <div className="flex items-center gap-1 animate-in fade-in">
+        <input
+          type="text"
+          value={customValue}
+          onChange={e => setCustomValue(e.target.value)}
+          placeholder="New Bay..."
+          autoFocus
+          className="h-6 w-24 rounded border border-blue-400 bg-background px-1.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (customValue.trim()) onSelect(customValue.trim());
+            setIsCustom(false);
+          }}
+          className="grid size-6 place-items-center rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          title="Save Bay"
+        >
+          <Check className="size-3" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsCustom(false)}
+          className="grid size-6 place-items-center rounded bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          title="Cancel"
+        >
+          <X className="size-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative inline-flex items-center group">
+      <ParkingSquare className="absolute left-2 size-3 text-blue-600 pointer-events-none dark:text-blue-400" />
+      <select
+        value={STANDARD_BAYS.includes(currentBay) ? currentBay : "custom_saved"}
+        onChange={e => {
+          if (e.target.value === "custom_prompt") {
+            setIsCustom(true);
+            setCustomValue(currentBay);
+          } else if (e.target.value !== "custom_saved") {
+            onSelect(e.target.value);
+          }
+        }}
+        className="h-6 appearance-none rounded-md border border-blue-200 bg-blue-50/90 pl-6 pr-6 text-[11px] font-semibold text-blue-700 outline-none hover:bg-blue-100/80 hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
+        title="Click to relocate vehicle to another bay"
+      >
+        {!STANDARD_BAYS.includes(currentBay) && (
+          <option value="custom_saved">{currentBay}</option>
+        )}
+        <optgroup label="Terminal Bays">
+          <option value="Bay A-1">Bay A-1</option>
+          <option value="Bay A-2">Bay A-2</option>
+          <option value="Bay A-3">Bay A-3</option>
+          <option value="Bay A-4">Bay A-4</option>
+          <option value="Bay B-1">Bay B-1</option>
+          <option value="Bay B-2">Bay B-2</option>
+          <option value="Bay B-3">Bay B-3</option>
+          <option value="Bay B-4">Bay B-4</option>
+        </optgroup>
+        <optgroup label="Charging Docks">
+          <option value="Charging Bay 1">⚡ Charging Bay 1</option>
+          <option value="Charging Bay 2">⚡ Charging Bay 2</option>
+          <option value="Charging Bay 3">⚡ Charging Bay 3</option>
+          <option value="Fast DC Charger">⚡ Fast DC Charger</option>
+        </optgroup>
+        <optgroup label="Service & Maintenance">
+          <option value="Inspection Bay">Inspection Bay</option>
+          <option value="Washing Bay">Washing Bay</option>
+        </optgroup>
+        <optgroup label="Custom">
+          <option value="custom_prompt">+ Custom Bay Name...</option>
+        </optgroup>
+      </select>
+      <ChevronDown className="absolute right-1.5 size-3 text-blue-600/70 pointer-events-none group-hover:text-blue-700" />
+    </div>
+  );
+}
+
 const SQL_CREATE_TABLE = `-- Run this in Supabase SQL Editor:
+
 CREATE TABLE IF NOT EXISTS public.fleet_vehicles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   plate_number text UNIQUE NOT NULL,
@@ -258,6 +362,16 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     await persistVehicleUpdate(updated);
     toast.success(`${vehicle.plate_number} battery updated to ${clamped}%`);
   }
+
+  // Quick bay update directly from dropdown
+  async function changeBay(vehicle: FleetVehicle, newBay: string) {
+    if (!newBay || newBay === vehicle.bay_number) return;
+    const updated: FleetVehicle = { ...vehicle, bay_number: newBay };
+    setVehicles(prev => prev.map(v => (v.id === vehicle.id ? updated : v)));
+    await persistVehicleUpdate(updated);
+    toast.success(`🅿️ ${vehicle.plate_number} relocated to ${newBay}!`);
+  }
+
 
   // Register a new vehicle
   async function handleRegisterVehicle(e: React.FormEvent) {
@@ -760,10 +874,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                               {v.model} · {v.color}
                             </p>
                           </div>
-                          <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
-                            <ParkingSquare className="size-3" /> {v.bay_number}
-                          </span>
+                          <BayDropdown
+                            currentBay={v.bay_number}
+                            onSelect={(newBay) => changeBay(v, newBay)}
+                          />
                         </div>
+
 
                         {/* Battery Level Meter & Telemetry */}
                         <div className="mt-4 rounded-lg border border-border/70 bg-muted/30 p-3">
@@ -966,10 +1082,17 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                               {v.model} · {v.color}
                             </p>
                           </div>
-                          <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-                            ● On Duty
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+                              ● On Duty
+                            </span>
+                            <BayDropdown
+                              currentBay={v.bay_number}
+                              onSelect={(newBay) => changeBay(v, newBay)}
+                            />
+                          </div>
                         </div>
+
 
                         {/* Assigned Driver Card */}
                         <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2.5">
