@@ -168,15 +168,30 @@ function AdminPage() {
                         <td className="px-4 py-3">
                           {b.status === "searching" ? (
                             <Select onValueChange={v => assignDriver(b.id, v)}>
-                              <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Assign driver" /></SelectTrigger>
+                              <SelectTrigger className="h-7 w-48 text-xs"><SelectValue placeholder="Assign driver" /></SelectTrigger>
                               <SelectContent>
-                                {drivers.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name} {d.is_online ? '(Online)' : '(Offline)'}</SelectItem>)}
+                                {drivers.map(d => (
+                                  <SelectItem key={d.id} value={d.id}>
+                                    {d.full_name} · {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "No plate"} {d.is_online ? '(Online)' : '(Offline)'}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span className="text-xs text-muted-foreground">{b.driver_id ? drivers.find(d => d.id === b.driver_id)?.full_name ?? "Assigned" : "—"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {b.driver_id ? (() => {
+                                const d = drivers.find(dr => dr.id === b.driver_id);
+                                return d ? (
+                                  <span className="flex flex-col">
+                                    <span className="font-semibold text-foreground">{d.full_name}</span>
+                                    <span className="font-mono text-[11px] font-bold text-primary">{d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "No plate"}</span>
+                                  </span>
+                                ) : "Assigned";
+                              })() : "—"}
+                            </span>
                           )}
                         </td>
+
                         <td className="px-4 py-3">
                           <span className="font-mono text-sm font-bold text-primary">{b.ride_otp || "—"}</span>
                         </td>
@@ -293,6 +308,7 @@ function AdminPage() {
 function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Driver[]; bookings: any[]; onRefresh: () => void }) {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
 
   const filtered = drivers.filter(d =>
     d.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -341,6 +357,7 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
       {filtered.map(d => {
         const stats = driverStats(d.id);
         const isExpanded = expanded === d.id;
+        const isEditingVehicle = editingVehicleId === d.id;
         const rides = driverBookings(d.id);
 
         return (
@@ -358,11 +375,30 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
                       {d.is_online ? "● Online" : "Offline"}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{d.city} · {d.vehicle_model || "—"} {d.vehicle_number && `· ${d.vehicle_number}`}</p>
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground">{d.city}</span>
+                    <span className="text-muted-foreground text-xs">·</span>
+                    <span className="inline-flex items-center gap-1 rounded bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs font-semibold text-primary">
+                      <Car className="size-3" />
+                      <span>{d.vehicle_model || "Mahindra BE.6"}</span>
+                      <span className="font-mono font-bold">
+                        {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "⚠️ No car assigned"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" className="text-xs"
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                  onClick={() => setEditingVehicleId(isEditingVehicle ? null : d.id)}
+                >
+                  <Car className="size-3.5" />
+                  {isEditingVehicle ? "Close" : (d.vehicle_number && d.vehicle_number !== "Unassigned" ? "Change Vehicle" : "Assign Daily Vehicle")}
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs"
                   onClick={async () => { await supabase.from("drivers").update({ status: d.status === "active" ? "inactive" : "active" }).eq("id", d.id); onRefresh(); }}>
                   {d.status === "active" ? "Deactivate" : "Activate"}
                 </Button>
@@ -371,6 +407,88 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
                 </button>
               </div>
             </div>
+
+            {/* Daily Vehicle Assignment Form */}
+            {isEditingVehicle && (
+              <div className="border-t border-border bg-primary/5 p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Car className="size-4" /> Daily Vehicle Assignment — {d.full_name}
+                  </p>
+                  <span className="text-[11px] text-muted-foreground">Updates customer booking screens & driver console in real-time</span>
+                </div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div className="sm:col-span-4">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Vehicle Model</label>
+                    <input
+                      type="text"
+                      defaultValue={d.vehicle_model || "Mahindra BE.6"}
+                      id={`model-${d.id}`}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="e.g. Mahindra BE.6"
+                    />
+                  </div>
+                  <div className="sm:col-span-5">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase">Plate Number (Today's Car)</label>
+                    <input
+                      type="text"
+                      defaultValue={d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : ""}
+                      id={`plate-${d.id}`}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      placeholder="e.g. DL 01 EV 8092"
+                    />
+                  </div>
+                  <div className="sm:col-span-3 flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-9 text-xs font-semibold"
+                      onClick={async () => {
+                        const m = (document.getElementById(`model-${d.id}`) as HTMLInputElement)?.value;
+                        const p = (document.getElementById(`plate-${d.id}`) as HTMLInputElement)?.value;
+                        if (!p?.trim()) {
+                          toast.error("Please enter a vehicle plate number");
+                          return;
+                        }
+                        const { error } = await supabase.from("drivers").update({
+                          vehicle_model: m?.trim() || "Mahindra BE.6",
+                          vehicle_number: p.trim().toUpperCase()
+                        }).eq("id", d.id);
+                        if (error) {
+                          toast.error("Could not assign vehicle: " + error.message);
+                          return;
+                        }
+                        toast.success(`Vehicle ${p.trim().toUpperCase()} assigned to ${d.full_name}! Updated across all active bookings.`);
+                        setEditingVehicleId(null);
+                        onRefresh();
+                      }}
+                    >
+                      Save Vehicle
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-9 text-xs" onClick={() => setEditingVehicleId(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+                {/* Quick sample plate buttons for fast admin operation */}
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">Quick Sample Plates:</span>
+                  {["DL 01 EV 2001", "DL 01 EV 2002", "DL 01 EV 2003", "HR 26 EV 5010"].map(plate => (
+                    <button
+                      key={plate}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(`plate-${d.id}`) as HTMLInputElement;
+                        if (el) el.value = plate;
+                      }}
+                      className="rounded border border-border bg-background px-2 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                    >
+                      {plate}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             {/* Analytics row — always visible */}
             <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4 lg:grid-cols-6">

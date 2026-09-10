@@ -388,28 +388,53 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
 
   useEffect(() => {
-    // 1. Subscribe to booking status updates
+    let driverChannel: any = null;
+
+    function subscribeToDriver(driverId: string) {
+      if (driverChannel) supabase.removeChannel(driverChannel);
+      driverChannel = supabase.channel(`driver-${driverId}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${driverId}` }, (driverPayload) => {
+          setDriverInfo(prev => prev ? { ...prev, ...driverPayload.new } : (driverPayload.new as any));
+        }).subscribe();
+    }
+
+    // 1. Initial load: immediately check if driver is already assigned to this booking
+    async function loadInitial() {
+      const { data: b } = await supabase.from("bookings").select("status, driver_id").eq("id", bookingData.id).single();
+      if (b) {
+        if (b.status) setStatus(b.status);
+        if (b.driver_id) {
+          const { data: d } = await supabase.from("drivers").select("*").eq("id", b.driver_id).single();
+          if (d) {
+            setDriverInfo(d as any);
+            subscribeToDriver(d.id);
+          }
+        }
+      }
+    }
+    loadInitial();
+
+    // 2. Subscribe to booking status updates
     const bookingChannel = supabase.channel(`booking-${bookingData.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` }, async (payload) => {
         const newStatus = payload.new.status;
         setStatus(newStatus);
         
         // If driver assigned, fetch driver details
-        if (payload.new.driver_id && !driverInfo) {
+        if (payload.new.driver_id) {
           const { data } = await supabase.from("drivers").select("*").eq("id", payload.new.driver_id).single();
           if (data) {
             setDriverInfo(data as any);
-            // 2. Subscribe to driver location updates
-            supabase.channel(`driver-${data.id}`)
-              .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${data.id}` }, (driverPayload) => {
-                setDriverInfo(prev => prev ? { ...prev, current_lat: driverPayload.new.current_lat, current_lng: driverPayload.new.current_lng } : prev);
-              }).subscribe();
+            subscribeToDriver(data.id);
           }
         }
       }).subscribe();
       
-    return () => { supabase.removeChannel(bookingChannel); };
-  }, [bookingData.id, driverInfo]);
+    return () => {
+      supabase.removeChannel(bookingChannel);
+      if (driverChannel) supabase.removeChannel(driverChannel);
+    };
+  }, [bookingData.id]);
 
   return <div className="flex flex-col py-2">
     <div className="flex items-center gap-4 border-b border-background/10 pb-6">
@@ -430,13 +455,15 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
     {/* Driver Info */}
     {driverInfo ? (
       <div className="mt-6 rounded-xl border border-background/15 p-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-background/60">Your Driver</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-background/60">Your Driver & Assigned Vehicle</p>
         <div className="mt-4 flex items-start justify-between">
           <div>
             <p className="font-bold text-background">{driverInfo.full_name}</p>
-            <div className="mt-1 flex items-center gap-2 text-xs text-background/60">
+            <div className="mt-1 flex items-center gap-2 text-xs text-background/60 flex-wrap">
               <span className="flex items-center gap-1"><Car className="size-3" /> {driverInfo.vehicle_model || vehicle.name}</span>
-              <span className="rounded bg-background/10 px-1.5 py-0.5 font-mono text-background">{driverInfo.vehicle_number || "Awaiting Plate"}</span>
+              <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
+                {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
+              </span>
             </div>
           </div>
           <a href={`tel:${driverInfo.phone}`} className="grid size-10 place-items-center rounded-full bg-background/10 text-background hover:bg-background/20 transition-colors">

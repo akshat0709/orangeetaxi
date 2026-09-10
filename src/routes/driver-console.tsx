@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, BatteryCharging, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,6 +77,7 @@ function DriverConsolePage() {
     loadData();
     const channel = supabase.channel("driver-bookings")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, () => loadData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
@@ -110,7 +111,7 @@ function DriverConsolePage() {
         full_name: appData?.full_name || user.email?.split("@")[0] || "New Driver",
         city: appData?.city || "Delhi NCR",
         phone: appData?.phone || "",
-        vehicle_model: "Orange Go",
+        vehicle_model: "Mahindra BE.6",
         vehicle_number: "Unassigned"
       }).select().single();
       driverData = newDriver;
@@ -242,8 +243,19 @@ function DriverConsolePage() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Driver Console</p>
             <h1 className="display-serif mt-2 text-4xl">Welcome, {driver.full_name.split(" ")[0]}.</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{driver.city}</p>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">{driver.city}</span>
+              <span className="text-muted-foreground text-xs">·</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <Car className="size-3.5" />
+                <span>{driver.vehicle_model || "Mahindra BE.6"}</span>
+                <span className="font-mono font-bold">
+                  {driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "No car assigned today"}
+                </span>
+              </span>
+            </div>
           </div>
+
           <button onClick={toggleOnline} disabled={toggling}
             className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
             {toggling ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
