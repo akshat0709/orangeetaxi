@@ -148,12 +148,12 @@ function DriverConsolePage() {
     if (!driver) return;
     setToggling(true);
     const newStatus = !driver.is_online;
-    const { error } = await supabase.from("drivers").update({ is_active: newStatus, is_online: newStatus }).eq("id", driver.id);
+    const { error } = await supabase.from("drivers").update({ is_online: newStatus }).eq("id", driver.id);
     if (!error) {
       setDriver(prev => prev ? { ...prev, is_online: newStatus } : prev);
       toast.success(newStatus ? "You're now online — ready for rides!" : "You're now offline");
     } else {
-      toast.error("Could not update status");
+      toast.error("Could not update status: " + error.message);
     }
     setToggling(false);
   }
