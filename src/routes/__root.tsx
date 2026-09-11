@@ -9,7 +9,21 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
-import { Analytics } from "@vercel/analytics/react";
+
+function Analytics() {
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window.location.hostname.includes("vercel") || window.location.hostname.includes("orange"))) {
+      if (!document.getElementById("vercel-analytics-script")) {
+        const script = document.createElement("script");
+        script.id = "vercel-analytics-script";
+        script.src = "/_vercel/insights/script.js";
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    }
+  }, []);
+  return null;
+}
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";

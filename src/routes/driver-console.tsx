@@ -1,8 +1,8 @@
 // @ts-nocheck
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowRight, Banknote, BatteryCharging, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Wallet, X, Map } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Volume2, Wallet, X, Map } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,58 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700 border-red-200",
 };
 
+function playRideRequestChime() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // First tone (587.33 Hz - D5)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(587.33, now);
+    gain1.gain.setValueAtTime(0.35, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    // Second tone (880 Hz - A5)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(880, now + 0.16);
+    gain2.gain.setValueAtTime(0.4, now + 0.16);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.16);
+    osc2.stop(now + 0.55);
+
+    // Third tone (1318.51 Hz - E6)
+    const osc3 = ctx.createOscillator();
+    const gain3 = ctx.createGain();
+    osc3.type = "sine";
+    osc3.frequency.setValueAtTime(1318.51, now + 0.32);
+    gain3.gain.setValueAtTime(0.28, now + 0.32);
+    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    osc3.connect(gain3);
+    gain3.connect(ctx.destination);
+    osc3.start(now + 0.32);
+    osc3.stop(now + 0.75);
+
+    // Mobile haptic vibration
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    }
+  } catch (err) {
+    console.warn("Audio chime error:", err);
+  }
+}
+
 function DriverConsolePage() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -63,6 +115,14 @@ function DriverConsolePage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const s = localStorage.getItem("orange_driver_sound_enabled");
+      return s !== null ? s === "true" : true;
+    }
+    return true;
+  });
+  const prevRequestsCountRef = useRef(-1);
 
   useEffect(() => {
     if (!authLoading) {
@@ -78,7 +138,24 @@ function DriverConsolePage() {
     if (!user) return;
     loadData();
     const channel = supabase.channel("driver-bookings")
-      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, (payload) => {
+        if (payload.new?.status === "searching" && !payload.new?.driver_id) {
+          if (soundEnabled) {
+            playRideRequestChime();
+          }
+          toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+        }
+        loadData();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, (payload) => {
+        if (payload.new?.status === "searching" && payload.old?.status !== "searching") {
+          if (soundEnabled) {
+            playRideRequestChime();
+          }
+          toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+        }
+        loadData();
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, () => loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_cash_settlements" }, () => loadData())
       .subscribe();
@@ -92,7 +169,7 @@ function DriverConsolePage() {
       window.removeEventListener("storage", handleStorageUpdate);
       window.removeEventListener("cash_settlements_updated", handleStorageUpdate);
     };
-  }, [user]);
+  }, [user, soundEnabled]);
 
 
   // Live location sharing
@@ -148,7 +225,17 @@ function DriverConsolePage() {
     const { data: requests } = await supabase.from("bookings").select("*")
       .eq("status", "searching").is("driver_id", null)
       .order("created_at", { ascending: false }).limit(5);
-    setNewRequests((requests as Booking[]) ?? []);
+    const reqList = (requests as Booking[]) ?? [];
+    setNewRequests(reqList);
+
+    // If new requests arrived and driver is online, play chime alert!
+    if (reqList.length > prevRequestsCountRef.current && prevRequestsCountRef.current !== -1) {
+      if (soundEnabled && driverData?.is_online) {
+        playRideRequestChime();
+        toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+      }
+    }
+    prevRequestsCountRef.current = reqList.length;
 
     const { data: recent } = await supabase.from("bookings").select("*")
       .eq("driver_id", driverData.id).eq("status", "completed")
@@ -314,11 +401,52 @@ function DriverConsolePage() {
           </div>
 
 
-          <button onClick={toggleOnline} disabled={toggling}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
-            {toggling ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
-            {driver.is_online ? "Online" : "Go Online"}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sound Alert Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                localStorage.setItem("orange_driver_sound_enabled", String(next));
+                if (next) {
+                  playRideRequestChime();
+                  toast.success("Alert chime enabled 🔔");
+                } else {
+                  toast.info("Alert chime muted 🔕");
+                }
+              }}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+                soundEnabled
+                  ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              }`}
+              title={soundEnabled ? "Mute ride alerts" : "Enable ride alerts"}
+            >
+              {soundEnabled ? <Bell className="size-3.5 text-primary" /> : <BellOff className="size-3.5" />}
+              <span>{soundEnabled ? "Chime ON" : "Chime Muted"}</span>
+            </button>
+
+            {/* Test Sound Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playRideRequestChime();
+                toast.success("Playing test request chime 🎵");
+              }}
+              className="flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Test chime sound"
+            >
+              <Volume2 className="size-3.5 text-primary" />
+              <span>Test</span>
+            </button>
+
+            <button onClick={toggleOnline} disabled={toggling}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
+              {toggling ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+              {driver.is_online ? "Online" : "Go Online"}
+            </button>
+          </div>
         </div>
 
         <Tabs defaultValue="rides" className="mt-10">

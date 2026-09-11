@@ -21,6 +21,7 @@ import { Route as ElectricRouteImport } from './routes/electric'
 import { Route as ExperienceRouteImport } from './routes/experience'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TalkToOrangeRouteImport } from './routes/talk-to-orange'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -85,6 +86,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/talk-to-orange': typeof TalkToOrangeRoute
   '/terms': typeof TermsRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/talk-to-orange': typeof TalkToOrangeRoute
   '/terms': typeof TermsRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/experience': typeof ExperienceRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/profile': typeof ProfileRoute
   '/support': typeof SupportRoute
   '/talk-to-orange': typeof TalkToOrangeRoute
   '/terms': typeof TermsRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/experience'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/support'
     | '/talk-to-orange'
     | '/terms'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/experience'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/support'
     | '/talk-to-orange'
     | '/terms'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/experience'
     | '/login'
     | '/privacy'
+    | '/profile'
     | '/support'
     | '/talk-to-orange'
     | '/terms'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   ExperienceRoute: typeof ExperienceRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  ProfileRoute: typeof ProfileRoute
   SupportRoute: typeof SupportRoute
   TalkToOrangeRoute: typeof TalkToOrangeRoute
   TermsRoute: typeof TermsRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/support': {
       id: '/support'
       path: '/support'
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExperienceRoute: ExperienceRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  ProfileRoute: ProfileRoute,
   SupportRoute: SupportRoute,
   TalkToOrangeRoute: TalkToOrangeRoute,
   TermsRoute: TermsRoute,

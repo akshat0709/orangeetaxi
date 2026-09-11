@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { MapPicker } from "@/components/map-picker";
 import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
+import { LiveRideMap } from "@/components/live-ride-map";
+import { RatingModal } from "@/components/rating-modal";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
@@ -78,6 +80,8 @@ function PassengerPage() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
   const [submitting, setSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<{ id: string; reference: string; otp: string } | null>(null);
+  const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
+  const [liveRideStatus, setLiveRideStatus] = useState<string>("searching");
 
   useEffect(() => {
     async function fetchData() {
@@ -220,15 +224,87 @@ function PassengerPage() {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
           <div className="rounded-xl border border-background/15 bg-background/5 p-7">
-            {loading ? <div className="flex justify-center py-16"><Loader2 className="size-8 animate-spin text-primary" /></div> :
-             step === 1 ? <Step1Vehicles vehicles={vehicles} selected={selectedVehicle} onSelect={setSelectedVehicle} onNext={() => { if (!user) { navigate({ to: "/login", search: { redirect: "/book" } }); return; } setStep(2); }} /> :
-             step === 2 ? <Step2Journey areas={areas} pickupId={pickupId} dropId={dropId} onPickup={setPickupId} onDrop={setDropId} pickupGPS={pickupGPS} dropGPS={dropGPS} onPickupGPS={setPickupGPS} onDropGPS={setDropGPS} distKm={distKm} fareBreakdown={fareBreakdown} selectedVehicle={selectedVehicle!} onBack={() => setStep(1)} onNext={() => setStep(3)} /> :
-             step === 3 ? <Step3Confirm selectedVehicle={selectedVehicle!} pickup={pickup!} drop={drop!} fareBreakdown={fareBreakdown!} distKm={distKm} paymentMethod={paymentMethod} onPaymentChange={setPaymentMethod} onBack={() => setStep(2)} onConfirm={confirmBooking} submitting={submitting} /> :
-             <Step4Confirmed bookingData={bookingData!} pickup={pickup!} drop={drop!} vehicle={selectedVehicle!} fare={fareBreakdown!.total} />}
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="size-8 animate-spin text-primary" />
+              </div>
+            ) : step === 1 ? (
+              <Step1Vehicles
+                vehicles={vehicles}
+                selected={selectedVehicle}
+                onSelect={setSelectedVehicle}
+                onNext={() => {
+                  if (!user) {
+                    navigate({ to: "/login", search: { redirect: "/book" } });
+                    return;
+                  }
+                  setStep(2);
+                }}
+              />
+            ) : step === 2 ? (
+              <Step2Journey
+                areas={areas}
+                pickupId={pickupId}
+                dropId={dropId}
+                onPickup={setPickupId}
+                onDrop={setDropId}
+                pickupGPS={pickupGPS}
+                dropGPS={dropGPS}
+                onPickupGPS={setPickupGPS}
+                onDropGPS={setDropGPS}
+                distKm={distKm}
+                fareBreakdown={fareBreakdown}
+                selectedVehicle={selectedVehicle!}
+                onBack={() => setStep(1)}
+                onNext={() => setStep(3)}
+              />
+            ) : step === 3 ? (
+              <Step3Confirm
+                selectedVehicle={selectedVehicle!}
+                pickup={pickup!}
+                drop={drop!}
+                fareBreakdown={fareBreakdown!}
+                distKm={distKm}
+                paymentMethod={paymentMethod}
+                onPaymentChange={setPaymentMethod}
+                onBack={() => setStep(2)}
+                onConfirm={confirmBooking}
+                submitting={submitting}
+              />
+            ) : (
+              <Step4Confirmed
+                bookingData={bookingData!}
+                pickup={pickup!}
+                drop={drop!}
+                vehicle={selectedVehicle!}
+                fare={fareBreakdown?.total || selectedVehicle?.minimum_fare || 500}
+                distKm={distKm}
+                onDriverUpdate={setLiveDriverInfo}
+                onStatusUpdate={setLiveRideStatus}
+                onReset={() => {
+                  setStep(1);
+                  setBookingData(null);
+                  setLiveDriverInfo(null);
+                  setLiveRideStatus("searching");
+                }}
+              />
+            )}
           </div>
-          <figure className="overflow-hidden rounded-xl">
-            <img src={interiorImage} alt="Premium Orange cabin" className="aspect-[4/3] size-full object-cover" />
-          </figure>
+          {step === 4 && pickup && drop ? (
+            <div className="hidden lg:block sticky top-24">
+              <LiveRideMap
+                pickup={pickup}
+                drop={drop}
+                driver={liveDriverInfo}
+                status={liveRideStatus}
+                distKm={distKm}
+              />
+            </div>
+          ) : (
+            <figure className="overflow-hidden rounded-xl">
+              <img src={interiorImage} alt="Premium Orange cabin" className="aspect-[4/3] size-full object-cover" />
+            </figure>
+          )}
         </div>
       </div>
     </section>
@@ -372,9 +448,43 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /* ---------- STEP 4: Live Tracking ---------- */
-function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingData: { id: string; reference: string; otp: string }; pickup: ServiceArea; drop: ServiceArea; vehicle: VehicleCategory; fare: number; }) {
+function Step4Confirmed({
+  bookingData,
+  pickup,
+  drop,
+  vehicle,
+  fare,
+  distKm,
+  onDriverUpdate,
+  onStatusUpdate,
+  onReset,
+}: {
+  bookingData: { id: string; reference: string; otp: string };
+  pickup: ServiceArea;
+  drop: ServiceArea;
+  vehicle: VehicleCategory;
+  fare: number;
+  distKm?: number;
+  onDriverUpdate?: (driver: any) => void;
+  onStatusUpdate?: (status: string) => void;
+  onReset?: () => void;
+}) {
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+
+  function handleStatusChange(newStatus: string) {
+    setStatus(newStatus);
+    onStatusUpdate?.(newStatus);
+    if (newStatus === "completed") {
+      setRatingModalOpen(true);
+    }
+  }
+
+  function handleDriverChange(d: any) {
+    setDriverInfo(d);
+    onDriverUpdate?.(d);
+  }
 
   async function fetchDriverWithPhone(driverId: string) {
     try {
@@ -415,19 +525,28 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
       if (driverChannel) supabase.removeChannel(driverChannel);
       driverChannel = supabase.channel(`driver-${driverId}`)
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${driverId}` }, (driverPayload) => {
-          setDriverInfo(prev => prev ? { ...prev, ...driverPayload.new } : (driverPayload.new as any));
+          setDriverInfo(prev => {
+            const updated = prev ? { ...prev, ...driverPayload.new } : (driverPayload.new as any);
+            onDriverUpdate?.(updated);
+            return updated;
+          });
         }).subscribe();
     }
 
     // 1. Initial load: immediately check if driver is already assigned to this booking
     async function loadInitial() {
-      const { data: b } = await supabase.from("bookings").select("status, driver_id").eq("id", bookingData.id).single();
+      const { data: b } = await supabase.from("bookings").select("status, driver_id, rating").eq("id", bookingData.id).single();
       if (b) {
-        if (b.status) setStatus(b.status);
+        if (b.status) {
+          handleStatusChange(b.status);
+          if (b.status === "completed" && !b.rating) {
+            setRatingModalOpen(true);
+          }
+        }
         if (b.driver_id) {
           const d = await fetchDriverWithPhone(b.driver_id);
           if (d) {
-            setDriverInfo(d as any);
+            handleDriverChange(d);
             subscribeToDriver(d.id);
           }
         }
@@ -439,13 +558,13 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
     const bookingChannel = supabase.channel(`booking-${bookingData.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` }, async (payload) => {
         const newStatus = payload.new.status;
-        setStatus(newStatus);
+        handleStatusChange(newStatus);
         
         // If driver assigned, fetch driver details
         if (payload.new.driver_id) {
           const d = await fetchDriverWithPhone(payload.new.driver_id);
           if (d) {
-            setDriverInfo(d as any);
+            handleDriverChange(d);
             subscribeToDriver(d.id);
           }
         }
@@ -637,21 +756,35 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
       vehicle={vehicle}
     />
 
-    {/* Live Map (only if driver coords exist) */}
-    {driverInfo?.current_lat && driverInfo?.current_lng && (
-      <div className="mt-6 overflow-hidden rounded-xl border border-background/15 bg-background/5">
-        <iframe 
-          title="Driver Live Location"
-          width="100%" 
-          height="200" 
-          frameBorder="0" 
-          style={{ border: 0 }} 
-          src={`https://maps.google.com/maps?q=${driverInfo.current_lat},${driverInfo.current_lng}&z=15&output=embed`}
-          allowFullScreen
-        />
-        <div className="p-3 text-center text-xs text-background/60 bg-background/10">Live tracking active</div>
-      </div>
-    )}
+    {/* Live Map (Mobile View) */}
+    <div className="mt-6 lg:hidden">
+      <LiveRideMap
+        pickup={pickup}
+        drop={drop}
+        driver={driverInfo}
+        status={status}
+        distKm={distKm}
+      />
+    </div>
+
+    {/* 5-Star Post-Ride Rating Modal */}
+    <RatingModal
+      open={ratingModalOpen}
+      onOpenChange={setRatingModalOpen}
+      booking={{
+        id: bookingData.id,
+        reference: bookingData.reference,
+        pickup_area: pickup.name,
+        drop_area: drop.name,
+        estimated_fare: fare,
+        driver_id: driverInfo?.id,
+      }}
+      driver={driverInfo}
+      onSubmitted={() => {
+        if (onReset) onReset();
+        else window.location.reload();
+      }}
+    />
 
     <div className="mt-6 space-y-2 text-sm">
       <Row label="Pickup" value={pickup.name} />
@@ -663,7 +796,16 @@ function Step4Confirmed({ bookingData, pickup, drop, vehicle, fare }: { bookingD
     </div>
     
     <div className="mt-8 flex justify-center">
-      <Button variant="ghost" className="text-background/60 hover:text-background" onClick={() => window.location.reload()}>Book another ride</Button>
+      <Button
+        variant="ghost"
+        className="text-background/60 hover:text-background"
+        onClick={() => {
+          if (onReset) onReset();
+          else window.location.reload();
+        }}
+      >
+        Book another ride
+      </Button>
     </div>
   </div>;
 }
