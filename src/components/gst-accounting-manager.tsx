@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -51,7 +52,8 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
   const completedBookings = bookings.filter((b) => b.status === "completed");
 
   const filteredBookings = completedBookings.filter((b) => {
-    const d = new Date(b.completed_at || b.created_at);
+    const rawDate = b.completed_at || b.created_at;
+    const d = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date(0);
     const now = new Date();
 
     if (dateFilter === "today") {
@@ -359,8 +361,10 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
                 filteredBookings.map((b) => {
                   const fare = Number(b.final_fare || b.estimated_fare || 0);
                   const gst = calculateRideGST(fare, b.pickup_area, b.drop_area);
-                  const invNo = formatInvoiceNumber(b.reference, b.completed_at || b.created_at);
-                  const dateStr = new Date(b.completed_at || b.created_at).toLocaleDateString("en-IN", {
+                  const rawDate = b.completed_at || b.created_at;
+                  const invNo = formatInvoiceNumber(b.reference, rawDate);
+                  const validDate = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
+                  const dateStr = validDate.toLocaleDateString("en-IN", {
                     day: "2-digit",
                     month: "short",
                   });

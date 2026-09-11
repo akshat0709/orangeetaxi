@@ -61,11 +61,11 @@ export function TaxInvoiceModal({
 
   const fare = Number(booking.final_fare || booking.estimated_fare || 500);
   const gst = calculateRideGST(fare, booking.pickup_area, booking.drop_area);
-  const invoiceNumber = formatInvoiceNumber(booking.reference, booking.completed_at || booking.created_at);
-
-  const rideDate = booking.completed_at
-    ? new Date(booking.completed_at)
-    : new Date(booking.created_at || Date.now());
+  const rawDate = booking.completed_at || booking.created_at;
+  const invoiceNumber = formatInvoiceNumber(booking.reference, rawDate);
+  const rideDate = rawDate && !isNaN(new Date(rawDate).getTime())
+    ? new Date(rawDate)
+    : new Date();
 
   const formattedDate = rideDate.toLocaleDateString("en-IN", {
     day: "numeric",

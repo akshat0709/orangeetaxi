@@ -109,12 +109,12 @@ export interface GSTBreakdown {
  */
 export function calculateRideGST(
   totalFare: number,
-  pickupArea: string = "Delhi",
-  dropArea: string = "Delhi"
+  pickupArea?: string,
+  dropArea?: string
 ): GSTBreakdown {
   const fare = Math.max(0, Number(totalFare) || 0);
-  const pickupState = resolveStateFromLocation(pickupArea);
-  const dropState = resolveStateFromLocation(dropArea);
+  const pickupState = resolveStateFromLocation(pickupArea || "Delhi");
+  const dropState = resolveStateFromLocation(dropArea || "Delhi");
 
   // Place of supply in passenger transport is where passenger embarks (CGST Act Section 12(9))
   // However for interstate trips from Delhi to Haryana/UP, place of supply across border triggers IGST
@@ -164,8 +164,8 @@ export function calculateRideGST(
  * Generates an official sequential invoice number for a booking
  * Format: OT/2026-27/REF-XXXX
  */
-export function formatInvoiceNumber(reference: string, dateStr?: string): string {
-  const d = dateStr ? new Date(dateStr) : new Date();
+export function formatInvoiceNumber(reference?: string, dateStr?: string): string {
+  const d = dateStr && !isNaN(new Date(dateStr).getTime()) ? new Date(dateStr) : new Date();
   const year = d.getFullYear();
   const month = d.getMonth(); // 0-indexed
   // Indian Financial Year: April (3) to March
@@ -173,14 +173,14 @@ export function formatInvoiceNumber(reference: string, dateStr?: string): string
   const fyEnd = fyStart + 1;
   const fyStr = `${fyStart.toString().padStart(2, "0")}-${fyEnd.toString().padStart(2, "0")}`;
 
-  const cleanRef = (reference || "0000").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase();
+  const cleanRef = (reference || "0000").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase() || "0000";
   return `OT/${fyStr}/${cleanRef}`;
 }
 
 /**
  * Generates GSTR-1 Compliant CSV content ready for GST Portal offline tool / CA filing
  */
-export function generateGSTR1CSV(bookings: any[], profile: CompanyGSTProfile = DEFAULT_COMPANY_PROFILE): string {
+export function generateGSTR1CSV(bookings: any[] = [], profile: CompanyGSTProfile = DEFAULT_COMPANY_PROFILE): string {
   const headers = [
     "Invoice Number",
     "Invoice Date",
@@ -203,19 +203,20 @@ export function generateGSTR1CSV(bookings: any[], profile: CompanyGSTProfile = D
     "Payment Mode",
   ];
 
-  const rows = bookings.map((b) => {
-    const fare = Number(b.final_fare || b.estimated_fare || 0);
-    const date = b.completed_at ? new Date(b.completed_at) : new Date(b.created_at || Date.now());
+  const rows = (bookings || []).map((b) => {
+    const fare = Number(b?.final_fare || b?.estimated_fare || 0);
+    const rawDate = b?.completed_at || b?.created_at;
+    const date = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
     const dateFormatted = date.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     }).replace(/\//g, "-");
 
-    const invNum = formatInvoiceNumber(b.reference, b.completed_at || b.created_at);
-    const gst = calculateRideGST(fare, b.pickup_area, b.drop_area);
+    const invNum = formatInvoiceNumber(b?.reference, rawDate);
+    const gst = calculateRideGST(fare, b?.pickup_area, b?.drop_area);
 
-    const isB2B = Boolean(b.corporate_gstin || b.customer_gstin);
+    const isB2B = Boolean(b?.corporate_gstin || b?.customer_gstin);
     const invoiceType = isB2B ? "B2B (Regular)" : "B2C (Others)";
 
     return [
@@ -233,11 +234,11 @@ export function generateGSTR1CSV(bookings: any[], profile: CompanyGSTProfile = D
       `"N"`,
       `"${invoiceType}"`,
       `"${profile.gstin}"`,
-      `"${b.corporate_gstin || b.customer_gstin || "URP"}"`, // URP = Unregistered Person
-      `"${(b.customer_name || "Passenger").replace(/"/g, '""')}"`,
-      `"${b.vehicle_number || "Mahindra EV"}"`,
-      `"${(b.pickup_area || "")} to ${(b.drop_area || "")}"`,
-      `"${(b.payment_method || "cash").toUpperCase()}"`,
+      `"${b?.corporate_gstin || b?.customer_gstin || "URP"}"`, // URP = Unregistered Person
+      `"${(b?.customer_name || "Passenger").replace(/"/g, '""')}"`,
+      `"${b?.vehicle_number || "Mahindra EV"}"`,
+      `"${(b?.pickup_area || "")} to ${(b?.drop_area || "")}"`,
+      `"${(b?.payment_method || "cash").toUpperCase()}"`,
     ].join(",");
   });
 

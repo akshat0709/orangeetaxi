@@ -13,11 +13,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
-
-
-
+import { TabErrorBoundary } from "@/components/tab-error-boundary";
 
 export const Route = createFileRoute("/admin")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : "bookings",
+  }),
   head: () => ({ meta: [{ title: "Admin — Orange Taxi" }] }),
   component: AdminPage,
 });
@@ -49,25 +50,14 @@ function AdminPage() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== "undefined") {
-      const p = new URLSearchParams(window.location.search);
-      return p.get("tab") || "bookings";
-    }
-    return "bookings";
-  });
+  const search = Route.useSearch();
+  const [activeTab, setActiveTab] = useState(() => search?.tab || "bookings");
 
   useEffect(() => {
-    const handleUrlChange = () => {
-      if (typeof window !== "undefined") {
-        const p = new URLSearchParams(window.location.search);
-        const t = p.get("tab");
-        if (t) setActiveTab(t);
-      }
-    };
-    window.addEventListener("popstate", handleUrlChange);
-    return () => window.removeEventListener("popstate", handleUrlChange);
-  }, []);
+    if (search?.tab && search.tab !== activeTab) {
+      setActiveTab(search.tab);
+    }
+  }, [search?.tab]);
 
 
   useEffect(() => {
@@ -162,11 +152,11 @@ function AdminPage() {
           value={activeTab}
           onValueChange={val => {
             setActiveTab(val);
-            if (typeof window !== "undefined") {
-              const u = new URL(window.location.href);
-              u.searchParams.set("tab", val);
-              window.history.replaceState(null, "", u.toString());
-            }
+            navigate({
+              to: "/admin",
+              search: { tab: val },
+              replace: true,
+            });
           }}
           className="mt-10"
         >
@@ -360,7 +350,9 @@ function AdminPage() {
 
           {/* GST & INVOICING */}
           <TabsContent value="gst">
-            <GSTAccountingManager bookings={bookings} onRefresh={loadAll} />
+            <TabErrorBoundary tabName="GST & Invoicing" onRetry={loadAll}>
+              <GSTAccountingManager bookings={bookings} onRefresh={loadAll} />
+            </TabErrorBoundary>
           </TabsContent>
 
 
