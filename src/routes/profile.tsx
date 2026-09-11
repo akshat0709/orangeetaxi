@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert } from "lucide-react";
+import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -54,6 +55,7 @@ function ProfilePage() {
   const [guardianName, setGuardianName] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
   const [guardianSavedOnce, setGuardianSavedOnce] = useState(false);
+  const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -362,9 +364,21 @@ function ProfilePage() {
                               <span className="capitalize">{booking.payment_method}</span>
                             </div>
                           </div>
-                          <div className="shrink-0 text-right">
+                          <div className="shrink-0 text-right flex flex-col items-end">
                             <p className="text-lg font-bold text-primary">₹{Math.round(displayFare ?? 0)}</p>
                             {booking.final_fare == null && <p className="text-[10px] text-muted-foreground">est.</p>}
+                            {booking.status === "completed" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedInvoiceBooking(booking)}
+                                className="mt-2 h-7 px-2.5 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10 shadow-xs"
+                                title="View & download official GST tax invoice"
+                              >
+                                <FileText className="size-3" />
+                                <span>Invoice</span>
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -397,6 +411,17 @@ function ProfilePage() {
           </Tabs>
         </div>
       </div>
+
+      {selectedInvoiceBooking && (
+        <TaxInvoiceModal
+          open={Boolean(selectedInvoiceBooking)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedInvoiceBooking(null);
+          }}
+          booking={selectedInvoiceBooking}
+          customer={{ fullName, phone, email: user?.email }}
+        />
+      )}
     </div>
   );
 }

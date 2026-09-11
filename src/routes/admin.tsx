@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
+import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 
 
 
@@ -176,6 +177,9 @@ function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="cash" className="gap-1.5 font-semibold">
               <Banknote className="size-3.5 text-emerald-600" /> Cash Settlements
+            </TabsTrigger>
+            <TabsTrigger value="gst" className="gap-1.5 font-semibold">
+              <FileSpreadsheet className="size-3.5 text-blue-600" /> GST & Invoicing
             </TabsTrigger>
             <TabsTrigger value="drivers">Drivers</TabsTrigger>
             <TabsTrigger value="applications">Applications <CountBadge n={stats.pendingApplications} color="amber" /></TabsTrigger>
@@ -352,6 +356,11 @@ function AdminPage() {
           {/* CASH SETTLEMENTS */}
           <TabsContent value="cash">
             <CashSettlementManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+          </TabsContent>
+
+          {/* GST & INVOICING */}
+          <TabsContent value="gst">
+            <GSTAccountingManager bookings={bookings} onRefresh={loadAll} />
           </TabsContent>
 
 

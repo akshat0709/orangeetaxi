@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -14,6 +14,7 @@ import { MapPicker } from "@/components/map-picker";
 import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import { LiveRideMap } from "@/components/live-ride-map";
 import { RatingModal } from "@/components/rating-modal";
+import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
@@ -472,6 +473,7 @@ function Step4Confirmed({
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [taxInvoiceModalOpen, setTaxInvoiceModalOpen] = useState(false);
 
   function handleStatusChange(newStatus: string) {
     setStatus(newStatus);
@@ -785,6 +787,49 @@ function Step4Confirmed({
         else window.location.reload();
       }}
     />
+
+    {/* Completed Ride GST Tax Invoice Banner */}
+    {status === "completed" && (
+      <div className="mt-5 rounded-2xl border border-primary/30 bg-primary/10 p-4 flex items-center justify-between gap-3 flex-wrap shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+            <FileText className="size-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-foreground">Official GST Tax Invoice Ready</p>
+            <p className="text-[11px] text-background/70">ORANGE TAXI LIMITED · SAC 996412 · 5% GST</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setTaxInvoiceModalOpen(true)}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs px-3.5 h-8 gap-1.5 shadow"
+        >
+          <FileText className="size-3" />
+          <span>View Invoice</span>
+        </Button>
+      </div>
+    )}
+
+    {/* Tax Invoice Modal */}
+    {taxInvoiceModalOpen && (
+      <TaxInvoiceModal
+        open={taxInvoiceModalOpen}
+        onOpenChange={setTaxInvoiceModalOpen}
+        booking={{
+          id: bookingData.id,
+          reference: bookingData.reference,
+          pickup_area: pickup.name,
+          drop_area: drop.name,
+          estimated_fare: fare,
+          final_fare: fare,
+          driver_id: driverInfo?.id,
+          completed_at: new Date().toISOString(),
+        }}
+        driver={driverInfo}
+      />
+    )}
 
     <div className="mt-6 space-y-2 text-sm">
       <Row label="Pickup" value={pickup.name} />
