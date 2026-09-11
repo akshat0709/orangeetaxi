@@ -142,6 +142,79 @@ function DriverPage() {
       </div>
       <DriverApplicationForm />
     </div></section>
+
+    {/* Statutory Driver Onboarding Terms & Conditions (Clause 11.1(ix) & Clause 14.10) */}
+    <section className="border-t border-border bg-card py-20 md:py-28">
+      <div className="section-shell max-w-5xl">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <ShieldCheck className="size-4" /> Regulatory Disclosures (Clause 11.1 & 14.10)
+        </div>
+        <h2 className="display-serif mt-3 text-3xl md:text-4xl">
+          Standard Driver Terms & Operating Code / चालक ऑनबोर्डिंग नियम
+        </h2>
+        <p className="mt-3 text-sm text-muted-foreground">
+          In compliance with Clause 11.1(ix) of the Motor Vehicle Aggregator Guidelines, 2025, the terms governing driver-partner onboarding, fixed earnings, conduct, and vehicle operations are published below in English and Hindi.
+        </p>
+
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          {/* English Column */}
+          <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
+            <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+              <span>English — Operating Agreement</span>
+              <span className="text-[10px] uppercase font-bold text-primary">Official Terms</span>
+            </h3>
+            <div>
+              <p className="font-semibold text-foreground">1. Eligibility & Police Verification (Clause 15.4)</p>
+              <p className="mt-1">Every driver must possess a valid Commercial / Transport Driving Licence, minimum 2 years driving experience, and clean police verification records before being activated.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">2. Fixed Salary & Fair Incentives (Clause 14.6)</p>
+              <p className="mt-1">Orange Taxi provides dependable monthly fixed salaries + performance rewards. Drivers are not subject to arbitrary surge commissions or unfair trip deductions.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">3. Zero-Tolerance Alcohol & Drug Policy (Clause 14.10)</p>
+              <p className="mt-1">Operating any Orange Taxi under the influence of alcohol, narcotics, or intoxicating substances is strictly prohibited. Immediate suspension and permanent blacklisting apply upon violation.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">4. Vehicle Standards & Service Quality</p>
+              <p className="mt-1">All electric cabs must be kept spotless, air-conditioned throughout the journey, and operated with professional courtesy at all times.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">5. Fair Inquiry & Grievance (Section 8 SLA)</p>
+              <p className="mt-1">Any passenger complaint against a driver requires a mandatory 3-working-day fair inquiry before final disciplinary action is determined.</p>
+            </div>
+          </div>
+
+          {/* Hindi Column */}
+          <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
+            <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+              <span>हिंदी — चालक नियम एवं शर्तें</span>
+              <span className="text-[10px] uppercase font-bold text-primary">आधिकारिक नियम</span>
+            </h3>
+            <div>
+              <p className="font-semibold text-foreground">1. पात्रता एवं पुलिस सत्यापन (खंड 15.4)</p>
+              <p className="mt-1">सभी चालकों के पास वैध कमर्शियल ड्राइविंग लाइसेंस, न्यूनतम 2 वर्ष का अनुभव और पुलिस सत्यापन प्रमाणपत्र होना अनिवार्य है।</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">2. निश्चित मासिक वेतन एवं प्रोत्साहन (खंड 14.6)</p>
+              <p className="mt-1">ऑरेंज टैक्सी निश्चित मासिक वेतन और बेहतरीन सेवा के लिए अतिरिक्त बोनस प्रदान करती है। कोई अनुचित कमीशन कटौती नहीं की जाती।</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">3. नशा निषेध नीति - जीरो टॉलरेंस (खंड 14.10)</p>
+              <p className="mt-1">शराब, ड्रग्स या किसी भी प्रकार के नशे की हालत में वाहन चलाना सख्त वर्जित है। उल्लंघन करने पर चालक को तुरंत बर्खास्त और ब्लैकलिस्ट किया जाएगा।</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">4. वाहन स्वच्छता एवं एसी मानक</p>
+              <p className="mt-1">सभी इलेक्ट्रिक वाहन साफ-सुथरे रहने चाहिए, यात्रा के दौरान एसी चालू रहना चाहिए और यात्रियों के साथ आदरपूर्वक व्यवहार आवश्यक है।</p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">5. निष्पक्ष जांच का अधिकार (3 दिन की जांच)</p>
+              <p className="mt-1">किसी भी शिकायत की स्थिति में चालक को पक्ष रखने का पूरा अवसर दिया जाएगा और 3 कार्यदिवसों में निष्पक्ष जांच पूरी की जाएगी।</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </>;
 }
 
@@ -234,6 +307,12 @@ function DriverApplicationForm() {
           <div className="col-span-2">
             <Label htmlFor="da-msg">Anything else you'd like us to know? <span className="text-muted-foreground">(optional)</span></Label>
             <Textarea id="da-msg" rows={3} placeholder="Tell us about your experience or why you'd like to join Orange..." className="mt-1.5 resize-none bg-background" {...form.register("message")} />
+          </div>
+          {/* DPDP Data Collection Notice */}
+          <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground leading-relaxed">
+            <p>
+              <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By submitting, you consent to Orange Taxi Limited processing your contact info and driving licence for verification, background checks, and onboarding under our Privacy Policy.
+            </p>
           </div>
         </div>
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>

@@ -138,18 +138,70 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  return (
+    <footer className="bg-night py-16 text-background">
+      <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
+            <span className="text-sm font-bold tracking-[0.14em]">ORANGE TAXI</span>
+          </div>
+          <p className="mt-4 max-w-sm text-sm leading-6 text-background/70">
+            <strong>ORANGE TAXI LIMITED</strong> — India's zero-emission premium electric mobility network.
+          </p>
+          
+          {/* Statutory Corporate Identification under Companies Act, 2013 */}
+          <div className="mt-5 space-y-1.5 border-t border-background/15 pt-4 text-xs text-background/60">
+            <p><span className="font-semibold text-background/80">CIN:</span> U49224DL2026PLC461350</p>
+            <p><span className="font-semibold text-background/80">Registered Office:</span> S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi 110017, India</p>
+            <p className="pt-1">
+              <span className="font-semibold text-background/80">24x7 Helpline:</span> +91 11 4000 7000 · <span className="font-semibold text-background/80">Email:</span> support@orangetaxi.in
+            </p>
+            <p>
+              <span className="font-semibold text-background/80">Grievance Officer:</span> grievance@orangetaxi.in
+            </p>
+          </div>
+        </div>
 
-  return <footer className="bg-night py-16 text-background">
-    <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
-      <div><div className="flex items-center gap-2.5"><span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span><span className="text-sm font-bold tracking-[0.14em]">ORANGE TAXI</span></div><p className="mt-5 max-w-xs text-sm leading-7 text-background/60">Premium comfort. Thoughtful service. Electric by nature.</p></div>
-      <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-        <FooterGroup title="Explore" items={[["Home", "/"], ["Experience", "/experience"], ["Electric", "/electric"], ["Business", "/business"], ["About", "/about"]]} />
-        <FooterGroup title="Join us" items={[["Book a ride", "/book"], ["Drive with us", "/drive"], ["Talk to Orange", "/talk-to-orange"], ["Support", "/support"]]} />
-        <FooterGroup title="Legal" items={[["Privacy Policy", "/privacy"], ["Terms & Conditions", "/terms"]]} />
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          <FooterGroup
+            title="Explore"
+            items={[
+              ["Home", "/"],
+              ["Experience", "/experience"],
+              ["Electric Fleet", "/electric"],
+              ["For Business", "/business"],
+              ["About Us", "/about"],
+            ]}
+          />
+          <FooterGroup
+            title="Services"
+            items={[
+              ["Book a Ride", "/book"],
+              ["Drive With Us", "/drive"],
+              ["Talk to Orange", "/talk-to-orange"],
+              ["Support & Grievance", "/support"],
+              ["Corporate Contact", "/contact"],
+            ]}
+          />
+          <FooterGroup
+            title="Compliance & Legal"
+            items={[
+              ["Privacy Policy", "/privacy"],
+              ["Terms & Conditions", "/terms"],
+              ["Customer Care & SLA", "/support"],
+              ["Driver Code & Safety", "/drive"],
+            ]}
+          />
+        </div>
       </div>
-    </div>
-    <div className="section-shell mt-14 flex flex-col gap-3 border-t border-background/15 pt-6 text-xs text-background/45 sm:flex-row sm:justify-between"><span>© 2026 Orange Taxi</span><span>Instagram · LinkedIn · X</span></div>
-  </footer>;
+
+      <div className="section-shell mt-12 flex flex-col gap-3 border-t border-background/15 pt-6 text-xs text-background/50 sm:flex-row sm:items-center sm:justify-between">
+        <span>© 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.</span>
+        <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
+      </div>
+    </footer>
+  );
 }
 
 function FooterGroup({ title, items }: { title: string; items: readonly (readonly [string, string])[] }) {

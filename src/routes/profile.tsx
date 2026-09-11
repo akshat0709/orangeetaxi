@@ -118,7 +118,7 @@ function ProfilePage() {
       setBookingsLoading(true);
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, vehicle_name, payment_method, rating")
+        .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
         .eq("customer_id", user.id)
         .order("created_at", { ascending: false });
       if (!error && data) setBookings(data);
@@ -381,6 +381,30 @@ function ProfilePage() {
                             )}
                           </div>
                         </div>
+
+                        {/* 7-Day Driver Contact for Lost Items (Clause 14.11 MV Aggregator Guidelines) */}
+                        {booking.status === "completed" && booking.drivers?.phone && (
+                          (() => {
+                            const completedDate = booking.completed_at ? new Date(booking.completed_at).getTime() : new Date(booking.created_at).getTime();
+                            const isWithin7Days = (Date.now() - completedDate) <= 7 * 24 * 60 * 60 * 1000;
+                            if (!isWithin7Days) return null;
+                            const cleanPhone = booking.drivers.phone.replace(/[^0-9+]/g, "");
+                            return (
+                              <div className="mt-3.5 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2 text-xs">
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Phone className="size-3 text-primary" />
+                                  <span>Driver: <strong className="text-foreground">{booking.drivers.full_name}</strong> ({booking.drivers.phone})</span>
+                                </div>
+                                <a
+                                  href={`tel:${cleanPhone}`}
+                                  className="text-primary hover:underline font-semibold text-[11px] flex items-center gap-1"
+                                >
+                                  Call Driver (Lost Property)
+                                </a>
+                              </div>
+                            );
+                          })()
+                        )}
                       </div>
                     );
                   })

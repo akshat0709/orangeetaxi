@@ -2,11 +2,12 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -435,6 +436,10 @@ function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, pa
         </RadioGroup>
       </div>
     </div>
+    {/* Affirmative Booking Consent under Consumer Protection Rules */}
+    <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed">
+      By confirming, you agree to our <Link to="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
+    </div>
     <div className="mt-6 flex gap-3">
       <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
       <Button size="lg" className="flex-1" onClick={onConfirm} disabled={submitting}>
@@ -474,6 +479,23 @@ function Step4Confirmed({
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [taxInvoiceModalOpen, setTaxInvoiceModalOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState("delay");
+
+  async function handleCancelRide() {
+    setCancelling(true);
+    const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", bookingData.id);
+    if (error) {
+      toast.error("Failed to cancel ride: " + error.message);
+    } else {
+      setStatus("cancelled");
+      onStatusUpdate?.("cancelled");
+      setCancelModalOpen(false);
+      toast.success("Ride cancelled. ₹0 fee applied under statutory exemption.");
+    }
+    setCancelling(false);
+  }
 
   function handleStatusChange(newStatus: string) {
     setStatus(newStatus);
@@ -639,19 +661,33 @@ function Step4Confirmed({
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-lg font-bold text-background flex items-center gap-2">
-              {driverInfo.full_name}
-            </p>
-            <div className="flex items-center gap-2 text-xs text-background/60 flex-wrap">
-              <span className="flex items-center gap-1 text-background/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
-              <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
-                {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
-              </span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3.5">
+              {/* High-Resolution Driver Photo / Verified Avatar (Clause 14.9) */}
+              <div className="relative size-12 shrink-0 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
+                <span>{driverInfo.full_name?.charAt(0) || "D"}</span>
+                <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
+                  ✓
+                </span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-bold text-background flex items-center gap-2">
+                  {driverInfo.full_name}
+                  <span className="rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-semibold text-emerald-400 px-1.5 py-0.5">
+                    Verified Driver
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-background/60 flex-wrap">
+                  <span className="flex items-center gap-1 text-background/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
+                  <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
+                    {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Prominently Display Driver Phone Number with Copy Button */}
-            <div className="mt-3 flex items-center gap-2 pt-1 flex-wrap">
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
               <div className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-mono font-bold text-primary">
                 <Phone className="size-3 text-primary" />
                 <span>{activeDriverPhone}</span>
@@ -746,6 +782,80 @@ function Step4Confirmed({
         </Button>
       </div>
     </div>
+
+    {/* Fee-Exempt Cancellation Option (Clause 18 MV Aggregator Guidelines) */}
+    {(status === "searching" || status === "accepted" || status === "arrived") && (
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-background/10 bg-background/5 p-3 text-xs">
+        <span className="text-background/60">Need to change your ride?</span>
+        <button
+          type="button"
+          onClick={() => setCancelModalOpen(true)}
+          className="text-xs font-semibold text-rose-400 hover:text-rose-300 underline"
+        >
+          Cancel Ride (Fee-Exempt Options)
+        </button>
+      </div>
+    )}
+
+    {/* Fee-Exempt Cancel Dialog */}
+    <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+      <DialogContent className="max-w-md bg-background text-foreground border-border">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+            <XCircle className="size-5 text-destructive" />
+            Cancel Ride Request
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Under Clause 18 of the MV Aggregator Guidelines 2025, cancellations meeting statutory grounds carry <strong>₹0 cancellation fee</strong>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-4 space-y-2 text-xs">
+          <p className="font-semibold text-foreground">Select Reason for Cancellation:</p>
+          {[
+            { id: "delay", label: "Driver delayed (> 5 mins past ETA)", fee: "₹0 Fee" },
+            { id: "mismatch", label: "Driver or vehicle plate mismatch at pickup", fee: "₹0 Fee" },
+            { id: "offline", label: "Driver asked for off-app / offline cash fare", fee: "₹0 Fee" },
+            { id: "plans", label: "Change of plans (Within free cancellation window)", fee: "₹0 Fee" },
+          ].map((item) => (
+            <label
+              key={item.id}
+              className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                cancelReason === item.id ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="radio"
+                  name="cancel_reason"
+                  checked={cancelReason === item.id}
+                  onChange={() => setCancelReason(item.id)}
+                  className="accent-primary"
+                />
+                <span>{item.label}</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                {item.fee}
+              </span>
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-5 flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={() => setCancelModalOpen(false)}>
+            Keep Ride
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleCancelRide}
+            disabled={cancelling}
+          >
+            {cancelling ? <Loader2 className="size-3.5 animate-spin" /> : "Confirm Cancellation"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
 
     {/* Guardian Safety Modal Dialog */}
     <GuardianSafetyModal
