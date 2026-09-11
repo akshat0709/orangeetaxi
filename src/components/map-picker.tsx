@@ -34,6 +34,7 @@ export function MapPicker({
   placeholder = "Search street, landmark, or drag map...",
   onConfirm,
   onBack,
+  apiKey,
   areas = [],
   initialLocation = null,
 }: MapPickerProps) {
@@ -45,12 +46,28 @@ export function MapPicker({
   const [mode, setMode] = useState<"map" | "list">("map");
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(initialLocation);
   const [searchValue, setSearchValue] = useState(initialLocation?.name || "");
-  const [searchResults, setSearchResults] = useState<Array<{ name: string; lat: number; lng: number; sub?: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [loadError, setLoadError] = useState(false);
+
+  // Dynamically load Google Maps JS SDK with Places library if apiKey provided
+  useEffect(() => {
+    if (!apiKey) return;
+    if (typeof window !== "undefined" && window.google?.maps?.places) return;
+
+    const scriptId = "google-maps-places-sdk";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      script.onerror = () => console.warn("Google Maps JS API notice: falling back to local/OSM geocoder.");
+      document.head.appendChild(script);
+    }
+  }, [apiKey]);
 
   // Initial center: Delhi NCR default
   const defaultCenter = initialLocation
@@ -168,6 +185,33 @@ export function MapPicker({
     setIsResolvingAddress(true);
 
     reverseTimeoutRef.current = setTimeout(async () => {
+      // 1. Try Google Geocoder if loaded
+      if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+        try {
+          const geocoder = new window.google.maps.Geocoder();
+          const googleAddress: string | null = await new Promise((resolve) => {
+            geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+              if (status === "OK" && results?.[0]?.formatted_address) {
+                const parts = results[0].formatted_address.split(",").map((s: string) => s.trim());
+                resolve(parts.slice(0, 3).join(", "));
+              } else {
+                resolve(null);
+              }
+            });
+          });
+
+          if (googleAddress) {
+            setSelectedLocation({ name: googleAddress, lat, lng });
+            setSearchValue(googleAddress);
+            setIsResolvingAddress(false);
+            return;
+          }
+        } catch (e) {
+          // fallback to OSM Nominatim
+        }
+      }
+
+      // 2. Fallback to OpenStreetMap Nominatim
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -194,7 +238,7 @@ export function MapPicker({
         // Silently catch network errors
       }
 
-      // Fallback: match nearest service area
+      // 3. Fallback: match nearest service area
       const nearest = findNearestArea(lat, lng);
       const fallbackName = nearest ? `Near ${nearest.name}` : `Pin Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
       setSelectedLocation({ name: fallbackName, lat, lng });
@@ -234,7 +278,7 @@ export function MapPicker({
     searchTimeoutRef.current = setTimeout(async () => {
       const qLower = query.toLowerCase();
       // 1. Check local preset areas & areas table first (Instant!)
-      const localMatches: Array<{ name: string; lat: number; lng: number; sub?: string }> = [];
+      const localMatches: Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }> = [];
 
       [...areas, ...QUICK_PRESETS].forEach((item) => {
         if (item.name.toLowerCase().includes(qLower) && !localMatches.some((m) => m.name === item.name)) {
@@ -247,7 +291,45 @@ export function MapPicker({
         }
       });
 
-      // 2. Query Nominatim for live street/landmark matching in India
+      // 2. Query Google Places Autocomplete if available
+      if (typeof window !== "undefined" && window.google?.maps?.places?.AutocompleteService) {
+        try {
+          const autoService = new window.google.maps.places.AutocompleteService();
+          const googleMatches: any[] = await new Promise((resolve) => {
+            autoService.getPlacePredictions(
+              {
+                input: query,
+                componentRestrictions: { country: "in" },
+              },
+              (predictions: any, status: any) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                  resolve(
+                    predictions.slice(0, 4).map((p: any) => ({
+                      name: p.description,
+                      lat: 0,
+                      lng: 0,
+                      placeId: p.place_id,
+                      sub: "Google Verified Landmark",
+                    }))
+                  );
+                } else {
+                  resolve([]);
+                }
+              }
+            );
+          });
+
+          if (googleMatches.length > 0) {
+            setSearchResults([...localMatches, ...googleMatches]);
+            setIsSearching(false);
+            return;
+          }
+        } catch (err) {
+          // fallback to OSM Nominatim
+        }
+      }
+
+      // 3. Fallback: Query Nominatim for live street/landmark matching in India
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=4`,
@@ -277,7 +359,33 @@ export function MapPicker({
   }
 
   // Select a location from search or quick preset
-  function selectTargetLocation(loc: { name: string; lat: number; lng: number }) {
+  function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
+    // If location has placeId from Google Places and needs coordinates resolved:
+    if (loc.placeId && (!loc.lat || !loc.lng) && typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+      setIsResolvingAddress(true);
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ placeId: loc.placeId }, (results: any, status: any) => {
+        setIsResolvingAddress(false);
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const gLat = results[0].geometry.location.lat();
+          const gLng = results[0].geometry.location.lng();
+          const resolved = { name: loc.name, lat: gLat, lng: gLng };
+          setSelectedLocation(resolved);
+          setSearchValue(loc.name);
+          setSearchResults([]);
+          if (mode === "map" && mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([gLat, gLng], 16, { duration: 1 });
+          }
+          return;
+        }
+        // If geocode fails, just save name
+        setSelectedLocation(loc as any);
+        setSearchValue(loc.name);
+        setSearchResults([]);
+      });
+      return;
+    }
+
     setSelectedLocation(loc);
     setSearchValue(loc.name);
     setSearchResults([]);

@@ -351,6 +351,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         label="Pickup location"
         placeholder="Search street, landmark, or drag map..."
         areas={areas}
+        apiKey={GOOGLE_MAPS_KEY}
         initialLocation={pickupGPS}
         onBack={onBack}
         onConfirm={(loc) => {
@@ -383,6 +384,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         label="Drop-off destination"
         placeholder="Search destination, hotel, or drag map..."
         areas={areas}
+        apiKey={GOOGLE_MAPS_KEY}
         initialLocation={dropGPS}
         onBack={() => setSubStep("pickup")}
         onConfirm={(loc) => {
