@@ -11,6 +11,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate } from "@/lib/ride-vehicle";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -240,7 +241,13 @@ function DriverConsolePage() {
     const { data: recent } = await supabase.from("bookings").select("*")
       .eq("driver_id", driverData.id).eq("status", "completed")
       .order("completed_at", { ascending: false }).limit(100);
-    setRecentRides((recent as Booking[]) ?? []);
+    const recentList = (recent as Booking[]) ?? [];
+    if (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned") {
+      recentList.forEach(r => {
+        saveRideVehiclePlate(r.id, driverData.vehicle_number, r.reference);
+      });
+    }
+    setRecentRides(recentList);
 
     try {
       const { data: settleData } = await supabase
@@ -294,6 +301,12 @@ function DriverConsolePage() {
     }
     const { error } = await supabase.from("bookings").update({ driver_id: driver.id, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "searching");
     if (error) { toast.error("Could not accept ride — it may have been taken by another driver."); return; }
+
+    if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
+      const activeBooking = newRequests.find(b => b.id === bookingId);
+      await lockBookingVehicle(supabase, bookingId, driver.vehicle_number, activeBooking?.vehicle_name, activeBooking?.reference);
+    }
+
     toast.success("Ride accepted!");
     loadData();
   }
@@ -318,6 +331,10 @@ function DriverConsolePage() {
       updates.completed_at = new Date().toISOString();
       updates.final_fare = booking.estimated_fare;
       updates.payment_status = "paid";
+      if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
+        updates.vehicle_name = formatVehicleNameWithPlate(booking.vehicle_name, driver.vehicle_number);
+        saveRideVehiclePlate(booking.id, driver.vehicle_number, booking.reference);
+      }
     }
     const { error } = await supabase.from("bookings").update(updates).eq("id", booking.id);
     if (error) { toast.error("Update failed"); return; }
@@ -674,17 +691,30 @@ function DriverConsolePage() {
               {recentRides.length === 0
                 ? <EmptyState icon={TrendingUp} title="No completed rides yet" text="Completed rides will appear here." />
                 : <div className="space-y-2">
-                    {recentRides.map(ride => (
-                      <div key={ride.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-5 py-4 gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <MapPin className="size-3 shrink-0 text-primary" />
-                            <span className="truncate">{ride.pickup_area} → {ride.drop_area}</span>
+                    {recentRides.map(ride => {
+                      const ridePlate = getBookingVehiclePlate(ride, driver);
+                      return (
+                        <div key={ride.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-5 py-4 gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MapPin className="size-3 shrink-0 text-primary" />
+                              <span className="truncate">{ride.pickup_area} → {ride.drop_area}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                              <span>
+                                {ride.completed_at ? new Date(ride.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                              </span>
+                              {ridePlate && (
+                                <>
+                                  <span>·</span>
+                                  <span className="inline-flex items-center gap-1 font-mono font-bold text-foreground bg-primary/10 px-1.5 py-0.5 rounded text-[10px]">
+                                    <Car className="size-2.5 text-primary" />
+                                    <span>{ridePlate}</span>
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {ride.completed_at ? new Date(ride.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                          </p>
-                        </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
                             {ride.payment_method?.toUpperCase()}
@@ -692,7 +722,8 @@ function DriverConsolePage() {
                           <span className="font-bold text-primary">₹{Math.round(ride.final_fare ?? ride.estimated_fare)}</span>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
               }
             </div>

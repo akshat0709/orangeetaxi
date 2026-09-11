@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 
 export interface CompanyGSTProfile {
   legalName: string;
@@ -236,7 +237,7 @@ export function generateGSTR1CSV(bookings: any[] = [], profile: CompanyGSTProfil
       `"${profile.gstin}"`,
       `"${b?.corporate_gstin || b?.customer_gstin || "URP"}"`, // URP = Unregistered Person
       `"${(b?.customer_name || "Passenger").replace(/"/g, '""')}"`,
-      `"${b?.vehicle_number || "Mahindra EV"}"`,
+      `"${getBookingVehiclePlate(b)}"`,
       `"${(b?.pickup_area || "")} to ${(b?.drop_area || "")}"`,
       `"${(b?.payment_method || "cash").toUpperCase()}"`,
     ].join(",");

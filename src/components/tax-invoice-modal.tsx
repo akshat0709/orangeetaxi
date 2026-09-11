@@ -12,6 +12,7 @@ import {
   getStoredCompanyProfile,
   CompanyGSTProfile,
 } from "@/lib/gst-utils";
+import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 
 interface TaxInvoiceModalProps {
   open: boolean;
@@ -295,12 +296,12 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Vehicle: </span>
-                  <strong>{driver?.vehicle_model || booking.vehicle_name || "Mahindra BE.6 Electric"}</strong>
+                  <strong>{(booking.vehicle_name?.split("·")[0]?.trim()) || driver?.vehicle_model || "Mahindra BE.6 Electric"}</strong>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Registration Plate: </span>
                   <strong className="font-mono px-1.5 py-0.5 rounded bg-muted border border-border">
-                    {driver?.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "DL 01 EV 1001"}
+                    {getBookingVehiclePlate(booking, driver)}
                   </strong>
                 </p>
                 <p>

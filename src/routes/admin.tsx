@@ -14,6 +14,7 @@ import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
+import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate } from "@/lib/ride-vehicle";
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -79,10 +80,23 @@ function AdminPage() {
       supabase.from("corporate_enquiries").select("*").order("created_at", { ascending: false }),
       supabase.from("drivers").select("*").order("created_at", { ascending: false }),
     ]);
-    setBookings((b as Booking[]) ?? []);
+    const fetchedBookings = (b as Booking[]) ?? [];
+    const fetchedDrivers = (d as Driver[]) ?? [];
+
+    // Automatically snapshot and freeze vehicle registration numbers for existing completed rides
+    fetchedBookings.forEach((booking) => {
+      if (booking.driver_id && ["completed", "in_progress"].includes(booking.status)) {
+        const dr = fetchedDrivers.find((x) => x.id === booking.driver_id);
+        if (dr?.vehicle_number && dr.vehicle_number !== "Unassigned") {
+          saveRideVehiclePlate(booking.id, dr.vehicle_number, booking.reference);
+        }
+      }
+    });
+
+    setBookings(fetchedBookings);
     setApplications((a as Application[]) ?? []);
     setEnquiries((e as Enquiry[]) ?? []);
-    setDrivers((d as Driver[]) ?? []);
+    setDrivers(fetchedDrivers);
     setLoading(false);
   }
 
@@ -122,8 +136,28 @@ function AdminPage() {
   }
 
   async function assignDriver(bookingId: string, driverId: string) {
-    const { error } = await supabase.from("bookings").update({ driver_id: driverId, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", bookingId);
-    if (error) { toast.error("Assignment failed"); return; }
+    const driver = drivers.find((d) => d.id === driverId);
+    const booking = bookings.find((b) => b.id === bookingId);
+    const plate = driver?.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : null;
+
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        driver_id: driverId,
+        status: "accepted",
+        accepted_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+
+    if (error) {
+      toast.error("Assignment failed");
+      return;
+    }
+
+    if (plate) {
+      await lockBookingVehicle(supabase, bookingId, plate, booking?.vehicle_name, booking?.reference);
+    }
+
     toast.success("Driver assigned!");
     loadAll();
   }
@@ -220,12 +254,18 @@ function AdminPage() {
                             <span className="text-xs text-muted-foreground">
                               {b.driver_id ? (() => {
                                 const d = drivers.find(dr => dr.id === b.driver_id);
+                                const ridePlate = getBookingVehiclePlate(b, d);
                                 return d ? (
                                   <span className="flex flex-col">
                                     <span className="font-semibold text-foreground">{d.full_name}</span>
-                                    <span className="font-mono text-[11px] font-bold text-primary">{d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "No plate"}</span>
+                                    <span className="font-mono text-[11px] font-bold text-primary">{ridePlate}</span>
                                   </span>
-                                ) : "Assigned";
+                                ) : (
+                                  <span className="flex flex-col">
+                                    <span className="font-semibold text-foreground">Assigned</span>
+                                    <span className="font-mono text-[11px] font-bold text-primary">{ridePlate}</span>
+                                  </span>
+                                );
                               })() : "—"}
                             </span>
                           )}
@@ -777,21 +817,31 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
                   <p className="px-6 py-6 text-sm text-muted-foreground">No completed rides yet.</p>
                 ) : (
                   <div className="divide-y divide-border max-h-72 overflow-y-auto">
-                    {rides.slice(0, 50).map(b => (
-                      <div key={b.id} className="flex items-center justify-between px-6 py-3 gap-4 text-sm hover:bg-muted/20">
-                        <div>
-                          <p className="font-mono text-xs font-bold text-muted-foreground">{b.reference}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{b.pickup_area} → {b.drop_area}</p>
-                          <p className="text-xs text-muted-foreground">{b.completed_at ? new Date(b.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                    {rides.slice(0, 50).map(b => {
+                      const ridePlate = getBookingVehiclePlate(b, d);
+                      return (
+                        <div key={b.id} className="flex items-center justify-between px-6 py-3 gap-4 text-sm hover:bg-muted/20">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-mono text-xs font-bold text-foreground">{b.reference}</p>
+                              {ridePlate && (
+                                <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                  {ridePlate}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{b.pickup_area} → {b.drop_area}</p>
+                            <p className="text-xs text-muted-foreground">{b.completed_at ? new Date(b.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
                             {b.payment_method?.toUpperCase()}
                           </span>
                           <span className="font-bold text-primary">₹{Math.round(b.final_fare ?? b.estimated_fare)}</span>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 )}
               </div>
