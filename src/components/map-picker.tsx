@@ -107,10 +107,11 @@ export function MapPicker({
           attributionControl: false,
         });
 
-        // Use CartoDB Voyager tiles: clean, warm, luxury styling matching Orange Taxi
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          subdomains: "abcd",
-          maxZoom: 19,
+        // Clean Google Maps roadmap tiles: fast CDN, highly detailed Indian landmarks/roads, zero watermarks
+        L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+          subdomains: "0123",
+          maxZoom: 20,
+          attribution: "© Google Maps",
         }).addTo(map);
 
         // Add subtle zoom control in top right

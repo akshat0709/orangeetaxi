@@ -109,10 +109,11 @@ export function LiveRideMap({ pickup, drop, driver, status, distKm }: LiveMapPro
           attributionControl: false,
         });
 
-        // CartoDB Voyager tiles
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          maxZoom: 19,
-          subdomains: "abcd",
+        // Clean Google Maps roadmap tiles: fast CDN, highly detailed Indian landmarks/roads, zero watermarks
+        L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+          maxZoom: 20,
+          subdomains: "0123",
+          attribution: "© Google Maps",
         }).addTo(map);
 
         L.control.zoom({ position: "bottomright" }).addTo(map);
