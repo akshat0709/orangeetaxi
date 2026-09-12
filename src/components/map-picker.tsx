@@ -217,8 +217,8 @@ export function MapPicker({
         mapInstanceRef.current = map;
         setMapLoaded(true);
 
-        // Handle drag end -> reverse geocode center pin
-        map.on("moveend", () => {
+        // Handle user dragging map -> reverse geocode new center pin
+        map.on("dragend", () => {
           const center = map.getCenter();
           handleMapMoveEnd(center.lat, center.lng);
         });
@@ -230,25 +230,18 @@ export function MapPicker({
           }
         }, 200);
 
-        // Auto-detect user's GPS if no location pre-selected
+        // Auto-center map view to user's general area without forcing selection
         if (!initialLocation && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               if (!isMounted || !mapInstanceRef.current) return;
               const lat = pos.coords.latitude;
               const lng = pos.coords.longitude;
-              mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2 });
-              handleMapMoveEnd(lat, lng);
+              mapInstanceRef.current.setView([lat, lng], 13);
             },
-            () => {
-              if (!selectedLocation) {
-                handleMapMoveEnd(defaultCenter.lat, defaultCenter.lng);
-              }
-            },
-            { enableHighAccuracy: true, timeout: 6000 }
+            () => {},
+            { enableHighAccuracy: false, timeout: 4000 }
           );
-        } else if (!selectedLocation) {
-          handleMapMoveEnd(defaultCenter.lat, defaultCenter.lng);
         }
       } catch (err) {
         console.warn("Leaflet map initialization notice:", err);
@@ -529,6 +522,7 @@ export function MapPicker({
                 if (mode === "map" && mapInstanceRef.current) {
                   mapInstanceRef.current.flyTo([gLat, gLng], 16, { duration: 1 });
                 }
+                if (onConfirm) onConfirm(resolved);
                 return;
               }
               fallbackResolvePlace(loc);
@@ -552,6 +546,7 @@ export function MapPicker({
     if (mode === "map" && mapInstanceRef.current) {
       mapInstanceRef.current.flyTo([loc.lat, loc.lng], 16, { duration: 1 });
     }
+    if (onConfirm) onConfirm(loc);
   }
 
   // Robust coordinate resolution fallback via Nominatim search
@@ -574,6 +569,7 @@ export function MapPicker({
           if (mode === "map" && mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1 });
           }
+          if (onConfirm) onConfirm(resolved);
           return;
         }
       }
@@ -583,6 +579,7 @@ export function MapPicker({
     setSelectedLocation(loc);
     setSearchValue(loc.name);
     setSearchResults([]);
+    if (onConfirm) onConfirm(loc);
   }
 
   // GPS Locate current position
