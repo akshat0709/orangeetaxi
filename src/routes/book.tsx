@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -62,6 +62,49 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
+  // 1. Try Google Geocoder if loaded
+  if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const googleAddress: string | null = await new Promise((resolve) => {
+        geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+          if (status === "OK" && results?.[0]?.formatted_address) {
+            const parts = results[0].formatted_address.split(",").map((s: string) => s.trim());
+            resolve(parts.slice(0, 3).join(", "));
+          } else {
+            resolve(null);
+          }
+        });
+      });
+      if (googleAddress) return googleAddress;
+    } catch (e) {}
+  }
+
+  // 2. Try OpenStreetMap Nominatim
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+      const road = addr.road || addr.street || "";
+      const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || "";
+      const city = addr.city || addr.town || addr.municipality || addr.state_district || "";
+      const primary = [road, locality].filter(Boolean).join(", ");
+      if (primary && city) return `${primary}, ${city}`;
+      if (primary) return primary;
+      if (data.display_name) {
+        return data.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
+      }
+    }
+  } catch (e) {}
+
+  return `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+}
+
 function PassengerPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -79,11 +122,33 @@ function PassengerPage() {
   // GPS locations (used when Maps key is available)
   const [pickupGPS, setPickupGPS] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [dropGPS, setDropGPS] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [locatingGPS, setLocatingGPS] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
   const [submitting, setSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<{ id: string; reference: string; otp: string } | null>(null);
   const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
   const [liveRideStatus, setLiveRideStatus] = useState<string>("searching");
+
+  // Auto-acquire user GPS for instant zero-click pickup
+  useEffect(() => {
+    if (pickupGPS || typeof window === "undefined" || !navigator.geolocation) return;
+
+    setLocatingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const name = await reverseGeocodeCoords(lat, lng);
+        setPickupGPS({ name, lat, lng });
+        setLocatingGPS(false);
+      },
+      (err) => {
+        console.warn("Auto-GPS acquire error:", err);
+        setLocatingGPS(false);
+      },
+      { enableHighAccuracy: true, timeout: 9000, maximumAge: 60000 }
+    );
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -257,6 +322,7 @@ function PassengerPage() {
                 distKm={distKm}
                 fareBreakdown={fareBreakdown}
                 selectedVehicle={selectedVehicle!}
+                locatingGPS={locatingGPS}
                 onBack={() => setStep(1)}
                 onNext={() => setStep(3)}
               />
@@ -344,53 +410,113 @@ function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
   </div>;
 }
 
-function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dropGPS, onPickupGPS, onDropGPS, distKm, fareBreakdown, selectedVehicle, onBack, onNext }: any) {
-  const [subStep, setSubStep] = useState<"pickup" | "drop">("pickup");
+function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dropGPS, onPickupGPS, onDropGPS, distKm, fareBreakdown, selectedVehicle, onBack, onNext, locatingGPS }: any) {
+  // Start directly at drop-off destination selection (Pickup is automatically auto-detected via GPS)
+  const [subStep, setSubStep] = useState<"pickup" | "drop">("drop");
   const hasPickup = !!(pickupGPS || pickupId);
   const hasDrop = !!(dropGPS || dropId);
 
   if (subStep === "pickup") {
     return (
-      <MapPicker
-        label="Pickup location"
-        placeholder="Search street, landmark, or drag map..."
-        areas={areas}
-        apiKey={GOOGLE_MAPS_KEY}
-        initialLocation={pickupGPS}
-        onBack={onBack}
-        onConfirm={(loc) => {
-          onPickupGPS(loc);
-          setSubStep("drop");
-        }}
-      />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between rounded-xl bg-background/10 px-3.5 py-2.5 text-xs text-background border border-background/15">
+          <div className="flex items-center gap-2">
+            <MapPin className="size-4 text-primary" />
+            <span className="font-semibold">Select or Adjust Pickup Pin</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSubStep("drop")}
+            className="text-xs font-semibold text-primary underline hover:text-primary/80"
+          >
+            Back to Destination →
+          </button>
+        </div>
+
+        <MapPicker
+          label="Pickup location"
+          placeholder="Search street, landmark, or drag map..."
+          areas={areas}
+          apiKey={GOOGLE_MAPS_KEY}
+          initialLocation={pickupGPS}
+          onBack={() => setSubStep("drop")}
+          onConfirm={(loc) => {
+            onPickupGPS(loc);
+            setSubStep("drop");
+          }}
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Pickup confirmed banner */}
-      <div className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/15 p-3.5 text-xs text-background">
-        <MapPin className="size-4 shrink-0 text-primary" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase font-bold tracking-wider text-primary">Pickup Confirmed</p>
-          <p className="truncate font-medium text-background">{pickupGPS?.name || "Selected Pickup"}</p>
+      {/* Pickup Location Status Banner (Auto-GPS Detected) */}
+      {pickupGPS ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3.5 text-xs text-background shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+              <Crosshair className="size-4 animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Pickup Location</p>
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-300">
+                  Live GPS Verified
+                </span>
+              </div>
+              <p className="truncate font-medium text-background text-xs">{pickupGPS.name}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSubStep("pickup")}
+            className="shrink-0 text-xs font-semibold text-emerald-400 underline hover:text-emerald-300 ml-2"
+          >
+            Change
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSubStep("pickup")}
-          className="shrink-0 text-xs font-semibold text-primary underline hover:text-primary/80"
-        >
-          Change
-        </button>
-      </div>
+      ) : locatingGPS ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3.5 text-xs text-background">
+          <div className="flex items-center gap-3 min-w-0">
+            <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-primary">Locating your live GPS...</p>
+              <p className="truncate text-xs text-background/60">Auto-setting pickup to your exact spot</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSubStep("pickup")}
+            className="shrink-0 text-xs font-semibold text-primary underline ml-2"
+          >
+            Set manually
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-xs text-background">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <MapPin className="size-4 text-amber-400 shrink-0" />
+            <span className="text-xs text-background/80 truncate">No pickup detected</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSubStep("pickup")}
+            className="shrink-0 text-xs font-bold text-amber-400 underline ml-2"
+          >
+            Set Pickup Location
+          </button>
+        </div>
+      )}
 
+      {/* Main Destination MapPicker (Only destination needed) */}
       <MapPicker
         label="Drop-off destination"
-        placeholder="Search destination, hotel, or drag map..."
+        placeholder="Where are you going? Search destination, hotel, mall, or drag map..."
         areas={areas}
         apiKey={GOOGLE_MAPS_KEY}
         initialLocation={dropGPS}
-        onBack={() => setSubStep("pickup")}
+        onBack={onBack}
         onConfirm={(loc) => {
           onDropGPS(loc);
         }}
@@ -406,7 +532,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         </div>
       )}
 
-      {hasDrop && (
+      {hasDrop && hasPickup && (
         <Button size="lg" className="mt-2 w-full" onClick={onNext}>
           Review & Confirm <ArrowRight />
         </Button>
