@@ -63,7 +63,17 @@ function generateOTP() {
 }
 
 async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
-  // 1. Try Google Geocoder if loaded
+  // 1. Instant check against curated presets (within 3km of an airport or major hub)
+  if (PAN_INDIA_PRESETS && PAN_INDIA_PRESETS.length > 0) {
+    for (const p of PAN_INDIA_PRESETS) {
+      const d = haversine(lat, lng, p.lat, p.lng);
+      if (d < 3) {
+        return p.name;
+      }
+    }
+  }
+
+  // 2. Try Google Geocoder if loaded
   if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
     try {
       const geocoder = new window.google.maps.Geocoder();
@@ -81,7 +91,7 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     } catch (e) {}
   }
 
-  // 2. Try OpenStreetMap Nominatim with timeout controller
+  // 3. Try OpenStreetMap Nominatim with landmark POI prioritization
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -93,19 +103,24 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     if (res.ok) {
       const data = await res.json();
       const addr = data.address || {};
+      const landmark = data.name || addr.aeroway || addr.amenity || addr.tourism || addr.railway || addr.office || "";
       const road = addr.road || addr.street || "";
       const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || "";
       const city = addr.city || addr.town || addr.municipality || addr.state_district || "";
-      const primary = [road, locality].filter(Boolean).join(", ");
-      if (primary && city) return `${primary}, ${city}`;
-      if (primary) return primary;
+
+      if (landmark && city) return `${landmark}, ${city}`;
+      if (landmark && locality) return `${landmark}, ${locality}`;
+      if (landmark) return landmark;
+      if (road && locality) return `${road}, ${locality}`;
+      if (road && city) return `${road}, ${city}`;
+      if (locality && city) return `${locality}, ${city}`;
       if (data.display_name) {
         return data.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
       }
     }
   } catch (e) {}
 
-  // 3. Intelligent proximity check against known Indian presets
+  // 4. Intelligent proximity check against known Indian presets
   if (PAN_INDIA_PRESETS && PAN_INDIA_PRESETS.length > 0) {
     let closest = null;
     let minDist = Infinity;
@@ -121,7 +136,7 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     }
   }
 
-  // 4. City bounding check (e.g. Bengaluru)
+  // 5. City bounding check (e.g. Bengaluru)
   if (lat >= 12.75 && lat <= 13.25 && lng >= 77.4 && lng <= 77.8) {
     return `Indiranagar / Bengaluru (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
   }
