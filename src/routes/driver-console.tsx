@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate } from "@/lib/ride-vehicle";
+import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/driver-console")({
 interface Booking {
   id: string; reference: string; status: string;
   pickup_area: string; drop_area: string;
+  pickup_address?: string; drop_address?: string;
   estimated_fare: number; final_fare: number | null;
   vehicle_name: string; payment_method: string;
   created_at: string; completed_at: string | null;
@@ -342,12 +344,54 @@ function DriverConsolePage() {
     loadData();
   }
 
-  function getNavUrl(areaName: string) {
-    if (!areaName || areaName.trim() === "") return "https://www.google.com/maps";
-    const a = areas[areaName];
-    if (a?.lat && a?.lng) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=driving`;
+  function getNavUrl(areaName: string, coordsOrAddress?: string | null) {
+    // 1. Direct coordinate check from pickup_address / drop_address: e.g. "12.9784,77.6408"
+    if (coordsOrAddress && coordsOrAddress.trim()) {
+      const trimmed = coordsOrAddress.trim();
+      const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        }
+      }
     }
+
+    // 2. Extract coordinates embedded in the area name, e.g. "Current Location (12.9784, 77.6408)" or "Indiranagar (12.978, 77.641)"
+    if (areaName) {
+      const parenMatch = areaName.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
+      if (parenMatch) {
+        const lat = parseFloat(parenMatch[1]);
+        const lng = parseFloat(parenMatch[2]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        }
+      }
+    }
+
+    // 3. Exact or case-insensitive match from service_areas DB
+    if (areaName) {
+      const foundInAreas = areas[areaName] || Object.values(areas).find(a => a.name.toLowerCase() === areaName.toLowerCase());
+      if (foundInAreas?.lat && foundInAreas?.lng) {
+        return `https://www.google.com/maps/dir/?api=1&destination=${foundInAreas.lat},${foundInAreas.lng}&travelmode=driving`;
+      }
+    }
+
+    // 4. Match against PAN_INDIA_PRESETS (Airports, Railway stations, Metros across India)
+    if (areaName && Array.isArray(PAN_INDIA_PRESETS)) {
+      const cleanTarget = areaName.toLowerCase().replace(/^(near|at|to|from)\s+/i, "").trim();
+      const preset = PAN_INDIA_PRESETS.find(p => {
+        const pName = p.name.toLowerCase();
+        return pName === cleanTarget || cleanTarget.includes(pName) || pName.includes(cleanTarget);
+      });
+      if (preset?.lat && preset?.lng) {
+        return `https://www.google.com/maps/dir/?api=1&destination=${preset.lat},${preset.lng}&travelmode=driving`;
+      }
+    }
+
+    // 5. Fallback: Google Maps directions with clean query
+    if (!areaName || areaName.trim() === "") return "https://www.google.com/maps";
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(areaName.trim())}&travelmode=driving`;
   }
 
@@ -494,22 +538,47 @@ function DriverConsolePage() {
                             </span>
                           </div>
                           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="size-4 text-primary" />{ride.pickup_area}
+                            <MapPin className="size-4 text-primary shrink-0" />
+                            <a 
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-foreground hover:underline hover:text-primary transition-colors"
+                              title="Open Pickup in Google Maps"
+                            >
+                              {ride.pickup_area}
+                            </a>
                             <span className="text-border">→</span>
-                            <Navigation className="size-4 text-primary" />{ride.drop_area}
+                            <Navigation className="size-4 text-primary shrink-0" />
+                            <a 
+                              href={getNavUrl(ride.drop_area, ride.drop_address)} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-foreground hover:underline hover:text-primary transition-colors"
+                              title="Open Drop-off in Google Maps"
+                            >
+                              {ride.drop_area}
+                            </a>
                           </div>
                         </div>
                       </div>
 
                       {ride.status === "accepted" && (
                         <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
-                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.pickup_area)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Pickup</a></Button>
+                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Pickup</a></Button>
                           <Button onClick={() => advanceStatus(ride)} className="flex-1">Mark Arrived <Check className="ml-2 size-4" /></Button>
                         </div>
                       )}
 
                       {ride.status === "arrived" && (
                         <div className="mt-6 border-t border-border pt-4 text-center">
+                          <div className="mb-3 flex justify-center">
+                            <Button asChild variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
+                              <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer">
+                                <Map className="mr-1.5 size-3.5" /> Re-open Pickup Navigation
+                              </a>
+                            </Button>
+                          </div>
                           <p className="text-sm font-semibold mb-3">Ask customer for the 6-digit OTP</p>
                           <div className="flex flex-col items-center gap-4">
                             <InputOTP maxLength={6} value={otpInputs[ride.id] || ""} onChange={(val) => setOtpInputs(p => ({ ...p, [ride.id]: val }))}>
@@ -526,7 +595,7 @@ function DriverConsolePage() {
 
                       {ride.status === "in_progress" && (
                         <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
-                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.drop_area)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Drop-off</a></Button>
+                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Drop-off</a></Button>
                           <Button onClick={() => advanceStatus(ride)} className="flex-1 bg-green-600 hover:bg-green-700">Complete Ride <CheckCircle className="ml-2 size-4" /></Button>
                         </div>
                       )}
@@ -545,7 +614,31 @@ function DriverConsolePage() {
                   <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
                     <div className="flex justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 text-sm font-bold"><MapPin className="size-4 text-primary" />{ride.pickup_area} <span className="text-muted-foreground">→</span> <Navigation className="size-4 text-primary" />{ride.drop_area}</div>
+                        <div className="flex items-center gap-2 text-sm font-bold">
+                          <MapPin className="size-4 text-primary shrink-0" />
+                          <a 
+                            href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
+                            title="Preview pickup location on Google Maps"
+                          >
+                            {ride.pickup_area}
+                            <Map className="size-3 text-muted-foreground inline" />
+                          </a>
+                          <span className="text-muted-foreground">→</span> 
+                          <Navigation className="size-4 text-primary shrink-0" />
+                          <a 
+                            href={getNavUrl(ride.drop_area, ride.drop_address)} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
+                            title="Preview drop location on Google Maps"
+                          >
+                            {ride.drop_area}
+                            <Map className="size-3 text-muted-foreground inline" />
+                          </a>
+                        </div>
                         <div className="mt-2 text-xs text-muted-foreground space-x-4"><span className="font-bold text-primary">₹{Math.round(ride.estimated_fare)}</span><span>{Math.round(ride.distance_km)} km</span><span>{ride.vehicle_name}</span></div>
                       </div>
                       <div className="flex gap-2 shrink-0">

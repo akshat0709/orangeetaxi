@@ -315,6 +315,21 @@ function PassengerPage() {
           if (veh) setSelectedVehicle(veh);
           if (pArea) setPickupId(pArea.id);
           if (dArea) setDropId(dArea.id);
+
+          // Restore exact GPS coordinates if available
+          if (activeBooking.pickup_address && activeBooking.pickup_address.includes(",")) {
+            const [pLat, pLng] = activeBooking.pickup_address.split(",").map(Number);
+            if (!isNaN(pLat) && !isNaN(pLng)) {
+              setPickupGPS({ name: activeBooking.pickup_area, lat: pLat, lng: pLng });
+            }
+          }
+          if (activeBooking.drop_address && activeBooking.drop_address.includes(",")) {
+            const [dLat, dLng] = activeBooking.drop_address.split(",").map(Number);
+            if (!isNaN(dLat) && !isNaN(dLng)) {
+              setDropGPS({ name: activeBooking.drop_area, lat: dLat, lng: dLng });
+            }
+          }
+
           setBookingData({ id: activeBooking.id, reference: activeBooking.reference, otp: activeBooking.ride_otp });
           setStep(4);
           setLoading(false);
@@ -362,7 +377,9 @@ function PassengerPage() {
     const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
       pickup_area: pickup.name,
+      pickup_address: `${pickup.lat},${pickup.lng}`,
       drop_area: drop.name,
+      drop_address: `${drop.lat},${drop.lng}`,
       distance_km: Math.round(distKm * 10) / 10,
       duration_min: Math.round(distKm / 0.5),
       vehicle_code: selectedVehicle.code,
