@@ -288,6 +288,10 @@ function PassengerPage() {
                   setBookingData(null);
                   setLiveDriverInfo(null);
                   setLiveRideStatus("searching");
+                  setPickupGPS(null);
+                  setDropGPS(null);
+                  setPickupId("");
+                  setDropId("");
                 }}
               />
             )}
@@ -490,13 +494,15 @@ function Step4Confirmed({
     const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", bookingData.id);
     if (error) {
       toast.error("Failed to cancel ride: " + error.message);
+      setCancelling(false);
     } else {
       setStatus("cancelled");
       onStatusUpdate?.("cancelled");
       setCancelModalOpen(false);
       toast.success("Ride cancelled. ₹0 fee applied under statutory exemption.");
+      setCancelling(false);
+      onReset?.();
     }
-    setCancelling(false);
   }
 
   function handleStatusChange(newStatus: string) {
@@ -563,6 +569,10 @@ function Step4Confirmed({
     async function loadInitial() {
       const { data: b } = await supabase.from("bookings").select("status, driver_id, rating").eq("id", bookingData.id).single();
       if (b) {
+        if (b.status === "cancelled") {
+          onReset?.();
+          return;
+        }
         if (b.status) {
           handleStatusChange(b.status);
           if (b.status === "completed" && !b.rating) {
@@ -586,6 +596,12 @@ function Step4Confirmed({
         const newStatus = payload.new.status;
         handleStatusChange(newStatus);
         
+        if (newStatus === "cancelled") {
+          toast.info("Ride has been cancelled.");
+          onReset?.();
+          return;
+        }
+
         // If driver assigned, fetch driver details
         if (payload.new.driver_id) {
           const d = await fetchDriverWithPhone(payload.new.driver_id);
