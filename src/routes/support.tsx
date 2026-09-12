@@ -76,7 +76,7 @@ function SupportPage() {
             <h3 className="mt-3 text-base font-bold">Customer Care Email</h3>
             <p className="mt-1 text-xs text-muted-foreground">For receipts, invoicing, lost property, and booking inquiries.</p>
             <p className="mt-4 font-mono text-sm font-bold text-primary">
-              <a href="mailto:support@orangetaxi.in" className="hover:underline">support@orangetaxi.in</a>
+              <a href="mailto:support@orange-taxi.com" className="hover:underline">support@orange-taxi.com</a>
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">Average response under 2 hours</p>
           </div>
@@ -86,7 +86,7 @@ function SupportPage() {
             <h3 className="mt-3 text-base font-bold">Grievance Officer</h3>
             <p className="mt-1 text-xs text-muted-foreground">Appointed nodal officer under IT Rules 2021 & MV Aggregator norms.</p>
             <p className="mt-4 font-mono text-sm font-bold text-primary">
-              <a href="mailto:grievance@orangetaxi.in" className="hover:underline">grievance@orangetaxi.in</a>
+              <a href="mailto:grievance@orange-taxi.com" className="hover:underline">grievance@orange-taxi.com</a>
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">Formal ticket acknowledgement in 24h</p>
           </div>

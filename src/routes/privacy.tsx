@@ -153,8 +153,8 @@ function PrivacyPage() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">Direct Email:</p>
-                <p><a href="mailto:grievance@orangetaxi.in" className="text-primary underline">grievance@orangetaxi.in</a></p>
-                <p className="text-muted-foreground">support@orangetaxi.in</p>
+                <p><a href="mailto:grievance@orange-taxi.com" className="text-primary underline">grievance@orange-taxi.com</a></p>
+                <p className="text-muted-foreground">support@orange-taxi.com</p>
               </div>
               <div className="sm:col-span-2 mt-1">
                 <p className="font-semibold text-foreground">Postal Address:</p>

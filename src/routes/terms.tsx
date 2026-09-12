@@ -69,7 +69,7 @@ function TermsPage() {
             <ul className="mt-3 list-disc space-y-1.5 pl-5 text-muted-foreground">
               <li>Account authentication is secured via direct Mobile Phone Number and One-Time Password (OTP) verification.</li>
               <li>You are solely responsible for maintaining the confidentiality of your credentials and all activities conducted under your verified phone number.</li>
-              <li>You agree to notify us immediately at <a href="mailto:support@orangetaxi.in" className="text-primary underline">support@orangetaxi.in</a> of any unauthorised access or security breach.</li>
+              <li>You agree to notify us immediately at <a href="mailto:support@orange-taxi.com" className="text-primary underline">support@orange-taxi.com</a> of any unauthorised access or security breach.</li>
             </ul>
           </section>
 
@@ -118,7 +118,7 @@ function TermsPage() {
               <li>No driver may operate an Orange Taxi vehicle under the influence of alcohol, narcotics, prescription drugs that impair motor reflexes, or intoxicating substances.</li>
               <li>Drivers undergo mandatory background verification, medical screening, and zero-tolerance compliance training before taking active trips.</li>
               <li>
-                <strong>Immediate Reporting Procedure:</strong> If you suspect your driver is driving recklessly or is under the influence, <strong>terminate the ride immediately in a safe location</strong>, trigger the in-app SOS / Guardian emergency call, and notify our emergency desk at <a href="tel:+911140007000" className="text-primary font-bold">+91 11 4000 7000</a> or <a href="mailto:grievance@orangetaxi.in" className="text-primary underline">grievance@orangetaxi.in</a>.
+                <strong>Immediate Reporting Procedure:</strong> If you suspect your driver is driving recklessly or is under the influence, <strong>terminate the ride immediately in a safe location</strong>, trigger the in-app SOS / Guardian emergency call, and notify our emergency desk at <a href="tel:+911140007000" className="text-primary font-bold">+91 11 4000 7000</a> or <a href="mailto:grievance@orange-taxi.com" className="text-primary underline">grievance@orange-taxi.com</a>.
               </li>
               <li>The driver will be suspended from dispatch immediately pending an inquiry completed within 3 working days.</li>
             </ul>
@@ -161,7 +161,7 @@ function TermsPage() {
           <section className="rounded-xl border border-border bg-card p-6">
             <h3 className="font-bold text-foreground">Need Assistance or Legal Clarifications?</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              For corporate or legal queries, write to our Legal Secretariat at <a href="mailto:support@orangetaxi.in" className="text-primary underline">support@orangetaxi.in</a> or visit our corporate office at S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017.
+              For corporate or legal queries, write to our Legal Secretariat at <a href="mailto:support@orange-taxi.com" className="text-primary underline">support@orange-taxi.com</a> or visit our corporate office at S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017.
             </p>
           </section>
         </div>

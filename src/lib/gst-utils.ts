@@ -29,8 +29,8 @@ export const DEFAULT_COMPANY_PROFILE: CompanyGSTProfile = {
   stateCode: "07",
   sacCode: "996412", // Passenger transportation services by taxi
   taxRatePercent: 5.0, // 5% GST on passenger transport
-  supportEmail: "support@orangetaxi.in",
-  supportPhone: "+91 98100 12345",
+  supportEmail: "support@orange-taxi.com",
+  supportPhone: "+91 11 4000 7000",
 };
 
 export function getStoredCompanyProfile(): CompanyGSTProfile {

@@ -64,7 +64,7 @@ function ContactPage() {
             <p className="mt-1 text-xs text-muted-foreground">For ride bookings, passenger queries, and live trip assistance.</p>
             <div className="mt-4 text-xs space-y-1">
               <p className="font-mono text-primary font-semibold"><a href="tel:+911140007000">+91 11 4000 7000</a></p>
-              <p><a href="mailto:support@orangetaxi.in" className="text-muted-foreground hover:underline">support@orangetaxi.in</a></p>
+              <p><a href="mailto:support@orange-taxi.com" className="text-muted-foreground hover:underline">support@orange-taxi.com</a></p>
             </div>
           </div>
 
@@ -73,7 +73,7 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">Driver Partner Desk</h3>
             <p className="mt-1 text-xs text-muted-foreground">Driver onboarding, document verification, and training center.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:drive@orangetaxi.in" className="text-primary hover:underline">drive@orangetaxi.in</a></p>
+              <p><a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline">drive@orange-taxi.com</a></p>
               <p className="text-muted-foreground">South Delhi Driver Hub</p>
             </div>
           </div>
@@ -83,7 +83,7 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">Grievance Redressal</h3>
             <p className="mt-1 text-xs text-muted-foreground">Nodal officer for regulatory, consumer, and intermediary grievances.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:grievance@orangetaxi.in" className="text-primary hover:underline">grievance@orangetaxi.in</a></p>
+              <p><a href="mailto:grievance@orange-taxi.com" className="text-primary hover:underline">grievance@orange-taxi.com</a></p>
               <p className="text-muted-foreground">Statutory 24h Acknowledgement</p>
             </div>
           </div>
@@ -93,7 +93,7 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">Corporate Accounts</h3>
             <p className="mt-1 text-xs text-muted-foreground">Electric mobility packages for businesses and luxury hotel transit.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:business@orangetaxi.in" className="text-primary hover:underline">business@orangetaxi.in</a></p>
+              <p><a href="mailto:business@orange-taxi.com" className="text-primary hover:underline">business@orange-taxi.com</a></p>
               <p className="text-muted-foreground">GST Invoiced B2B Billing</p>
             </div>
           </div>
