@@ -343,9 +343,12 @@ function DriverConsolePage() {
   }
 
   function getNavUrl(areaName: string) {
+    if (!areaName || areaName.trim() === "") return "https://www.google.com/maps";
     const a = areas[areaName];
-    if (!a) return "#";
-    return `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=driving`;
+    if (a?.lat && a?.lng) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}&travelmode=driving`;
+    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(areaName.trim())}&travelmode=driving`;
   }
 
   if (authLoading || loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
