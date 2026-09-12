@@ -331,7 +331,7 @@ function DriverConsolePage() {
     if (flow.next === "in_progress") updates.started_at = new Date().toISOString();
     if (flow.next === "completed") {
       updates.completed_at = new Date().toISOString();
-      updates.final_fare = booking.estimated_fare;
+      updates.final_fare = Math.round(Number(booking.estimated_fare || 0));
       updates.payment_status = "paid";
       if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
         updates.vehicle_name = formatVehicleNameWithPlate(booking.vehicle_name, driver.vehicle_number);
@@ -412,26 +412,26 @@ function DriverConsolePage() {
   // Earnings calculations — daily, weekly, monthly split by payment method
   const today = new Date(); today.setHours(0,0,0,0);
   const todayRides   = recentRides.filter(r => new Date(r.completed_at ?? "") >= today);
-  const todayTotal   = todayRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const todayUPI     = todayRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const todayCash    = todayRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const todayTotal   = todayRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const todayUPI     = todayRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const todayCash    = todayRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const weekStart    = new Date(Date.now() - 7 * 24 * 3600000);
   const weeklyRides  = recentRides.filter(r => new Date(r.completed_at ?? "") >= weekStart);
-  const weeklyEarnings = weeklyRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const weekUPI      = weeklyRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const monthlyEarnings = recentRides.reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const monthUPI     = recentRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
-  const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+  const weeklyEarnings = weeklyRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const weekUPI      = weeklyRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthlyEarnings = recentRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthUPI     = recentRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
 
-  // Cash calculations & Admin settlement balance
+  // Cash calculations & Admin settlement balance (Strict whole rupees)
   const totalCashCollected = recentRides
     .filter(r => r.payment_method === "cash")
-    .reduce((s, r) => s + (r.final_fare ?? r.estimated_fare), 0);
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
 
   const totalCashSubmitted = settlements
-    .reduce((s, x) => s + Number(x.amount), 0);
+    .reduce((s, x) => s + Math.round(Number(x.amount || 0)), 0);
 
   const currentCashHolding = Math.max(0, totalCashCollected - totalCashSubmitted);
 

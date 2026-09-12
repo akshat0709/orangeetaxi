@@ -53,9 +53,12 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 function calcFare(vehicle: VehicleCategory, distKm: number, settings: { tax_percent: number; platform_fee: number }) {
-  const raw = Math.max(vehicle.minimum_fare, vehicle.base_fare + vehicle.per_km * distKm);
-  const tax = (raw * settings.tax_percent) / 100;
-  return { base: vehicle.base_fare, distance: vehicle.per_km * distKm, tax, total: raw + tax + settings.platform_fee, platform: settings.platform_fee };
+  const distFare = Math.round(vehicle.per_km * distKm);
+  const raw = Math.max(vehicle.minimum_fare, vehicle.base_fare + distFare);
+  const tax = Math.round((raw * (settings.tax_percent || 0)) / 100);
+  const platform = Math.round(settings.platform_fee || 0);
+  const total = Math.round(raw + tax + platform);
+  return { base: vehicle.base_fare, distance: distFare, tax, total, platform };
 }
 
 function generateOTP() {
@@ -384,10 +387,10 @@ function PassengerPage() {
       duration_min: Math.round(distKm / 0.5),
       vehicle_code: selectedVehicle.code,
       vehicle_name: selectedVehicle.name,
-      base_fare: fareBreakdown.base,
-      distance_fare: fareBreakdown.distance,
-      tax_amount: fareBreakdown.tax,
-      estimated_fare: fareBreakdown.total,
+      base_fare: Math.round(fareBreakdown.base),
+      distance_fare: Math.round(fareBreakdown.distance),
+      tax_amount: Math.round(fareBreakdown.tax),
+      estimated_fare: Math.round(fareBreakdown.total),
       payment_method: paymentMethod,
       status: "searching",
       ride_otp: otp,

@@ -105,7 +105,7 @@ function AdminPage() {
     totalBookings: bookings.length,
     activeBookings: bookings.filter(b => ["searching", "accepted", "arrived", "in_progress"].includes(b.status)).length,
     completedBookings: bookings.filter(b => b.status === "completed").length,
-    totalRevenue: bookings.filter(b => b.status === "completed").reduce((s, b) => s + b.estimated_fare, 0),
+    totalRevenue: bookings.filter(b => b.status === "completed").reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0),
     onlineDrivers: drivers.filter(d => d.is_online).length,
     pendingApplications: applications.filter(a => a.status === "new").length,
     newEnquiries: enquiries.filter(e => e.status === "new").length,
@@ -540,12 +540,12 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
 
   function driverStats(driverId: string) {
     const rides = driverBookings(driverId);
-    const total = rides.reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
-    const upi   = rides.filter(b => b.payment_method === "upi").reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
-    const cash  = rides.filter(b => b.payment_method === "cash").reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    const total = rides.reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
+    const upi   = rides.filter(b => b.payment_method === "upi").reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
+    const cash  = rides.filter(b => b.payment_method === "cash").reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
     const today = new Date(); today.setHours(0,0,0,0);
     const todayRides = rides.filter(b => new Date(b.completed_at ?? "") >= today);
-    const todayTotal = todayRides.reduce((s, b) => s + (b.final_fare ?? b.estimated_fare), 0);
+    const todayTotal = todayRides.reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
     return { count: rides.length, total, upi, cash, todayTotal, todayCount: todayRides.length };
   }
 

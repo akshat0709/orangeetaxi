@@ -124,17 +124,17 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
     };
   }, []);
 
-  // Compute driver cash balances
+  // Compute driver cash balances (Strictly rounded to whole rupees — no decimals)
   function getDriverCashStats(driverId: string) {
     // Total cash from completed rides
     const cashRides = bookings.filter(
       b => b.driver_id === driverId && b.status === "completed" && b.payment_method === "cash"
     );
-    const totalCashDealt = cashRides.reduce((sum, b) => sum + (b.final_fare ?? b.estimated_fare), 0);
+    const totalCashDealt = cashRides.reduce((sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
 
     // Total cash submitted/collected by admin
     const driverSettlements = settlements.filter(s => s.driver_id === driverId);
-    const totalCashTaken = driverSettlements.reduce((sum, s) => sum + Number(s.amount), 0);
+    const totalCashTaken = driverSettlements.reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
 
     // Current cash holding in driver's hands (to be taken)
     const cashHolding = Math.max(0, totalCashDealt - totalCashTaken);
@@ -148,12 +148,12 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
     };
   }
 
-  // Fleet-wide cash metrics
+  // Fleet-wide cash metrics (Strictly whole rupees)
   const completedCashRides = bookings.filter(
     b => b.status === "completed" && b.payment_method === "cash"
   );
-  const fleetTotalCashDealt = completedCashRides.reduce((sum, b) => sum + (b.final_fare ?? b.estimated_fare), 0);
-  const fleetTotalCashTaken = settlements.reduce((sum, s) => sum + Number(s.amount), 0);
+  const fleetTotalCashDealt = completedCashRides.reduce((sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
+  const fleetTotalCashTaken = settlements.reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
   const fleetCashToBeTaken = Math.max(0, fleetTotalCashDealt - fleetTotalCashTaken);
 
   // Filtered drivers list
@@ -173,9 +173,9 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
       toast.error("Please choose a driver to collect cash from");
       return;
     }
-    const amt = Number(collectionAmount);
-    if (!amt || amt <= 0) {
-      toast.error("Please enter a valid cash amount");
+    const amt = Math.round(Number(collectionAmount));
+    if (!amt || amt <= 0 || isNaN(amt)) {
+      toast.error("Please enter a valid cash amount in whole rupees");
       return;
     }
 
@@ -231,7 +231,7 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
   function openQuickCollectionForDriver(driverId: string) {
     const stats = getDriverCashStats(driverId);
     setSelectedDriverId(driverId);
-    setCollectionAmount(stats.cashHolding > 0 ? stats.cashHolding : "");
+    setCollectionAmount(stats.cashHolding > 0 ? Math.round(stats.cashHolding) : "");
     setCollectionNotes(`Handover of cash collected from rides`);
     setIsCollecting(true);
   }
@@ -385,7 +385,7 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                   setSelectedDriverId(dId);
                   if (dId) {
                     const stats = getDriverCashStats(dId);
-                    setCollectionAmount(stats.cashHolding > 0 ? stats.cashHolding : "");
+                    setCollectionAmount(stats.cashHolding > 0 ? Math.round(stats.cashHolding) : "");
                   }
                 }}
                 required
@@ -415,7 +415,20 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                   min="1"
                   step="1"
                   value={collectionAmount}
-                  onChange={e => setCollectionAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  onKeyDown={e => {
+                    if (e.key === "." || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setCollectionAmount("");
+                    } else {
+                      const num = Math.round(Number(val));
+                      setCollectionAmount(isNaN(num) ? "" : num);
+                    }
+                  }}
                   placeholder="e.g. 1200"
                   required
                   className="w-full rounded-lg border border-border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -458,7 +471,7 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                 {stats.cashHolding > 0 && (
                   <button
                     type="button"
-                    onClick={() => setCollectionAmount(stats.cashHolding)}
+                    onClick={() => setCollectionAmount(Math.round(stats.cashHolding))}
                     className="rounded bg-emerald-600/10 text-emerald-700 px-2 py-0.5 font-semibold hover:bg-emerald-600/20 dark:text-emerald-300"
                   >
                     Full Balance (₹{Math.round(stats.cashHolding)})
