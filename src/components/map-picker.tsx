@@ -19,15 +19,92 @@ interface MapPickerProps {
   initialLocation?: MapLocation | null;
 }
 
-// Popular quick-select presets for Delhi NCR & Airport
-const QUICK_PRESETS = [
-  { name: "IGI Airport Terminal 3 (Bay 2)", lat: 28.5562, lng: 77.0856, tag: "✈️ Airport T3" },
-  { name: "IGI Airport Terminal 1 (Bay 1)", lat: 28.5684, lng: 77.1121, tag: "✈️ Airport T1" },
-  { name: "DLF Cyber City, Gurugram", lat: 28.4986, lng: 77.0878, tag: "🏢 Cyber City" },
-  { name: "Connaught Place, Inner Circle", lat: 28.6315, lng: 77.2167, tag: "📍 Connaught Place" },
-  { name: "Aerocity Worldmark, Delhi", lat: 28.5501, lng: 77.1199, tag: "🏨 Aerocity" },
-  { name: "Noida Sector 18 / Mall of India", lat: 28.5708, lng: 77.3271, tag: "🏬 Noida Sec 18" },
+// Popular quick-select presets across major Indian Metros
+export const PAN_INDIA_PRESETS = [
+  // Bengaluru
+  { name: "Kempegowda Int'l Airport (BLR)", city: "Bengaluru", lat: 13.1986, lng: 77.7066, tag: "✈️ BLR Airport", is_airport: true },
+  { name: "Indiranagar 100ft Road, Bengaluru", city: "Bengaluru", lat: 12.9784, lng: 77.6408, tag: "📍 Indiranagar" },
+  { name: "Koramangala 4th Block, Bengaluru", city: "Bengaluru", lat: 12.9345, lng: 77.6266, tag: "🏢 Koramangala" },
+  { name: "Whitefield ITPL, Bengaluru", city: "Bengaluru", lat: 12.9863, lng: 77.7308, tag: "💼 Whitefield" },
+  { name: "Electronic City Phase 1, Bengaluru", city: "Bengaluru", lat: 12.8452, lng: 77.6602, tag: "⚡ Electronic City" },
+  { name: "MG Road Metro Station, Bengaluru", city: "Bengaluru", lat: 12.9756, lng: 77.6066, tag: "🛍️ MG Road" },
+
+  // Delhi NCR
+  { name: "IGI Airport Terminal 3, Delhi", city: "Delhi NCR", lat: 28.5562, lng: 77.0856, tag: "✈️ Delhi T3", is_airport: true },
+  { name: "IGI Airport Terminal 1, Delhi", city: "Delhi NCR", lat: 28.5684, lng: 77.1121, tag: "✈️ Delhi T1", is_airport: true },
+  { name: "DLF Cyber City, Gurugram", city: "Delhi NCR", lat: 28.4986, lng: 77.0878, tag: "🏢 Cyber City" },
+  { name: "Connaught Place Inner Circle, Delhi", city: "Delhi NCR", lat: 28.6315, lng: 77.2167, tag: "📍 Connaught Place" },
+  { name: "Aerocity Worldmark, Delhi", city: "Delhi NCR", lat: 28.5501, lng: 77.1199, tag: "🏨 Aerocity" },
+  { name: "Noida Sector 18 / Mall of India", city: "Delhi NCR", lat: 28.5708, lng: 77.3271, tag: "🏬 Noida Sec 18" },
+
+  // Mumbai & MMR
+  { name: "CSMIA Airport Terminal 2, Mumbai", city: "Mumbai", lat: 19.0896, lng: 72.8656, tag: "✈️ Mumbai T2", is_airport: true },
+  { name: "Bandra Kurla Complex (BKC), Mumbai", city: "Mumbai", lat: 19.0664, lng: 72.8687, tag: "🏢 Mumbai BKC" },
+  { name: "Nariman Point / Marine Drive, Mumbai", city: "Mumbai", lat: 18.9256, lng: 72.8242, tag: "🌊 Marine Drive" },
+  { name: "Andheri West / Lokhandwala, Mumbai", city: "Mumbai", lat: 19.1363, lng: 72.8277, tag: "📍 Andheri West" },
+
+  // Hyderabad
+  { name: "RGIA Airport Shamshabad, Hyderabad", city: "Hyderabad", lat: 17.2403, lng: 78.4294, tag: "✈️ HYD Airport", is_airport: true },
+  { name: "HITEC City / Cyber Towers, Hyderabad", city: "Hyderabad", lat: 17.4474, lng: 78.3762, tag: "🏢 HITEC City" },
+  { name: "Jubilee Hills Road No. 36, Hyderabad", city: "Hyderabad", lat: 17.4325, lng: 78.4071, tag: "📍 Jubilee Hills" },
+
+  // Chennai
+  { name: "Chennai Int'l Airport (MAA)", city: "Chennai", lat: 12.9941, lng: 80.1709, tag: "✈️ MAA Airport", is_airport: true },
+  { name: "T. Nagar / Pondy Bazaar, Chennai", city: "Chennai", lat: 13.0418, lng: 80.2341, tag: "🛍️ T. Nagar" },
+
+  // Pune
+  { name: "Pune Airport (PNQ) / Viman Nagar", city: "Pune", lat: 18.5822, lng: 73.9197, tag: "✈️ Pune Airport", is_airport: true },
+  { name: "Koregaon Park / Kalyani Nagar, Pune", city: "Pune", lat: 18.5362, lng: 73.8940, tag: "📍 Koregaon Park" },
+
+  // Kolkata
+  { name: "Netaji Subhash Airport (CCU), Kolkata", city: "Kolkata", lat: 22.6547, lng: 88.4467, tag: "✈️ CCU Airport", is_airport: true },
+  { name: "Park Street / Chowringhee, Kolkata", city: "Kolkata", lat: 22.5513, lng: 88.3524, tag: "📍 Park Street" },
+
+  // Jaipur
+  { name: "Jaipur Int'l Airport (JAI)", city: "Jaipur", lat: 26.8289, lng: 75.8056, tag: "✈️ Jaipur Airport", is_airport: true },
+  { name: "C-Scheme / MI Road, Jaipur", city: "Jaipur", lat: 26.9124, lng: 75.8032, tag: "📍 C-Scheme" },
 ];
+
+const MAJOR_INDIAN_CITIES = [
+  { name: "Bengaluru", state: "Karnataka", lat: 12.9716, lng: 77.5946 },
+  { name: "Delhi NCR", state: "Delhi", lat: 28.6139, lng: 77.2090 },
+  { name: "Mumbai", state: "Maharashtra", lat: 19.0760, lng: 72.8777 },
+  { name: "Hyderabad", state: "Telangana", lat: 17.3850, lng: 78.4867 },
+  { name: "Chennai", state: "Tamil Nadu", lat: 13.0827, lng: 80.2707 },
+  { name: "Kolkata", state: "West Bengal", lat: 22.5726, lng: 88.3639 },
+  { name: "Pune", state: "Maharashtra", lat: 18.5204, lng: 73.8567 },
+  { name: "Ahmedabad", state: "Gujarat", lat: 23.0225, lng: 72.5714 },
+  { name: "Jaipur", state: "Rajasthan", lat: 26.9124, lng: 75.7873 },
+  { name: "Chandigarh", state: "Punjab/Haryana", lat: 30.7333, lng: 76.7794 },
+  { name: "Lucknow", state: "Uttar Pradesh", lat: 26.8467, lng: 80.9462 },
+  { name: "Kochi", state: "Kerala", lat: 9.9312, lng: 76.2673 },
+  { name: "Goa", state: "Goa", lat: 15.4909, lng: 73.8278 },
+  { name: "Indore", state: "Madhya Pradesh", lat: 22.7196, lng: 75.8577 },
+  { name: "Nagpur", state: "Maharashtra", lat: 21.1458, lng: 79.0882 },
+  { name: "Surat", state: "Gujarat", lat: 21.1702, lng: 72.8311 },
+  { name: "Bhopal", state: "Madhya Pradesh", lat: 23.2599, lng: 77.4126 },
+  { name: "Visakhapatnam", state: "Andhra Pradesh", lat: 17.6868, lng: 83.2185 },
+  { name: "Patna", state: "Bihar", lat: 25.5941, lng: 85.1376 },
+  { name: "Vadodara", state: "Gujarat", lat: 22.3072, lng: 73.1812 },
+  { name: "Coimbatore", state: "Tamil Nadu", lat: 11.0168, lng: 76.9558 },
+  { name: "Mysuru", state: "Karnataka", lat: 12.2958, lng: 76.6394 },
+  { name: "Guwahati", state: "Assam", lat: 26.1445, lng: 91.7362 },
+  { name: "Bhubaneswar", state: "Odisha", lat: 20.2961, lng: 85.8245 },
+  { name: "Dehradun", state: "Uttarakhand", lat: 30.3165, lng: 78.0322 },
+  { name: "Amritsar", state: "Punjab", lat: 31.6340, lng: 74.8723 },
+];
+
+function calcHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export function MapPicker({
   label,
@@ -52,6 +129,7 @@ export function MapPicker({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [activeCityTab, setActiveCityTab] = useState<string>("All");
 
   // Dynamically load Google Maps JS SDK with Places library if apiKey provided
   useEffect(() => {
@@ -119,9 +197,11 @@ export function MapPicker({
         const L = window.L;
         const map = L.map(mapContainerRef.current, {
           center: [defaultCenter.lat, defaultCenter.lng],
-          zoom: 14,
+          zoom: initialLocation ? 15 : 13,
           zoomControl: false,
           attributionControl: false,
+          minZoom: 4,
+          maxZoom: 20,
         });
 
         // Clean Google Maps roadmap tiles: fast CDN, highly detailed Indian landmarks/roads, zero watermarks
@@ -150,8 +230,24 @@ export function MapPicker({
           }
         }, 200);
 
-        // If no initial location, set initial address for default center
-        if (!selectedLocation) {
+        // Auto-detect user's GPS if no location pre-selected
+        if (!initialLocation && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (!isMounted || !mapInstanceRef.current) return;
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              mapInstanceRef.current.flyTo([lat, lng], 15, { duration: 1.2 });
+              handleMapMoveEnd(lat, lng);
+            },
+            () => {
+              if (!selectedLocation) {
+                handleMapMoveEnd(defaultCenter.lat, defaultCenter.lng);
+              }
+            },
+            { enableHighAccuracy: true, timeout: 6000 }
+          );
+        } else if (!selectedLocation) {
           handleMapMoveEnd(defaultCenter.lat, defaultCenter.lng);
         }
       } catch (err) {
@@ -211,7 +307,7 @@ export function MapPicker({
         }
       }
 
-      // 2. Fallback to OpenStreetMap Nominatim
+      // 2. OpenStreetMap Nominatim with structured Indian address extraction
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -219,12 +315,26 @@ export function MapPicker({
         );
         if (res.ok) {
           const data = await res.json();
+          const addr = data.address || {};
+          
+          // Build clean, human-readable Indian location name
+          const road = addr.road || addr.street || "";
+          const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || addr.quarter || "";
+          const city = addr.city || addr.town || addr.municipality || addr.city_district || addr.county || addr.state_district || "";
+          const state = addr.state || "";
+
+          const primaryTokens = [road, locality].filter(Boolean);
+          const secondaryTokens = [city, state].filter(Boolean);
+
           let formatted = "";
-          if (data.display_name) {
-            const parts = data.display_name.split(",").map((s: string) => s.trim());
-            formatted = parts.slice(0, 3).join(", ");
-          } else if (data.name) {
-            formatted = data.name;
+          if (primaryTokens.length > 0 && secondaryTokens.length > 0) {
+            formatted = `${primaryTokens.join(", ")}, ${secondaryTokens[0]}`;
+          } else if (primaryTokens.length > 0) {
+            formatted = primaryTokens.join(", ");
+          } else if (secondaryTokens.length > 0) {
+            formatted = secondaryTokens.join(", ");
+          } else if (data.display_name) {
+            formatted = data.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
           }
 
           if (formatted) {
@@ -238,29 +348,59 @@ export function MapPicker({
         // Silently catch network errors
       }
 
-      // 3. Fallback: match nearest service area
-      const nearest = findNearestArea(lat, lng);
-      const fallbackName = nearest ? `Near ${nearest.name}` : `Pin Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-      setSelectedLocation({ name: fallbackName, lat, lng });
-      setSearchValue(fallbackName);
+      // 3. Pan-India Intelligent Proximity Fallback (Never mislabels Bengaluru as Delhi!)
+      const nearestPreset = findNearestPreset(lat, lng);
+      if (nearestPreset && nearestPreset.distKm < 15) {
+        const fallbackName = `Near ${nearestPreset.preset.name}`;
+        setSelectedLocation({ name: fallbackName, lat, lng });
+        setSearchValue(fallbackName);
+        setIsResolvingAddress(false);
+        return;
+      }
+
+      const nearestCity = findNearestIndianCity(lat, lng);
+      if (nearestCity && nearestCity.distKm < 60) {
+        const fallbackName = `${nearestCity.city.name}, ${nearestCity.city.state} (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
+        setSelectedLocation({ name: fallbackName, lat, lng });
+        setSearchValue(fallbackName);
+        setIsResolvingAddress(false);
+        return;
+      }
+
+      const fallbackGeneric = `Pin Location (${lat.toFixed(4)}, ${lng.toFixed(4)}) · India`;
+      setSelectedLocation({ name: fallbackGeneric, lat, lng });
+      setSearchValue(fallbackGeneric);
       setIsResolvingAddress(false);
-    }, 450);
+    }, 400);
   }
 
   // Find closest pre-defined area by distance
-  function findNearestArea(lat: number, lng: number) {
-    const list = [...areas, ...QUICK_PRESETS];
+  function findNearestPreset(lat: number, lng: number) {
+    const list = [...areas, ...PAN_INDIA_PRESETS];
     if (!list.length) return null;
     let closest = list[0];
     let minDist = Infinity;
     list.forEach((item) => {
-      const d = Math.hypot(item.lat - lat, item.lng - lng);
+      const d = calcHaversineKm(lat, lng, item.lat, item.lng);
       if (d < minDist) {
         minDist = d;
         closest = item;
       }
     });
-    return closest;
+    return { preset: closest, distKm: minDist };
+  }
+
+  function findNearestIndianCity(lat: number, lng: number) {
+    let closest = MAJOR_INDIAN_CITIES[0];
+    let minDist = Infinity;
+    MAJOR_INDIAN_CITIES.forEach((c) => {
+      const d = calcHaversineKm(lat, lng, c.lat, c.lng);
+      if (d < minDist) {
+        minDist = d;
+        closest = c;
+      }
+    });
+    return { city: closest, distKm: minDist };
   }
 
   // Live search handler with suggestions
@@ -277,21 +417,22 @@ export function MapPicker({
 
     searchTimeoutRef.current = setTimeout(async () => {
       const qLower = query.toLowerCase();
-      // 1. Check local preset areas & areas table first (Instant!)
       const localMatches: Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }> = [];
 
-      [...areas, ...QUICK_PRESETS].forEach((item) => {
-        if (item.name.toLowerCase().includes(qLower) && !localMatches.some((m) => m.name === item.name)) {
+      // 1. Instant match against Pan-India presets & areas
+      [...PAN_INDIA_PRESETS, ...areas].forEach((item) => {
+        const fullStr = `${item.name} ${item.city || ""} ${item.tag || ""}`.toLowerCase();
+        if (fullStr.includes(qLower) && !localMatches.some((m) => m.name === item.name)) {
           localMatches.push({
             name: item.name,
             lat: item.lat,
             lng: item.lng,
-            sub: item.is_airport ? "Airport Hub" : "Orange Service Area",
+            sub: item.city ? `${item.city} Hub` : item.is_airport ? "Airport Hub" : "Orange Service Area",
           });
         }
       });
 
-      // 2. Query Google Places Autocomplete if available
+      // 2. Query Google Places Autocomplete (Restricted to entire country: India)
       if (typeof window !== "undefined" && window.google?.maps?.places?.AutocompleteService) {
         try {
           const autoService = new window.google.maps.places.AutocompleteService();
@@ -304,12 +445,12 @@ export function MapPicker({
               (predictions: any, status: any) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
                   resolve(
-                    predictions.slice(0, 4).map((p: any) => ({
+                    predictions.slice(0, 5).map((p: any) => ({
                       name: p.description,
                       lat: 0,
                       lng: 0,
                       placeId: p.place_id,
-                      sub: "Google Verified Landmark",
+                      sub: "Google Verified Location · India",
                     }))
                   );
                 } else {
@@ -329,22 +470,27 @@ export function MapPicker({
         }
       }
 
-      // 3. Fallback: Query Nominatim for live street/landmark matching in India
+      // 3. Pan-India Nominatim geocoder (Bengaluru, Delhi, Mumbai, Hyderabad, Kolkata, Chennai, etc.)
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=4`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&addressdetails=1&limit=6`,
           { headers: { "Accept-Language": "en" } }
         );
         if (res.ok) {
           const apiData = await res.json();
           apiData.forEach((item: any) => {
             const shortName = item.display_name.split(",").slice(0, 3).join(", ");
+            const addr = item.address || {};
+            const city = addr.city || addr.town || addr.municipality || addr.state_district || "";
+            const state = addr.state || "India";
+            const subLabel = [city, state].filter(Boolean).join(", ") || "India Location";
+
             if (!localMatches.some((m) => m.name.toLowerCase() === shortName.toLowerCase())) {
               localMatches.push({
                 name: shortName,
                 lat: parseFloat(item.lat),
                 lng: parseFloat(item.lon),
-                sub: "Delhi NCR Address",
+                sub: subLabel,
               });
             }
           });
@@ -355,34 +501,47 @@ export function MapPicker({
 
       setSearchResults(localMatches);
       setIsSearching(false);
-    }, 300);
+    }, 280);
   }
 
-  // Select a location from search or quick preset
+  // Select a location and resolve precise GPS coordinates anywhere in India
   function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
-    // If location has placeId from Google Places and needs coordinates resolved:
-    if (loc.placeId && (!loc.lat || !loc.lng) && typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+    // If location is from Google Places and has a placeId with 0 coordinates:
+    if (loc.placeId && (!loc.lat || !loc.lng)) {
       setIsResolvingAddress(true);
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ placeId: loc.placeId }, (results: any, status: any) => {
-        setIsResolvingAddress(false);
-        if (status === "OK" && results?.[0]?.geometry?.location) {
-          const gLat = results[0].geometry.location.lat();
-          const gLng = results[0].geometry.location.lng();
-          const resolved = { name: loc.name, lat: gLat, lng: gLng };
-          setSelectedLocation(resolved);
-          setSearchValue(loc.name);
-          setSearchResults([]);
-          if (mode === "map" && mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([gLat, gLng], 16, { duration: 1 });
-          }
+
+      // Attempt A: PlacesService getDetails (works with Places API, doesn't need Geocoding API)
+      if (typeof window !== "undefined" && window.google?.maps?.places?.PlacesService) {
+        try {
+          const dummyNode = document.createElement("div");
+          const placesService = new window.google.maps.places.PlacesService(dummyNode);
+          placesService.getDetails(
+            { placeId: loc.placeId, fields: ["geometry", "formatted_address", "name"] },
+            (place: any, status: any) => {
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+                const gLat = place.geometry.location.lat();
+                const gLng = place.geometry.location.lng();
+                const resolved = { name: place.formatted_address || loc.name, lat: gLat, lng: gLng };
+                setSelectedLocation(resolved);
+                setSearchValue(resolved.name);
+                setSearchResults([]);
+                setIsResolvingAddress(false);
+                if (mode === "map" && mapInstanceRef.current) {
+                  mapInstanceRef.current.flyTo([gLat, gLng], 16, { duration: 1 });
+                }
+                return;
+              }
+              fallbackResolvePlace(loc);
+            }
+          );
+          return;
+        } catch (e) {
+          fallbackResolvePlace(loc);
           return;
         }
-        // If geocode fails, just save name
-        setSelectedLocation(loc as any);
-        setSearchValue(loc.name);
-        setSearchResults([]);
-      });
+      }
+
+      fallbackResolvePlace(loc);
       return;
     }
 
@@ -393,6 +552,37 @@ export function MapPicker({
     if (mode === "map" && mapInstanceRef.current) {
       mapInstanceRef.current.flyTo([loc.lat, loc.lng], 16, { duration: 1 });
     }
+  }
+
+  // Robust coordinate resolution fallback via Nominatim search
+  async function fallbackResolvePlace(loc: { name: string; lat: number; lng: number }) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc.name)}&countrycodes=in&limit=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data[0]) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          const resolved = { name: loc.name, lat, lng };
+          setSelectedLocation(resolved);
+          setSearchValue(loc.name);
+          setSearchResults([]);
+          setIsResolvingAddress(false);
+          if (mode === "map" && mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1 });
+          }
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setIsResolvingAddress(false);
+    setSelectedLocation(loc);
+    setSearchValue(loc.name);
+    setSearchResults([]);
   }
 
   // GPS Locate current position
@@ -429,7 +619,7 @@ export function MapPicker({
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{label}</p>
           <p className="text-xs text-background/60 mt-0.5">
-            {mode === "map" ? "Drag map to position pin or search" : "Select from approved service zones"}
+            {mode === "map" ? "Drag anywhere in India or search your city" : "Select from popular hubs across India"}
           </p>
         </div>
 
@@ -451,18 +641,18 @@ export function MapPicker({
               mode === "list" ? "bg-primary text-primary-foreground shadow-xs" : "text-background/60 hover:text-background"
             }`}
           >
-            <List className="size-3.5" /> Quick List
+            <List className="size-3.5" /> Quick Hubs
           </button>
         </div>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="relative z-20">
-        <div className="relative">
+      {/* Search Input Bar + Locate Button */}
+      <div className="relative z-20 flex gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            className="w-full rounded-xl border border-background/20 bg-background text-foreground py-3 pl-10 pr-10 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30"
+            className="w-full rounded-xl border border-background/20 bg-background text-foreground py-3 pl-10 pr-10 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 shadow-xs"
             placeholder={placeholder}
             value={searchValue}
             onChange={(e) => handleSearchInput(e.target.value)}
@@ -481,9 +671,26 @@ export function MapPicker({
           )}
         </div>
 
+        {/* Quick GPS Auto-locate Button */}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={detectCurrentLocation}
+          disabled={loadingGPS}
+          title="Use my current GPS location"
+          className="shrink-0 rounded-xl border border-background/20 bg-background/10 hover:bg-background/20 text-background px-3"
+        >
+          {loadingGPS ? (
+            <Loader2 className="size-4 animate-spin text-primary" />
+          ) : (
+            <Crosshair className="size-4 text-primary" />
+          )}
+          <span className="hidden sm:inline text-xs font-semibold ml-1.5">My Location</span>
+        </Button>
+
         {/* Autocomplete Dropdown */}
         {searchResults.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border bg-background p-1.5 shadow-xl z-50 text-foreground">
+          <div className="absolute left-0 right-0 top-full mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-border bg-background p-1.5 shadow-2xl z-50 text-foreground">
             {searchResults.map((result, idx) => (
               <button
                 key={idx}
@@ -502,12 +709,12 @@ export function MapPicker({
         )}
       </div>
 
-      {/* Quick Location Chips */}
+      {/* Quick Location Chips (Pan-India Popular) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-background/60 shrink-0 flex items-center gap-1">
           <Sparkles className="size-3 text-primary" /> Popular:
         </span>
-        {QUICK_PRESETS.map((preset, idx) => (
+        {PAN_INDIA_PRESETS.slice(0, 8).map((preset, idx) => (
           <button
             key={idx}
             type="button"
@@ -555,27 +762,48 @@ export function MapPicker({
           {!mapLoaded && !loadError && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-night/90 backdrop-blur-xs">
               <Loader2 className="size-6 animate-spin text-primary" />
-              <p className="text-xs font-medium text-background/70">Loading Orange High-Def Map...</p>
+              <p className="text-xs font-medium text-background/70">Loading High-Definition Indian Map...</p>
             </div>
           )}
 
           {/* Map Status Hint */}
           <div className="absolute bottom-2.5 left-3 z-10">
             <span className="rounded-full bg-night/80 border border-background/20 px-2.5 py-0.5 text-[10px] font-medium text-background/80 backdrop-blur-xs shadow-xs">
-              {isResolvingAddress ? "📍 Locating..." : "Drag map to adjust location"}
+              {isResolvingAddress ? "📍 Resolving address..." : "Pan or drag pin anywhere across India"}
             </span>
           </div>
         </div>
       )}
 
-      {/* QUICK LIST VIEW (Dropdown Fallback) */}
+      {/* QUICK LIST VIEW (Categorized by City) */}
       {mode === "list" && (
         <div className="rounded-2xl border border-background/20 bg-background/5 p-4 space-y-3 shadow-xs">
-          <p className="text-xs font-semibold text-background/60 uppercase tracking-wider">
-            Select Service Area or Airport Bay
-          </p>
+          {/* City Category Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-background/10">
+            {["All", "Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad", "Other Metros"].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setActiveCityTab(c)}
+                className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  activeCityTab === c
+                    ? "bg-primary text-primary-foreground"
+                    : "text-background/60 hover:text-background hover:bg-background/10"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
           <div className="grid gap-2 max-h-64 overflow-y-auto pr-1">
-            {[...QUICK_PRESETS, ...areas].map((item: any, i) => {
+            {PAN_INDIA_PRESETS.filter((item) => {
+              if (activeCityTab === "All") return true;
+              if (activeCityTab === "Other Metros") {
+                return !["Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad"].includes(item.city);
+              }
+              return item.city === activeCityTab;
+            }).map((item: any, i) => {
               const isSelected = selectedLocation?.name === item.name;
               return (
                 <button
@@ -590,7 +818,10 @@ export function MapPicker({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <MapPin className={`size-4 shrink-0 ${isSelected ? "text-primary" : "text-primary/70"}`} />
-                    <span className="text-xs truncate">{item.name}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs truncate font-medium">{item.name}</p>
+                      <p className="text-[10px] text-background/50">{item.city} · Pan-India Hub</p>
+                    </div>
                   </div>
                   {item.is_airport || item.tag?.includes("Airport") ? (
                     <span className="shrink-0 text-[10px] rounded-full bg-amber-500/20 text-amber-300 font-semibold px-2 py-0.5">

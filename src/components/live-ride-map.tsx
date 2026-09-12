@@ -311,7 +311,7 @@ export function LiveRideMap({ pickup, drop, driver, status, distKm }: LiveMapPro
           {status === "searching" ? (
             <>
               <Loader2 className="size-3.5 animate-spin text-primary" />
-              <span>Scanning Delhi-NCR for nearest Orange EV...</span>
+              <span>Scanning area for nearest Orange EV...</span>
             </>
           ) : status === "accepted" ? (
             <>
