@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Star, TrendingUp, User, Volume2, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate } from "@/lib/ride-vehicle";
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
+import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -30,6 +31,7 @@ interface Booking {
   distance_km: number; rating: number | null;
   ride_otp?: string;
   customer_id?: string;
+  arrived_at?: string | null;
 }
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
@@ -120,6 +122,7 @@ function DriverConsolePage() {
   const [customerProfiles, setCustomerProfiles] = useState<Record<string, { full_name: string; phone: string }>>({});
   const [activeChatRide, setActiveChatRide] = useState<Booking | null>(null);
   const [unreadChats, setUnreadChats] = useState<Record<string, number>>({});
+  const [driverReviews, setDriverReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
@@ -323,6 +326,16 @@ function DriverConsolePage() {
         } catch (err) {}
       }
     }
+
+    try {
+      const storedReviews = JSON.parse(localStorage.getItem("orange_driver_reviews") || "[]");
+      if (driverData) {
+        const matched = storedReviews.filter((r: any) => !r.driver_id || r.driver_id === driverData.id || r.driver_name === driverData.full_name);
+        setDriverReviews(matched.length > 0 ? matched : storedReviews);
+      } else {
+        setDriverReviews(storedReviews);
+      }
+    } catch (e) {}
 
     setLoading(false);
 
@@ -586,6 +599,9 @@ function DriverConsolePage() {
             <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
             <TabsTrigger value="requests">New Requests {newRequests.length > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{newRequests.length}</span>}</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            <TabsTrigger value="praise">
+              Customer Praise & Tips {driverReviews.length > 0 && <span className="ml-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{driverReviews.length}</span>}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="rides">
@@ -630,6 +646,45 @@ function DriverConsolePage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Passenger Ride Preferences (Cabin Climate, Quiet Mode, Hub/Pillar) */}
+                      {(() => {
+                        let ridePrefs: { pillar?: string; cabinClimate?: string; quietRide?: boolean } = {};
+                        try {
+                          const raw = localStorage.getItem(`orange_ride_pref_${ride.id}`) || localStorage.getItem(`orange_ride_pref_${ride.reference}`);
+                          if (raw) ridePrefs = JSON.parse(raw);
+                        } catch (e) {}
+
+                        const hasPrefs = ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pillar;
+                        if (!hasPrefs) return null;
+
+                        return (
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {ridePrefs.cabinClimate && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-600 dark:text-sky-400">
+                                <Snowflake className="size-3" />
+                                <span>
+                                  {ridePrefs.cabinClimate === "chilled" && "Pre-cool AC: Chilled (20°C)"}
+                                  {ridePrefs.cabinClimate === "pleasant" && "Pre-cool AC: Pleasant (23°C)"}
+                                  {ridePrefs.cabinClimate === "eco" && "AC: Eco / Fresh Air"}
+                                </span>
+                              </span>
+                            )}
+                            {ridePrefs.quietRide && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                                <VolumeX className="size-3" />
+                                <span>Quiet Ride (Resting / Work Call)</span>
+                              </span>
+                            )}
+                            {ridePrefs.pillar && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                                <MapPin className="size-3" />
+                                <span>Terminal/Pillar: {ridePrefs.pillar}</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Customer Contact & In-Ride Communication Card */}
                       {(() => {
@@ -741,6 +796,11 @@ function DriverConsolePage() {
 
                       {ride.status === "arrived" && (
                         <div className="mt-6 border-t border-border pt-4 text-center">
+                          {/* Live Waiting Fee Timer */}
+                          <div className="mb-4">
+                            <WaitingFeeTimer arrivedAt={ride.arrived_at} isDriver={true} />
+                          </div>
+
                           <div className="mb-3 flex justify-center">
                             <Button asChild variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
                               <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer">
@@ -992,6 +1052,156 @@ function DriverConsolePage() {
                   </div>
               }
             </div>
+          </TabsContent>
+
+          {/* Customer Praise, Badges & Tips Tab */}
+          <TabsContent value="praise">
+            {(() => {
+              const totalTips = driverReviews.reduce((sum, r) => sum + (Number(r.tip) || 0), 0);
+              const allRatings = driverReviews.map(r => Number(r.rating)).filter(Boolean);
+              const praiseAvgRating = allRatings.length > 0
+                ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1)
+                : (driver.rating || 5.0).toFixed(1);
+
+              const complimentCounts: Record<string, number> = {};
+              driverReviews.forEach(r => {
+                if (Array.isArray(r.compliments)) {
+                  r.compliments.forEach((c: string) => {
+                    complimentCounts[c] = (complimentCounts[c] || 0) + 1;
+                  });
+                }
+              });
+
+              const totalCompliments = Object.values(complimentCounts).reduce((a, b) => a + b, 0);
+
+              return (
+                <div className="space-y-6">
+                  {/* Summary Metric Cards */}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5">
+                      <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <Banknote className="size-5" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Total Tips Earned</span>
+                      </div>
+                      <p className="mt-2 text-3xl font-extrabold text-foreground">₹{totalTips}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">100% direct to your bank payout</p>
+                    </div>
+
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
+                      <div className="flex items-center gap-2 text-amber-500">
+                        <Star className="size-5 fill-amber-400 text-amber-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Driver Rating</span>
+                      </div>
+                      <p className="mt-2 text-3xl font-extrabold text-foreground">{praiseAvgRating} ⭐</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Based on customer ratings</p>
+                    </div>
+
+                    <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Award className="size-5" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Praise Badges</span>
+                      </div>
+                      <p className="mt-2 text-3xl font-extrabold text-foreground">{totalCompliments}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Compliments collected</p>
+                    </div>
+                  </div>
+
+                  {/* Compliments Showcase Badges */}
+                  <div className="rounded-xl border border-border bg-background p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="size-5 text-primary" />
+                      <h3 className="font-bold text-sm">Customer Compliment Badges</h3>
+                    </div>
+                    {Object.keys(complimentCounts).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No compliment badges collected yet. Deliver exceptional service to earn praise badges!</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2.5">
+                        {Object.entries(complimentCounts).map(([badge, count]) => (
+                          <div
+                            key={badge}
+                            className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs font-bold text-foreground shadow-sm"
+                          >
+                            <span>{badge}</span>
+                            <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-extrabold text-primary-foreground">
+                              {count}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Passenger Reviews & Praise Feed */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Recent Customer Reviews</p>
+                    {driverReviews.length === 0 ? (
+                      <EmptyState icon={Heart} title="No customer reviews yet" text="Customer feedback and ratings will appear here after completed rides." />
+                    ) : (
+                      <div className="space-y-3">
+                        {driverReviews.map((rev, idx) => (
+                          <div key={rev.booking_id || idx} className="rounded-xl border border-border bg-background p-4 sm:p-5">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star
+                                      key={s}
+                                      className={`size-4 ${
+                                        s <= (rev.rating || 5)
+                                          ? "text-amber-400 fill-amber-400"
+                                          : "text-muted-foreground/30"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {rev.reference ? `Ride #${rev.reference}` : "Ride"}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {rev.tip > 0 && (
+                                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                    +₹{rev.tip} Tip
+                                  </span>
+                                )}
+                                {rev.created_at && (
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {new Date(rev.created_at).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {rev.compliments && rev.compliments.length > 0 && (
+                              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                {rev.compliments.map((c: string) => (
+                                  <span
+                                    key={c}
+                                    className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                                  >
+                                    {c}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {rev.comment && (
+                              <p className="mt-2.5 text-xs italic text-foreground bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                                "{rev.comment}"
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>

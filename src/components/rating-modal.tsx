@@ -52,6 +52,8 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
   const [tip, setTip] = useState<number>(0);
+  const [isCustomTip, setIsCustomTip] = useState(false);
+  const [customTipVal, setCustomTipVal] = useState("");
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -105,6 +107,7 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
         storedReviews.push({
           booking_id: booking.id,
           reference: booking.reference,
+          driver_id: driverId,
           driver_name: driver?.full_name,
           rating,
           tip,
@@ -219,25 +222,70 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
 
             {/* Optional Driver Tip */}
             <div className="mt-5">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Add a Tip for Driver (Optional)
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Add a Tip for Driver (Optional)
+                </p>
+                {tip > 0 && (
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    +₹{tip} Tip
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
                 {TIP_OPTIONS.map((amt) => (
                   <button
                     key={amt}
                     type="button"
-                    onClick={() => setTip(amt)}
+                    onClick={() => {
+                      setIsCustomTip(false);
+                      setCustomTipVal("");
+                      setTip(amt);
+                    }}
                     className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all border ${
-                      tip === amt
-                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      !isCustomTip && tip === amt
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm font-extrabold scale-105"
                         : "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                   >
                     {amt === 0 ? "No Tip" : `₹${amt}`}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomTip(true);
+                    if (TIP_OPTIONS.includes(tip)) setTip(0);
+                  }}
+                  className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all border ${
+                    isCustomTip
+                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm font-extrabold scale-105"
+                      : "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
+                  }`}
+                >
+                  Custom
+                </button>
               </div>
+
+              {isCustomTip && (
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="text-sm font-bold text-muted-foreground pl-1">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    placeholder="Enter custom tip amount..."
+                    value={customTipVal}
+                    onChange={(e) => {
+                      setCustomTipVal(e.target.value);
+                      const parsed = Math.max(0, parseInt(e.target.value, 10) || 0);
+                      setTip(parsed);
+                    }}
+                    className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
 
             {/* Comments Input */}

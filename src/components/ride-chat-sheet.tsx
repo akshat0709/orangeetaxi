@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { MessageSquare, Send, Phone, X, Car, User, CheckCheck } from "lucide-react";
+import { MessageSquare, Send, Phone, X, Car, User, CheckCheck, MapPin, Navigation } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ export function RideChatSheet({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sharingLocation, setSharingLocation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
   const isOpenRef = useRef(isOpen);
@@ -84,6 +85,32 @@ export function RideChatSheet({
   isOpenRef.current = isOpen;
 
   const storageKey = `orange_chat_${bookingId}`;
+
+  const shareMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    setSharingLocation(true);
+    toast.info("Acquiring high-accuracy GPS coordinates...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(5);
+        const lng = pos.coords.longitude.toFixed(5);
+        const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+        const msg = `📍 Standing here right now: ${mapUrl}`;
+        sendMessage(msg);
+        setSharingLocation(false);
+        toast.success(`Exact GPS coordinates shared!`);
+      },
+      (err) => {
+        console.warn("Location error:", err);
+        toast.error("Could not obtain GPS. Please verify location permissions.");
+        setSharingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   // Load persisted chat history for this booking
   useEffect(() => {
@@ -297,7 +324,26 @@ export function RideChatSheet({
                         {m.senderName}
                       </p>
                     )}
-                    <p className="leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
+                    {m.text.includes("maps.google.com") ? (
+                      <div className="space-y-2 my-1">
+                        <div className="flex items-center gap-1.5 font-bold text-xs">
+                          <MapPin className="size-3.5 text-emerald-400" />
+                          <span>Exact Physical Location Shared</span>
+                        </div>
+                        <p className="text-xs opacity-90">{m.text.split("https")[0]}</p>
+                        <a
+                          href={m.text.substring(m.text.indexOf("https"))}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 shadow-sm transition-all active:scale-95"
+                        >
+                          <Navigation className="size-3.5" />
+                          <span>Open in Google Maps / Navigate</span>
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
+                    )}
                     <div
                       className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${
                         isMe ? "text-primary-foreground/75" : "text-muted-foreground"
@@ -317,6 +363,16 @@ export function RideChatSheet({
         {/* Quick Response Chips (Uber / Ola Style) */}
         <div className="border-t border-border/70 bg-card/40 p-2">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+            <button
+              type="button"
+              onClick={shareMyLocation}
+              disabled={sharingLocation}
+              className="shrink-0 rounded-full border border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-xs font-bold transition-all hover:bg-emerald-500/20 active:scale-95 flex items-center gap-1 shadow-sm"
+              title="Share exact physical GPS location pin"
+            >
+              <MapPin className="size-3 text-emerald-500" />
+              <span>{sharingLocation ? "Locating..." : "📍 Share GPS Pin"}</span>
+            </button>
             <span className="text-[11px] font-semibold text-muted-foreground shrink-0 pl-1">
               Quick:
             </span>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Shield,
   ShieldAlert,
@@ -15,7 +15,8 @@ import {
   Check,
   X,
   ExternalLink,
-  LifeBuoy
+  LifeBuoy,
+  Radio
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface GuardianContact {
   name: string;
@@ -59,6 +61,82 @@ export function GuardianSafetyModal({
   const [nameInput, setNameInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sosCountdown, setSosCountdown] = useState<number | null>(null);
+  const [sosActive, setSosActive] = useState(false);
+  const countdownTimerRef = useRef<any>(null);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (sosCountdown === null) return;
+
+    if (sosCountdown > 0) {
+      countdownTimerRef.current = setTimeout(() => {
+        setSosCountdown((prev) => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (sosCountdown === 0) {
+      executeEmergencySos();
+      setSosCountdown(null);
+    }
+
+    return () => {
+      if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current);
+    };
+  }, [sosCountdown]);
+
+  function startSosCountdown() {
+    setSosCountdown(3);
+    toast.warning("🚨 EMERGENCY SOS INITIATED — Calling 112 in 3 seconds!", {
+      duration: 3500,
+    });
+  }
+
+  function cancelSosCountdown() {
+    if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current);
+    setSosCountdown(null);
+    toast.info("SOS Cancelled.");
+  }
+
+  async function executeEmergencySos() {
+    setSosActive(true);
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
+    const refStr = bookingData?.reference ? `#${bookingData.reference}` : "Active Ride";
+    const driverName = driverInfo?.full_name || "Assigned Driver";
+    const driverPhone = driverInfo?.phone || "Direct";
+    const carPlate = driverInfo?.vehicle_number || "BE.6";
+    const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
+
+    // 1. Mark SOS in bookings table
+    if (bookingData?.id) {
+      try {
+        await supabase.from("bookings").update({ sos_raised: true }).eq("id", bookingData.id);
+      } catch (e) {
+        console.warn("Could not mark SOS in booking:", e);
+      }
+    }
+
+    // 2. Dispatch emergency WhatsApp / SMS to Guardian if available
+    const sosMessage = `🚨 *URGENT EMERGENCY SOS ALERT*\n\n` +
+      `I have raised an emergency SOS in my Orange Electric Taxi.\n\n` +
+      `• *Booking Ref:* ${refStr}\n` +
+      `• *Vehicle:* ${carPlate}\n` +
+      `• *Driver:* ${driverName} (${driverPhone})\n` +
+      `• *Live Radar Tracking:* ${trackUrl}\n\n` +
+      `Police (112) is being notified. Please check on me immediately!`;
+
+    const targetPhone = guardian?.phone ? guardian.phone.replace(/[^0-9]/g, "") : "";
+    if (targetPhone) {
+      const cleanTarget = targetPhone.startsWith("91") ? targetPhone : `91${targetPhone}`;
+      const waUrl = `https://wa.me/${cleanTarget}?text=${encodeURIComponent(sosMessage)}`;
+      window.open(waUrl, "_blank");
+    }
+
+    toast.error("🚨 EMERGENCY SOS ACTIVE! Connecting to 112 Emergency Desk...", { duration: 6000 });
+
+    // 3. Dial National Emergency Helpline (112)
+    setTimeout(() => {
+      window.location.href = "tel:112";
+    }, 500);
+  }
 
   // Load guardian from localStorage on mount & when opened
   useEffect(() => {
@@ -130,6 +208,7 @@ export function GuardianSafetyModal({
       : "Plate Assigned";
     const pName = pickup?.name || "Pickup Point";
     const dName = drop?.name || "Destination";
+    const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
 
     const message = `🚨 *Orange Taxi Safety & Live Ride Alert*\n\n` +
       `Hi, I am currently traveling in an Orange Electric Taxi.\n\n` +
@@ -138,7 +217,7 @@ export function GuardianSafetyModal({
       `• *Driver:* ${driverName} (${driverPhone})\n` +
       `• *Pickup:* ${pName}\n` +
       `• *Destination:* ${dName}\n\n` +
-      `• *Track My Live Ride:* ${origin}/book#booking\n\n` +
+      `• *Track My Live Ride:* ${trackUrl}\n\n` +
       `_Sent via Orange Taxi Guardian Safety System_`;
 
     const targetPhone = guardian?.phone ? guardian.phone.replace(/[^0-9]/g, "") : "";
@@ -157,7 +236,8 @@ export function GuardianSafetyModal({
   function handleCopyDetails() {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
     const refStr = bookingData?.reference ? `#${bookingData.reference}` : "Active Ride";
-    const summary = `Orange Taxi Ride Ref: ${refStr} | Driver: ${driverInfo?.full_name || "Assigned"} (${driverInfo?.phone || "Pending"}) | Vehicle: ${driverInfo?.vehicle_number || "BE.6"} | Track: ${origin}/book#booking`;
+    const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
+    const summary = `Orange Taxi Ride Ref: ${refStr} | Driver: ${driverInfo?.full_name || "Assigned"} (${driverInfo?.phone || "Pending"}) | Vehicle: ${driverInfo?.vehicle_number || "BE.6"} | Track Live: ${trackUrl}`;
     navigator.clipboard?.writeText(summary);
     setCopied(true);
     toast.success("Ride details copied to clipboard!");
@@ -243,6 +323,47 @@ export function GuardianSafetyModal({
         ) : (
           /* ACTIVE GUARDIAN DASHBOARD */
           <div className="mt-4 space-y-4">
+            {/* Critical Emergency SOS Card */}
+            <div className="rounded-2xl border-2 border-red-600 bg-red-500/10 p-4 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-sm">
+                  <AlertTriangle className="size-5 animate-pulse" />
+                  <span>National Emergency Police SOS</span>
+                </div>
+                <span className="rounded bg-red-600 text-white font-mono text-[10px] font-bold px-2 py-0.5">
+                  112 POLICE
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                In distress, trigger instant SOS. Automatically dials 112, dispatches live GPS tracking to your guardian, and alerts Orange Command.
+              </p>
+
+              {sosCountdown !== null ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-red-600 text-white font-bold text-center py-3 rounded-xl text-sm animate-pulse">
+                    Calling 112 in {sosCountdown}s...
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={cancelSosCountdown}
+                    className="h-11 px-4 font-bold border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={startSosCountdown}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-black text-xs sm:text-sm py-5 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all tracking-wide"
+                >
+                  <AlertTriangle className="size-4 sm:size-5" />
+                  <span>TRIGGER EMERGENCY SOS (112)</span>
+                </Button>
+              )}
+            </div>
+
             {/* Guardian Contact Info Card */}
             <div className="rounded-xl border border-primary/40 bg-primary/10 p-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">

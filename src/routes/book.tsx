@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,6 +17,7 @@ import { LiveRideMap } from "@/components/live-ride-map";
 import { RatingModal } from "@/components/rating-modal";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
+import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
@@ -180,6 +181,9 @@ function PassengerPage() {
   const [dropGPS, setDropGPS] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [locatingGPS, setLocatingGPS] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
+  const [pickupPillar, setPickupPillar] = useState("");
+  const [cabinClimate, setCabinClimate] = useState<"chilled" | "pleasant" | "eco">("pleasant");
+  const [quietRide, setQuietRide] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<{ id: string; reference: string; otp: string } | null>(null);
   const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
@@ -395,9 +399,13 @@ function PassengerPage() {
       console.warn("Could not sync profile before booking:", e);
     }
 
+    const effectivePickup = pickupPillar
+      ? `${pickup.name} (${pickupPillar})`
+      : pickup.name;
+
     const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
-      pickup_area: pickup.name,
+      pickup_area: effectivePickup,
       pickup_address: `${pickup.lat},${pickup.lng}`,
       drop_area: drop.name,
       drop_address: `${drop.lat},${drop.lng}`,
@@ -420,6 +428,17 @@ function PassengerPage() {
       setSubmitting(false); 
       return; 
     }
+
+    // Persist ride preferences for this booking (viewable by driver)
+    const ridePref = {
+      cabinClimate,
+      quietRide,
+      pickupPillar: pickupPillar || undefined,
+    };
+    try {
+      localStorage.setItem(`orange_ride_pref_${(data as any).id}`, JSON.stringify(ridePref));
+      localStorage.setItem(`orange_ride_pref_${(data as any).reference}`, JSON.stringify(ridePref));
+    } catch {}
     
     setBookingData({ id: (data as any).id, reference: (data as any).reference, otp });
     setStep(4);
@@ -522,6 +541,12 @@ function PassengerPage() {
                 distKm={distKm}
                 paymentMethod={paymentMethod}
                 onPaymentChange={setPaymentMethod}
+                pickupPillar={pickupPillar}
+                onPickupPillarChange={setPickupPillar}
+                cabinClimate={cabinClimate}
+                onCabinClimateChange={setCabinClimate}
+                quietRide={quietRide}
+                onQuietRideChange={setQuietRide}
                 onBack={() => setStep(2)}
                 onConfirm={confirmBooking}
                 submitting={submitting}
@@ -717,43 +742,153 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
 }
 
 
-function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, paymentMethod, onPaymentChange, onBack, onConfirm, submitting }: any) {
-  return <div className="space-y-4 min-w-0 max-w-full">
-    <p className="text-sm font-semibold text-background">Confirm your ride</p>
-    <div className="space-y-3 min-w-0 max-w-full">
-      <div className="rounded-xl border border-background/15 p-4 sm:p-5 space-y-3 min-w-0 max-w-full">
-        <Row label="Vehicle" value={selectedVehicle.name} />
-        <Row label="Pickup" value={pickup.name} />
-        <Row label="Drop-off" value={drop.name} />
-        <div className="flex items-center justify-between border-t border-background/10 pt-3">
-          <span className="font-bold text-background">Total</span>
-          <span className="text-xl font-bold text-primary font-mono">₹{Math.round(fareBreakdown.total)}</span>
+function Step3Confirm({
+  selectedVehicle,
+  pickup,
+  drop,
+  fareBreakdown,
+  distKm,
+  paymentMethod,
+  onPaymentChange,
+  pickupPillar,
+  onPickupPillarChange,
+  cabinClimate,
+  onCabinClimateChange,
+  quietRide,
+  onQuietRideChange,
+  onBack,
+  onConfirm,
+  submitting,
+}: any) {
+  const isAirportOrHub =
+    pickup?.name?.toLowerCase().includes("airport") ||
+    pickup?.name?.toLowerCase().includes("terminal") ||
+    pickup?.name?.toLowerCase().includes("kempegowda") ||
+    pickup?.name?.toLowerCase().includes("tech park") ||
+    pickup?.name?.toLowerCase().includes("manyata") ||
+    pickup?.name?.toLowerCase().includes("ecospace") ||
+    pickup?.is_airport;
+
+  return (
+    <div className="space-y-4 min-w-0 max-w-full">
+      <p className="text-sm font-semibold text-background">Review & Customize Ride</p>
+      <div className="space-y-3 min-w-0 max-w-full">
+        {/* Journey Card */}
+        <div className="rounded-xl border border-background/15 p-4 sm:p-5 space-y-3 min-w-0 max-w-full">
+          <Row label="Vehicle" value={selectedVehicle.name} />
+          <Row label="Pickup" value={pickupPillar ? `${pickup.name} (${pickupPillar})` : pickup.name} />
+          <Row label="Drop-off" value={drop.name} />
+          <div className="flex items-center justify-between border-t border-background/10 pt-3">
+            <span className="font-bold text-background">Total Fare</span>
+            <span className="text-xl font-bold text-primary font-mono">₹{Math.round(fareBreakdown.total)}</span>
+          </div>
+        </div>
+
+        {/* Airport / Landmark Terminal & Pillar Selector */}
+        {isAirportOrHub && (
+          <div className="rounded-xl border border-primary/40 bg-primary/10 p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="size-3.5 text-primary" />
+              <label className="text-[11px] font-bold uppercase tracking-wider text-background">
+                Select Pickup Pillar / Gate Landmark (Optional)
+              </label>
+            </div>
+            <Select value={pickupPillar} onValueChange={onPickupPillarChange}>
+              <SelectTrigger className="bg-background/20 border-background/30 text-background text-xs h-10">
+                <SelectValue placeholder="Select Pickup Pillar or Gate (e.g. T2 Pillar 4B)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="T1 - Pillar 1 to 4 (Zone A)">🛫 Terminal 1 — Pick-up Zone A (Pillars 1 to 4)</SelectItem>
+                <SelectItem value="T1 - Pillar 5 to 8 (Zone B)">🛫 Terminal 1 — Pick-up Zone B (Pillars 5 to 8)</SelectItem>
+                <SelectItem value="T2 - Arrivals Curb (Pillars 1 to 3)">🛫 Terminal 2 — Arrivals Curb (Pillars 1 to 3)</SelectItem>
+                <SelectItem value="T2 - Commercial Zone (Pillars 4 to 6)">🛫 Terminal 2 — Commercial Zone (Pillars 4 to 6)</SelectItem>
+                <SelectItem value="Main Gate 1 (Visitor Reception)">🏢 Main Gate 1 (Visitor Reception)</SelectItem>
+                <SelectItem value="Gate 2 (Tower 3 & 4 Pick-up)">🏢 Gate 2 (Tower 3 & 4 Pick-up Bay)</SelectItem>
+                <SelectItem value="Curb-side Taxi Stand">🚕 Dedicated Curb Taxi Stand</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Pre-Ride Cabin Climate Preference */}
+        <div className="rounded-xl border border-background/15 bg-background/5 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-background/80 flex items-center gap-1.5">
+              <Snowflake className="size-3.5 text-primary" />
+              Cabin Climate Preference
+            </span>
+            <span className="text-[10px] font-semibold text-primary">Pre-cooled before arrival</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: "chilled", label: "Chilled", temp: "20°C", icon: "❄️" },
+              { id: "pleasant", label: "Pleasant", temp: "23°C", icon: "🍃" },
+              { id: "eco", label: "Eco / Mild", temp: "Fresh", icon: "🌿" },
+            ].map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onCabinClimateChange(item.id)}
+                className={`rounded-xl border p-2 text-center transition-all ${
+                  cabinClimate === item.id
+                    ? "border-primary bg-primary/20 text-background font-bold shadow-sm scale-102"
+                    : "border-background/20 bg-background/10 text-background/70 hover:border-background/40 hover:text-background"
+                }`}
+              >
+                <span className="text-sm block">{item.icon}</span>
+                <span className="text-xs block font-bold mt-0.5">{item.label}</span>
+                <span className="text-[10px] text-background/60 block">{item.temp}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quiet Ride Mode Toggle */}
+        <div className="rounded-xl border border-background/15 bg-background/5 p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
+              <VolumeX className="size-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-background">Quiet Ride Mode</p>
+              <p className="text-[10px] text-background/60">Executive peace — no conversation or music (work calls / resting)</p>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={quietRide}
+            onChange={e => onQuietRideChange(e.target.checked)}
+            className="size-4.5 accent-primary rounded cursor-pointer shrink-0"
+          />
+        </div>
+
+        {/* Payment Method */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Payment method</p>
+          <RadioGroup value={paymentMethod} onValueChange={onPaymentChange} className="mt-2.5 flex gap-3">
+            {([["cash", "Cash"], ["upi", "UPI"]] as const).map(([val, label]) => (
+              <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
+                <RadioGroupItem value={val} className="border-background/40 text-primary" />
+                <Wallet className="size-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold text-background">{label}</span>
+              </label>
+            ))}
+          </RadioGroup>
         </div>
       </div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Payment method</p>
-        <RadioGroup value={paymentMethod} onValueChange={onPaymentChange} className="mt-3 flex gap-3">
-          {([["cash", "Cash"], ["upi", "UPI"]] as const).map(([val, label]) => (
-            <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
-              <RadioGroupItem value={val} className="border-background/40 text-primary" />
-              <Wallet className="size-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold text-background">{label}</span>
-            </label>
-          ))}
-        </RadioGroup>
+
+      {/* Affirmative Booking Consent under Consumer Protection Rules */}
+      <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed min-w-0">
+        By confirming, you agree to our <Link to="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
+      </div>
+      <div className="mt-5 flex gap-3 min-w-0">
+        <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
+        <Button size="lg" className="flex-1" onClick={onConfirm} disabled={submitting}>
+          {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Confirm Ride <ArrowRight /></>}
+        </Button>
       </div>
     </div>
-    {/* Affirmative Booking Consent under Consumer Protection Rules */}
-    <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed min-w-0">
-      By confirming, you agree to our <Link to="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
-    </div>
-    <div className="mt-5 flex gap-3 min-w-0">
-      <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
-      <Button size="lg" className="flex-1" onClick={onConfirm} disabled={submitting}>
-        {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Confirm Ride <ArrowRight /></>}
-      </Button>
-    </div>
-  </div>;
+  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -785,6 +920,7 @@ function Step4Confirmed({
   const { user } = useAuth();
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [arrivedAt, setArrivedAt] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
@@ -871,11 +1007,14 @@ function Step4Confirmed({
 
     // 1. Initial load: immediately check if driver is already assigned to this booking
     async function loadInitial() {
-      const { data: b } = await supabase.from("bookings").select("status, driver_id, rating").eq("id", bookingData.id).single();
+      const { data: b } = await supabase.from("bookings").select("status, driver_id, rating, arrived_at").eq("id", bookingData.id).single();
       if (b) {
         if (b.status === "cancelled") {
           onReset?.();
           return;
+        }
+        if (b.arrived_at) {
+          setArrivedAt(b.arrived_at);
         }
         if (b.status) {
           handleStatusChange(b.status);
@@ -898,6 +1037,9 @@ function Step4Confirmed({
     const bookingChannel = supabase.channel(`booking-${bookingData.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` }, async (payload) => {
         const newStatus = payload.new.status;
+        if (payload.new.arrived_at) {
+          setArrivedAt(payload.new.arrived_at);
+        }
         handleStatusChange(newStatus);
         
         if (newStatus === "cancelled") {
@@ -971,6 +1113,13 @@ function Step4Confirmed({
       <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-background">{bookingData.otp}</p>
       <p className="mt-2 text-xs text-background/60">Show this code to your driver to start the ride</p>
     </div>
+
+    {/* Live Waiting Fee Countdown Bar */}
+    {status === "arrived" && (
+      <div className="mt-4">
+        <WaitingFeeTimer arrivedAt={arrivedAt} />
+      </div>
+    )}
 
     {/* Driver Info Card */}
     {driverInfo ? (
