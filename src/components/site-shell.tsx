@@ -1,13 +1,14 @@
 // @ts-nocheck
 
 import { Link, useRouter } from "@tanstack/react-router";
-import { LogOut, Menu, Moon, MoveUpRight, Settings, Sun, User } from "lucide-react";
+import { Download, LogOut, Menu, Moon, MoveUpRight, Settings, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { toast } from "sonner";
+import { triggerPWAInstall } from "@/components/pwa-install-prompt";
 
 const nav = [
   ["Experience", "/experience"], ["Electric", "/electric"], ["For Business", "/business"],
@@ -43,6 +44,15 @@ export function SiteHeader() {
         {!loading && role === "admin" && (
           <Link to="/admin" className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
         )}
+        {/* Install App Trigger */}
+        <button
+          onClick={triggerPWAInstall}
+          type="button"
+          aria-label="Install App"
+          className="hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground xl:flex"
+        >
+          <Download className="size-3.5" /> Install App
+        </button>
         {/* Theme Toggle */}
         <button
           onClick={toggle}
@@ -65,6 +75,9 @@ export function SiteHeader() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/book">Book a Ride</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={triggerPWAInstall}>
+                <Download className="mr-2 size-4" /> Install App
               </DropdownMenuItem>
               {role === "driver" && (
                 <DropdownMenuItem asChild>
@@ -120,6 +133,14 @@ export function SiteHeader() {
             {nav.map(([label, to]) => <SheetClose key={to} asChild><Link to={to} className="border-b border-border py-4 text-xl font-semibold">{label}</Link></SheetClose>)}
             {role === "driver" && <SheetClose asChild><Link to="/driver-console" className="border-b border-border py-4 text-xl font-semibold">My Console</Link></SheetClose>}
             {role === "admin" && <SheetClose asChild><Link to="/admin" className="border-b border-border py-4 text-xl font-semibold">Admin</Link></SheetClose>}
+            <button
+              onClick={() => {
+                triggerPWAInstall();
+              }}
+              className="flex items-center gap-2 border-b border-border py-4 text-left text-xl font-semibold text-primary transition-colors hover:text-primary/80"
+            >
+              <Download className="size-5" /> Install App
+            </button>
           </nav>
           {user ? (
             <button onClick={handleSignOut} className="mt-8 flex w-full items-center gap-2 rounded-lg border border-destructive/30 px-4 py-3 text-sm font-semibold text-destructive">
