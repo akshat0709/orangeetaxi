@@ -34,7 +34,7 @@ export function SiteHeader() {
   }
 
   return <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-    <div className="section-shell grid h-18 grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+    <div className="section-shell flex h-16 sm:h-18 items-center justify-between gap-4 min-w-0 max-w-full">
       <Brand />
       <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
         {nav.map(([label, to]) => <Link key={to} to={to} className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>{label}</Link>)}
@@ -113,10 +113,22 @@ export function SiteHeader() {
           )
         )}
       </nav>
-      {/* Mobile */}
-      <Sheet>
-        <SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open menu"><Menu /></Button></SheetTrigger>
-        <SheetContent className="w-[88%] bg-background p-7 sm:max-w-md">
+      {/* Mobile Header Controls */}
+      <div className="flex items-center gap-2 lg:hidden">
+        <button
+          onClick={toggle}
+          aria-label="Toggle theme"
+          className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+        </button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Open menu">
+              <Menu className="size-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-[88%] bg-background p-7 sm:max-w-md">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex items-center justify-between">
             <Brand />
@@ -154,6 +166,7 @@ export function SiteHeader() {
           )}
         </SheetContent>
       </Sheet>
+      </div>
     </div>
   </header>;
 }

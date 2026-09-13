@@ -413,37 +413,53 @@ function PassengerPage() {
     <section className="relative overflow-hidden bg-night text-background">
       <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
-      <div className="section-shell relative flex min-h-[50vh] items-end py-10 md:items-center md:py-20">
-        <div className="max-w-2xl animate-gentle-rise">
-          <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">For passengers</p>
-          <h1 className="display-serif text-[clamp(2.85rem,7vw,5rem)] leading-[0.92]">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
-          <p className="mt-7 max-w-xl text-base leading-7 text-background/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
-          <Button asChild size="lg" className="mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
+      <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
+        <div className="max-w-2xl animate-gentle-rise min-w-0">
+          <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">For passengers</p>
+          <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95]">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
+          <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-background/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
+          <Button asChild size="lg" className="mt-5 md:mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
         </div>
       </div>
     </section>
 
-    <section id="booking" className="bg-night py-24 text-background md:py-32">
-      <div className="section-shell">
+    <section id="booking" className="bg-night py-8 md:py-24 text-background min-w-0 max-w-full overflow-hidden">
+      <div className="section-shell min-w-0 max-w-full">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Book your Orange</p>
-        <h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{step === 4 ? "You're all set." : "Plan your journey."}</h2>
+        <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight">{step === 4 ? "You're all set." : "Plan your journey."}</h2>
 
         {step !== 4 && (
-          <div className="mt-8 flex items-center gap-3">
-            {([1, 2, 3] as const).map((s, i) => (
-              <div key={s} className="flex items-center gap-3">
-                <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-background/30 text-background/40"}`}>
-                  {step > s ? <Check className="size-3.5" /> : s}
+          <div className="mt-6 md:mt-8 min-w-0 max-w-full">
+            {/* Desktop stepper */}
+            <div className="hidden sm:flex items-center gap-3">
+              {([1, 2, 3] as const).map((s, i) => (
+                <div key={s} className="flex items-center gap-3">
+                  <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-background/30 text-background/40"}`}>
+                    {step > s ? <Check className="size-3.5" /> : s}
+                  </div>
+                  <span className={`text-xs font-semibold ${step === s ? "text-background" : "text-background/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
+                  {i < 2 && <ChevronRight className="size-4 text-background/30" />}
                 </div>
-                <span className={`text-xs font-semibold ${step === s ? "text-background" : "text-background/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
-                {i < 2 && <ChevronRight className="size-4 text-background/30" />}
+              ))}
+            </div>
+
+            {/* Mobile compact stepper */}
+            <div className="sm:hidden flex items-center justify-between rounded-xl border border-background/15 bg-background/5 px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="flex size-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                  {step}
+                </span>
+                <span className="text-xs font-semibold text-background">
+                  {step === 1 ? "Choose Vehicle" : step === 2 ? "Select Route & Destination" : "Confirm Ride"}
+                </span>
               </div>
-            ))}
+              <span className="text-[11px] font-medium text-background/60">Step {step} of 3</span>
+            </div>
           </div>
         )}
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-          <div className="rounded-xl border border-background/15 bg-background/5 p-7">
+        <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start min-w-0 max-w-full">
+          <div className="min-w-0 max-w-full rounded-2xl border border-background/15 bg-background/5 p-4 sm:p-7 shadow-lg">
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="size-8 animate-spin text-primary" />
@@ -514,7 +530,7 @@ function PassengerPage() {
             )}
           </div>
           {step === 4 && pickup && drop ? (
-            <div className="hidden lg:block sticky top-24">
+            <div className="hidden lg:block sticky top-24 min-w-0 max-w-full">
               <LiveRideMap
                 pickup={pickup}
                 drop={drop}
@@ -524,7 +540,7 @@ function PassengerPage() {
               />
             </div>
           ) : (
-            <figure className="overflow-hidden rounded-xl">
+            <figure className="overflow-hidden rounded-xl hidden lg:block">
               <img src={interiorImage} alt="Premium Orange cabin" className="aspect-[4/3] size-full object-cover" />
             </figure>
           )}
@@ -536,28 +552,28 @@ function PassengerPage() {
 
 /* ---------- STEP 1 to 3 components omitted for brevity, keeping same logic ---------- */
 function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
-  return <div>
+  return <div className="space-y-4 min-w-0 max-w-full">
     <p className="text-sm font-semibold text-background">Choose your ride</p>
-    <div className="mt-5 space-y-3">
+    <div className="space-y-3 min-w-0 max-w-full">
       {vehicles.map((v: any) => (
-        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-lg border p-5 text-left transition-all ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary" /><span className="text-sm font-bold text-background">{v.name}</span></div>
-              <p className="mt-1 text-xs text-background/60">{v.tagline}</p>
-              <p className="mt-2 text-xs text-background/50">{v.seats} seats</p>
+        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-xl border p-3.5 sm:p-5 text-left transition-all min-w-0 max-w-full ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
+          <div className="flex items-start justify-between gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary shrink-0" /><span className="text-sm font-bold text-background truncate">{v.name}</span></div>
+              <p className="mt-1 text-xs text-background/60 truncate">{v.tagline}</p>
+              <p className="mt-1.5 text-xs text-background/50">{v.seats} seats</p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-lg font-bold text-primary">₹{v.base_fare}</p>
-              <p className="text-xs text-background/50">base + ₹{v.per_km}/km</p>
-              <p className="text-xs text-background/40">min ₹{v.minimum_fare}</p>
+              <p className="text-[11px] text-background/50">base + ₹{v.per_km}/km</p>
+              <p className="text-[10px] text-background/40">min ₹{v.minimum_fare}</p>
             </div>
           </div>
           {selected?.id === v.id && <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary"><Check className="size-3" />Selected</div>}
         </button>
       ))}
     </div>
-    <Button size="lg" className="mt-6 w-full" disabled={!selected} onClick={onNext}>Continue <ArrowRight /></Button>
+    <Button size="lg" className="mt-4 sm:mt-6 w-full" disabled={!selected} onClick={onNext}>Continue <ArrowRight /></Button>
   </div>;
 }
 
@@ -568,12 +584,16 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
   // Safeguard: Ensure pickup is NEVER empty in Step 2 so zero user clicks are needed
   useEffect(() => {
     if (!pickupGPS && !locatingGPS) {
-      const defaultHub = areas.find((a: any) => a.name.toLowerCase().includes("bengaluru") || a.name.toLowerCase().includes("indiranagar")) || areas[0] || {
-        name: "Indiranagar 100ft Road, Bengaluru",
-        lat: 12.9784,
-        lng: 77.6408,
-      };
-      onPickupGPS({ name: defaultHub.name, lat: defaultHub.lat, lng: defaultHub.lng });
+      if (areas && areas.length > 0) {
+        const blrAirport = areas.find(a => a.name.toLowerCase().includes("airport") || a.is_airport) || areas[0];
+        onPickupGPS({ name: blrAirport.name, lat: blrAirport.lat, lng: blrAirport.lng });
+      } else {
+        onPickupGPS({
+          name: "Kempegowda Int'l Airport (BLR) - Terminal 1 & 2",
+          lat: 13.1986,
+          lng: 77.7066,
+        });
+      }
     }
   }, [pickupGPS, locatingGPS, areas]);
 
@@ -582,16 +602,16 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
 
   if (subStep === "pickup") {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between rounded-xl bg-background/10 px-3.5 py-2.5 text-xs text-background border border-background/15">
-          <div className="flex items-center gap-2">
-            <MapPin className="size-4 text-primary" />
-            <span className="font-semibold">Select or Adjust Pickup Pin</span>
+      <div className="space-y-3 min-w-0 max-w-full">
+        <div className="flex items-center justify-between rounded-xl bg-background/10 px-3.5 py-2.5 text-xs text-background border border-background/15 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="size-4 text-primary shrink-0" />
+            <span className="font-semibold truncate">Select or Adjust Pickup Pin</span>
           </div>
           <button
             type="button"
             onClick={() => setSubStep("drop")}
-            className="text-xs font-semibold text-primary underline hover:text-primary/80"
+            className="text-xs font-semibold text-primary underline hover:text-primary/80 shrink-0 ml-2"
           >
             Back to Destination →
           </button>
@@ -614,10 +634,10 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 max-w-full">
       {/* Pickup Location Status Banner (100% Zero-Click Auto-GPS) */}
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3.5 text-xs text-background shadow-xs">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3 sm:p-3.5 text-xs text-background shadow-xs min-w-0 max-w-full">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
             {locatingGPS ? (
               <Loader2 className="size-4 animate-spin text-emerald-400" />
@@ -625,11 +645,11 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
               <Crosshair className="size-4 animate-pulse" />
             )}
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Pickup Location (Auto-Detected)</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Pickup</p>
               <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-300">
-                {locatingGPS ? "Syncing GPS..." : "Live GPS Locked"}
+                {locatingGPS ? "Syncing..." : "Live GPS Locked"}
               </span>
             </div>
             <p className="truncate font-medium text-background text-xs">
@@ -640,7 +660,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         <button
           type="button"
           onClick={() => setSubStep("pickup")}
-          className="shrink-0 text-xs font-semibold text-emerald-400 underline hover:text-emerald-300 ml-2"
+          className="shrink-0 text-xs font-semibold text-emerald-400 underline hover:text-emerald-300 px-1"
         >
           Change
         </button>
@@ -660,12 +680,12 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
       />
 
       {fareBreakdown && distKm > 0 && (
-        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 min-w-0 max-w-full">
+          <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate ({selectedVehicle?.name})</p>
-            <span className="text-[11px] text-background/60">~{Math.round(distKm * 10) / 10} km · approx {Math.max(1, Math.round(distKm / 0.5))} min ride</span>
+            <span className="text-[11px] text-background/60 shrink-0">~{Math.round(distKm * 10) / 10} km · {Math.max(1, Math.round(distKm / 0.5))} min</span>
           </div>
-          <p className="mt-2 text-3xl font-bold text-background font-mono">₹{Math.round(fareBreakdown.total)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-bold text-background font-mono">₹{Math.round(fareBreakdown.total)}</p>
         </div>
       )}
 
@@ -680,25 +700,25 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
 
 
 function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, paymentMethod, onPaymentChange, onBack, onConfirm, submitting }: any) {
-  return <div>
+  return <div className="space-y-4 min-w-0 max-w-full">
     <p className="text-sm font-semibold text-background">Confirm your ride</p>
-    <div className="mt-5 space-y-3">
-      <div className="rounded-lg border border-background/15 p-5 space-y-3">
+    <div className="space-y-3 min-w-0 max-w-full">
+      <div className="rounded-xl border border-background/15 p-4 sm:p-5 space-y-3 min-w-0 max-w-full">
         <Row label="Vehicle" value={selectedVehicle.name} />
         <Row label="Pickup" value={pickup.name} />
         <Row label="Drop-off" value={drop.name} />
         <div className="flex items-center justify-between border-t border-background/10 pt-3">
           <span className="font-bold text-background">Total</span>
-          <span className="text-xl font-bold text-primary">₹{Math.round(fareBreakdown.total)}</span>
+          <span className="text-xl font-bold text-primary font-mono">₹{Math.round(fareBreakdown.total)}</span>
         </div>
       </div>
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Payment method</p>
         <RadioGroup value={paymentMethod} onValueChange={onPaymentChange} className="mt-3 flex gap-3">
           {([["cash", "Cash"], ["upi", "UPI"]] as const).map(([val, label]) => (
-            <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-4 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
+            <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
               <RadioGroupItem value={val} className="border-background/40 text-primary" />
-              <Wallet className="size-4 text-primary" />
+              <Wallet className="size-4 text-primary shrink-0" />
               <span className="text-sm font-semibold text-background">{label}</span>
             </label>
           ))}
@@ -706,10 +726,10 @@ function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, pa
       </div>
     </div>
     {/* Affirmative Booking Consent under Consumer Protection Rules */}
-    <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed">
+    <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed min-w-0">
       By confirming, you agree to our <Link to="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
     </div>
-    <div className="mt-6 flex gap-3">
+    <div className="mt-5 flex gap-3 min-w-0">
       <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
       <Button size="lg" className="flex-1" onClick={onConfirm} disabled={submitting}>
         {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Confirm Ride <ArrowRight /></>}
@@ -719,7 +739,7 @@ function Step3Confirm({ selectedVehicle, pickup, drop, fareBreakdown, distKm, pa
 }
 
 function Row({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between text-sm"><span className="text-background/60">{label}</span><span className="font-semibold text-background">{value}</span></div>;
+  return <div className="flex justify-between gap-3 text-sm min-w-0"><span className="text-background/60 shrink-0">{label}</span><span className="font-semibold text-background truncate text-right">{value}</span></div>;
 }
 
 /* ---------- STEP 4: Live Tracking ---------- */

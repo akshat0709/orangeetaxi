@@ -921,46 +921,46 @@ export function MapPicker({
   }
 
   return (
-    <div className="flex flex-col gap-4 text-background">
+    <div className="flex flex-col gap-3 sm:gap-4 text-background min-w-0 max-w-full overflow-hidden">
       {/* Header with Mode Switcher */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{label}</p>
-          <p className="text-xs text-background/60 mt-0.5">
-            {mode === "map" ? "Drag anywhere in India or search your city" : "Select from popular hubs across India"}
+      <div className="flex items-center justify-between gap-2 min-w-0 max-w-full">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary truncate">{label}</p>
+          <p className="text-[11px] text-background/60 mt-0.5 truncate">
+            {mode === "map" ? "Drag pin or search your destination" : "Select from popular hubs across India"}
           </p>
         </div>
 
         {/* View mode toggle */}
-        <div className="flex items-center rounded-lg border border-background/20 bg-background/10 p-0.5 text-xs">
+        <div className="flex items-center shrink-0 rounded-lg border border-background/20 bg-background/10 p-0.5 text-xs">
           <button
             type="button"
             onClick={() => setMode("map")}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors ${
+            className={`flex items-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-2.5 py-1 font-medium transition-colors ${
               mode === "map" ? "bg-primary text-primary-foreground shadow-xs" : "text-background/60 hover:text-background"
             }`}
           >
-            <MapIcon className="size-3.5" /> Map
+            <MapIcon className="size-3.5" /> <span className="text-xs">Map</span>
           </button>
           <button
             type="button"
             onClick={() => setMode("list")}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors ${
+            className={`flex items-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-2.5 py-1 font-medium transition-colors ${
               mode === "list" ? "bg-primary text-primary-foreground shadow-xs" : "text-background/60 hover:text-background"
             }`}
           >
-            <List className="size-3.5" /> Quick Hubs
+            <List className="size-3.5" /> <span className="text-xs">Hubs</span>
           </button>
         </div>
       </div>
 
       {/* Search Input Bar + Locate Button */}
-      <div className="relative z-20 flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative z-20 flex gap-2 min-w-0 max-w-full">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            className="w-full rounded-xl border border-background/20 bg-background text-foreground py-3 pl-10 pr-10 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 shadow-xs"
+            className="w-full rounded-xl border border-background/20 bg-background text-foreground py-2.5 sm:py-3 pl-9 sm:pl-10 pr-9 text-xs sm:text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30 shadow-xs truncate"
             placeholder={placeholder}
             value={searchValue}
             onChange={(e) => handleSearchInput(e.target.value)}
@@ -972,7 +972,7 @@ export function MapPicker({
                 setSearchValue("");
                 setSearchResults([]);
               }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
             >
               <X className="size-3.5" />
             </button>
@@ -986,7 +986,7 @@ export function MapPicker({
           onClick={detectCurrentLocation}
           disabled={loadingGPS}
           title="Use my current GPS location"
-          className="shrink-0 rounded-xl border border-background/20 bg-background/10 hover:bg-background/20 text-background px-3"
+          className="shrink-0 rounded-xl border border-background/20 bg-background/10 hover:bg-background/20 text-background px-2.5 sm:px-3 h-auto py-2 sm:py-2.5"
         >
           {loadingGPS ? (
             <Loader2 className="size-4 animate-spin text-primary" />
@@ -1018,7 +1018,7 @@ export function MapPicker({
       </div>
 
       {/* Quick Location Chips (Pan-India Popular) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none min-w-0 max-w-full touch-pan-x">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-background/60 shrink-0 flex items-center gap-1">
           <Sparkles className="size-3 text-primary" /> Popular:
         </span>
@@ -1036,8 +1036,8 @@ export function MapPicker({
 
       {/* MAP VIEW */}
       {mode === "map" && (
-        <div className="relative h-72 w-full overflow-hidden rounded-2xl border border-background/20 bg-neutral-900 shadow-inner">
-          <div ref={mapContainerRef} className="size-full z-0" />
+        <div className="relative h-64 sm:h-72 w-full overflow-hidden rounded-2xl border border-background/20 bg-neutral-900 shadow-inner min-w-0 max-w-full touch-none">
+          <div ref={mapContainerRef} className="size-full z-0 touch-none" />
 
           {/* Center Target Pin (Fixed overlay in center of map) */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">
@@ -1147,7 +1147,7 @@ export function MapPicker({
 
       {/* Confirmed Location Badge */}
       {selectedLocation && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/15 px-4 py-3 text-xs">
+        <div className="flex items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/15 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs min-w-0 max-w-full">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-white">
             <Check className="size-3.5" />
           </div>
@@ -1159,15 +1159,15 @@ export function MapPicker({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-2.5 sm:gap-3 pt-1 min-w-0 max-w-full">
         {onBack && (
-          <Button type="button" variant="ghost" className="flex-1 text-background/70 hover:text-background" onClick={onBack}>
+          <Button type="button" variant="ghost" className="flex-1 text-background/70 hover:text-background text-xs sm:text-sm" onClick={onBack}>
             Back
           </Button>
         )}
         <Button
           type="button"
-          className="flex-1"
+          className="flex-1 text-xs sm:text-sm font-semibold"
           disabled={!selectedLocation}
           onClick={() => selectedLocation && onConfirm(selectedLocation)}
         >
