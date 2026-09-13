@@ -53,6 +53,37 @@ function LoginPage() {
     // Fetch role to redirect properly
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
     const roleList = (roles ?? []).map(r => r.role);
+
+    // Sync phone into drivers table if logging in as driver
+    try {
+      let userPhone = (data.user.user_metadata?.phone || data.user.phone || "").trim();
+      if (!userPhone) {
+        const { data: prof } = await supabase.from("profiles").select("phone").eq("id", data.user.id).maybeSingle();
+        if (prof?.phone) userPhone = prof.phone.trim();
+      }
+
+      if (userPhone && (roleList.includes("driver") || roleList.includes("admin"))) {
+        const { data: existingDriver } = await supabase.from("drivers").select("id, phone").eq("user_id", data.user.id).maybeSingle();
+        if (existingDriver) {
+          if (!existingDriver.phone || existingDriver.phone.trim() !== userPhone) {
+            await supabase.from("drivers").update({ phone: userPhone }).eq("id", existingDriver.id);
+          }
+        } else if (roleList.includes("driver")) {
+          await supabase.from("drivers").insert({
+            user_id: data.user.id,
+            full_name: data.user.user_metadata?.full_name || data.user.email?.split("@")[0] || "Driver",
+            phone: userPhone,
+            city: "Bengaluru",
+            status: "active",
+            vehicle_model: "Mahindra BE.6",
+            vehicle_number: "Unassigned",
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync driver phone on sign in:", err);
+    }
+
     const destination = redirect ?? (roleList.includes("admin") ? "/admin" : roleList.includes("driver") ? "/driver-console" : "/book");
     toast.success("Welcome back!");
     navigate({ to: destination as any });
@@ -60,12 +91,41 @@ function LoginPage() {
 
   async function handleSignUp(values: SignUpValues) {
     setSubmitting(true);
+    const cleanPhone = (values.phone || "").trim();
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName, phone: values.phone, role: values.role } },
+      options: { data: { full_name: values.fullName, phone: cleanPhone, role: values.role } },
     });
     if (error) { toast.error(error.message); setSubmitting(false); return; }
+
+    if (data.user) {
+      // 1. Immediately save phone in profiles
+      try {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          full_name: values.fullName,
+          phone: cleanPhone,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (e) {}
+
+      // 2. If signing up as driver, immediately create driver profile with the exact phone
+      if (values.role === "driver") {
+        try {
+          await supabase.from("drivers").upsert({
+            user_id: data.user.id,
+            full_name: values.fullName,
+            phone: cleanPhone,
+            city: "Bengaluru",
+            status: "active",
+            vehicle_model: "Mahindra BE.6",
+            vehicle_number: "Unassigned",
+          }, { onConflict: "user_id" });
+        } catch (e) {}
+      }
+    }
+
     if (data.user && !data.session) {
       toast.success("Check your email to confirm your account, then sign in.");
       setMode("signin");

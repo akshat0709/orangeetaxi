@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Power, Star, TrendingUp, Volume2, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Phone, Power, Star, TrendingUp, Volume2, Wallet, X, Map } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -194,20 +194,41 @@ function DriverConsolePage() {
 
   async function loadData() {
     if (!user) return;
-    let { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).single();
+    let { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).maybeSingle();
     
+    // Resolve login phone from auth user_metadata, user.phone, profiles, or driver_applications
+    let loginPhone = (user.user_metadata?.phone || user.phone || "").trim();
+    if (!loginPhone) {
+      try {
+        const { data: prof } = await supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle();
+        if (prof?.phone && prof.phone.trim()) loginPhone = prof.phone.trim();
+      } catch (e) {}
+    }
+    if (!loginPhone) {
+      try {
+        const { data: appData } = await supabase.from("driver_applications").select("phone").eq("email", user.email).maybeSingle();
+        if (appData?.phone && appData.phone.trim()) loginPhone = appData.phone.trim();
+      } catch (e) {}
+    }
+
     // Auto-create driver profile if role is granted but profile is missing
     if (!driverData && (role === "driver" || role === "admin")) {
-      const { data: appData } = await supabase.from("driver_applications").select("*").eq("email", user.email).single();
+      const { data: appData } = await supabase.from("driver_applications").select("*").eq("email", user.email).maybeSingle();
       const { data: newDriver } = await supabase.from("drivers").insert({
         user_id: user.id,
-        full_name: appData?.full_name || user.email?.split("@")[0] || "New Driver",
-        city: appData?.city || "Delhi NCR",
-        phone: appData?.phone || "",
+        full_name: appData?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "New Driver",
+        city: appData?.city || "Bengaluru",
+        phone: loginPhone,
         vehicle_model: "Mahindra BE.6",
         vehicle_number: "Unassigned"
       }).select().single();
       driverData = newDriver;
+    } else if (driverData && loginPhone) {
+      // Sync driver phone if missing or if login phone was updated
+      if (!driverData.phone || driverData.phone.trim() !== loginPhone) {
+        await supabase.from("drivers").update({ phone: loginPhone }).eq("id", driverData.id);
+        driverData.phone = loginPhone;
+      }
     }
 
     if (!driverData) { setLoading(false); return; }
@@ -461,6 +482,26 @@ function DriverConsolePage() {
                 <Banknote className="size-3.5" />
                 <span>Cash in Hand: <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong></span>
               </span>
+              <span className="text-muted-foreground text-xs">·</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  const newPhone = prompt("Update your contact phone number (used for passenger calls):", driver.phone || "");
+                  if (newPhone !== null && newPhone.trim()) {
+                    const p = newPhone.trim();
+                    await supabase.from("drivers").update({ phone: p }).eq("id", driver.id);
+                    await supabase.from("profiles").update({ phone: p }).eq("id", user.id);
+                    await supabase.auth.updateUser({ data: { phone: p } });
+                    setDriver({ ...driver, phone: p });
+                    toast.success("Phone number updated successfully!");
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                title="Click to update phone number"
+              >
+                <Phone className="size-3.5" />
+                <span>Phone: <strong className="font-mono">{driver.phone || "Add Phone ✏️"}</strong></span>
+              </button>
             </div>
           </div>
 

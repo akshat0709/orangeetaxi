@@ -82,6 +82,31 @@ function AdminPage() {
     ]);
     const fetchedBookings = (b as Booking[]) ?? [];
     const fetchedDrivers = (d as Driver[]) ?? [];
+    const appsList = (a as Application[]) ?? [];
+
+    // Automatically resolve and backfill phone numbers from profiles or driver_applications if missing
+    for (const dr of fetchedDrivers) {
+      if (!dr.phone || dr.phone.trim() === "") {
+        try {
+          if (dr.user_id) {
+            const { data: prof } = await supabase.from("profiles").select("phone").eq("id", dr.user_id).maybeSingle();
+            if (prof?.phone && prof.phone.trim()) {
+              dr.phone = prof.phone.trim();
+              await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
+            }
+          }
+          if (!dr.phone || dr.phone.trim() === "") {
+            const matchingApp = appsList.find(app => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone);
+            if (matchingApp?.phone && matchingApp.phone.trim()) {
+              dr.phone = matchingApp.phone.trim();
+              await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
+            }
+          }
+        } catch (err) {
+          console.warn("Could not backfill driver phone in admin:", err);
+        }
+      }
+    }
 
     // Automatically snapshot and freeze vehicle registration numbers for existing completed rides
     fetchedBookings.forEach((booking) => {
@@ -94,7 +119,7 @@ function AdminPage() {
     });
 
     setBookings(fetchedBookings);
-    setApplications((a as Application[]) ?? []);
+    setApplications(appsList);
     setEnquiries((e as Enquiry[]) ?? []);
     setDrivers(fetchedDrivers);
     setLoading(false);
@@ -258,6 +283,7 @@ function AdminPage() {
                                 return d ? (
                                   <span className="flex flex-col">
                                     <span className="font-semibold text-foreground">{d.full_name}</span>
+                                    {d.phone && <span className="text-[11px] font-mono text-muted-foreground">📞 {d.phone}</span>}
                                     <span className="font-mono text-[11px] font-bold text-primary">{ridePlate}</span>
                                   </span>
                                 ) : (
