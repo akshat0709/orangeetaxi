@@ -100,6 +100,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
+      { httpEquiv: "Content-Security-Policy", content: "upgrade-insecure-requests" },
       { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
       { title: "Orange Taxi" },
       { name: "description", content: "Premium electric rides, made accessible." },
@@ -154,6 +155,17 @@ function RootComponent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Enforce HTTPS
+    if (
+      window.location.protocol === "http:" &&
+      window.location.hostname !== "localhost" &&
+      !window.location.hostname.startsWith("127.0.0.1")
+    ) {
+      window.location.replace(window.location.href.replace(/^http:/, "https:"));
+      return;
+    }
+
     const updateStandalone = () => {
       const isStandalone =
         window.matchMedia("(display-mode: standalone)").matches ||
