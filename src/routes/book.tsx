@@ -16,6 +16,7 @@ import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import { LiveRideMap } from "@/components/live-ride-map";
 import { RatingModal } from "@/components/rating-modal";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
+import { RideChatSheet } from "@/components/ride-chat-sheet";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
@@ -377,6 +378,23 @@ function PassengerPage() {
     setSubmitting(true);
     
     const otp = generateOTP();
+
+    // Ensure customer's profile is up to date with full name and phone number
+    try {
+      const custName = (user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "").trim();
+      const custPhone = (user.user_metadata?.phone || user.phone || "").trim();
+      if (custName || custPhone) {
+        await supabase.from("profiles").upsert({
+          id: user.id,
+          full_name: custName || "Passenger",
+          phone: custPhone,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" });
+      }
+    } catch (e) {
+      console.warn("Could not sync profile before booking:", e);
+    }
+
     const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
       pickup_area: pickup.name,
@@ -764,8 +782,11 @@ function Step4Confirmed({
   onStatusUpdate?: (status: string) => void;
   onReset?: () => void;
 }) {
+  const { user } = useAuth();
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [taxInvoiceModalOpen, setTaxInvoiceModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -1007,7 +1028,7 @@ function Step4Confirmed({
             </div>
           </div>
 
-          {/* Action Buttons: Call Driver & WhatsApp */}
+          {/* Action Buttons: Call Driver, WhatsApp & In-Ride Chat */}
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <a
               href={`tel:${cleanDialPhone}`}
@@ -1033,6 +1054,24 @@ function Step4Confirmed({
                 <span>WhatsApp</span>
               </a>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsChatOpen(true);
+                setUnreadChatCount(0);
+              }}
+              className="relative flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/20 px-3.5 py-2.5 text-xs font-bold text-primary hover:bg-primary/30 transition-all active:scale-95"
+              title="Open Live Chat with Driver"
+            >
+              <MessageSquare className="size-3.5" />
+              <span>In-Ride Chat</span>
+              {unreadChatCount > 0 && (
+                <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
+                  {unreadChatCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -1167,6 +1206,19 @@ function Step4Confirmed({
       pickup={pickup}
       drop={drop}
       vehicle={vehicle}
+    />
+
+    {/* In-Ride Real-Time Chat Drawer */}
+    <RideChatSheet
+      bookingId={bookingData.id}
+      bookingReference={bookingData.reference}
+      currentUserType="customer"
+      currentUserName={user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Passenger"}
+      otherPartyName={driverInfo?.full_name || "Driver"}
+      otherPartyPhone={activeDriverPhone}
+      isOpen={isChatOpen}
+      onOpenChange={setIsChatOpen}
+      onUnreadCountChange={setUnreadChatCount}
     />
 
     {/* Live Map (Mobile View) */}

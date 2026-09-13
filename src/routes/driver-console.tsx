@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Loader2, MapPin, Navigation, Phone, Power, Star, TrendingUp, Volume2, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Star, TrendingUp, User, Volume2, Wallet, X, Map } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate } from "@/lib/ride-vehicle";
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
+import { RideChatSheet } from "@/components/ride-chat-sheet";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -28,6 +29,7 @@ interface Booking {
   created_at: string; completed_at: string | null;
   distance_km: number; rating: number | null;
   ride_otp?: string;
+  customer_id?: string;
 }
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
@@ -115,6 +117,9 @@ function DriverConsolePage() {
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
+  const [customerProfiles, setCustomerProfiles] = useState<Record<string, { full_name: string; phone: string }>>({});
+  const [activeChatRide, setActiveChatRide] = useState<Booking | null>(null);
+  const [unreadChats, setUnreadChats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
@@ -244,13 +249,35 @@ function DriverConsolePage() {
       .eq("driver_id", driverData.id)
       .in("status", ["accepted", "arrived", "in_progress"])
       .order("created_at", { ascending: false });
-    setActiveRides((active as Booking[]) ?? []);
+    const activeList = (active as Booking[]) ?? [];
+    setActiveRides(activeList);
 
     const { data: requests } = await supabase.from("bookings").select("*")
       .eq("status", "searching").is("driver_id", null)
       .order("created_at", { ascending: false }).limit(5);
     const reqList = (requests as Booking[]) ?? [];
     setNewRequests(reqList);
+
+    // Fetch customer profiles for active rides and incoming requests
+    const allCustIds = Array.from(new Set([
+      ...activeList.map(b => b.customer_id),
+      ...reqList.map(b => b.customer_id)
+    ].filter(Boolean)));
+
+    if (allCustIds.length > 0) {
+      try {
+        const { data: profs } = await supabase.from("profiles").select("id, full_name, phone").in("id", allCustIds);
+        if (profs) {
+          const map: Record<string, { full_name: string; phone: string }> = {};
+          profs.forEach((p: any) => {
+            map[p.id] = { full_name: p.full_name || "Passenger", phone: p.phone || "" };
+          });
+          setCustomerProfiles(prev => ({ ...prev, ...map }));
+        }
+      } catch (e) {
+        console.warn("Could not fetch customer profiles:", e);
+      }
+    }
 
     // If new requests arrived and driver is online, play chime alert!
     if (reqList.length > prevRequestsCountRef.current && prevRequestsCountRef.current !== -1) {
@@ -604,6 +631,107 @@ function DriverConsolePage() {
                         </div>
                       </div>
 
+                      {/* Customer Contact & In-Ride Communication Card */}
+                      {(() => {
+                        const customerInfo = (ride.customer_id && customerProfiles[ride.customer_id]) || {
+                          full_name: "Passenger",
+                          phone: "",
+                        };
+                        const cleanCustomerPhone = (customerInfo.phone || "").replace(/\D/g, "");
+
+                        return (
+                          <div className="mt-4 rounded-xl border border-border/80 bg-muted/40 p-3.5 sm:p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-sm shrink-0">
+                                  {(customerInfo.full_name || "P").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Passenger Details</span>
+                                  </div>
+                                  <p className="font-bold text-sm text-foreground truncate">{customerInfo.full_name || "Passenger"}</p>
+                                  {customerInfo.phone ? (
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="font-mono text-xs font-semibold text-primary">{customerInfo.phone}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(customerInfo.phone);
+                                          toast.success(`Copied customer phone: ${customerInfo.phone}`);
+                                        }}
+                                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 border border-border/60 rounded px-1.5 py-0.5"
+                                        title="Copy customer phone"
+                                      >
+                                        <Copy className="size-3" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">Phone: Syncing via booking</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Action Buttons: Call Customer, WhatsApp & In-Ride Chat */}
+                              <div className="flex items-center gap-2 flex-wrap pt-1 sm:pt-0">
+                                {cleanCustomerPhone ? (
+                                  <a
+                                    href={`tel:${cleanCustomerPhone}`}
+                                    onClick={() => toast.success(`Calling ${customerInfo.full_name}: ${customerInfo.phone}`)}
+                                    className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all active:scale-95"
+                                  >
+                                    <PhoneCall className="size-3.5" />
+                                    <span>Call Customer</span>
+                                  </a>
+                                ) : (
+                                  <a
+                                    href="tel:+911140007000"
+                                    className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+                                  >
+                                    <Phone className="size-3.5" />
+                                    <span>Helpline</span>
+                                  </a>
+                                )}
+
+                                {cleanCustomerPhone && (
+                                  <a
+                                    href={`https://wa.me/${cleanCustomerPhone.startsWith("91") ? cleanCustomerPhone : `91${cleanCustomerPhone}`}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 transition-all active:scale-95"
+                                    title="Chat on WhatsApp"
+                                  >
+                                    <MessageSquare className="size-3.5" />
+                                    <span className="hidden sm:inline">WhatsApp</span>
+                                  </a>
+                                )}
+
+                                {/* In-Ride Chat Button with Unread Badge */}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setActiveChatRide(ride);
+                                    setUnreadChats(prev => ({ ...prev, [ride.id]: 0 }));
+                                  }}
+                                  className="relative flex items-center gap-1.5 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs h-9 px-3"
+                                >
+                                  <MessageSquare className="size-3.5 text-primary" />
+                                  <span>In-Ride Chat</span>
+                                  {unreadChats[ride.id] > 0 && (
+                                    <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
+                                      {unreadChats[ride.id]}
+                                    </span>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {ride.status === "accepted" && (
                         <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
                           <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Pickup</a></Button>
@@ -867,6 +995,34 @@ function DriverConsolePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Background Active Ride Chat Sheets for Realtime Alerts & In-Ride Messaging */}
+      {activeRides.map(ride => {
+        const isThisChatOpen = activeChatRide?.id === ride.id;
+        const custInfo = (ride.customer_id && customerProfiles[ride.customer_id]) || {
+          full_name: "Passenger",
+          phone: "",
+        };
+        return (
+          <RideChatSheet
+            key={`ride-chat-${ride.id}`}
+            bookingId={ride.id}
+            bookingReference={ride.reference}
+            currentUserType="driver"
+            currentUserName={driver?.full_name || "Driver"}
+            otherPartyName={custInfo.full_name || "Passenger"}
+            otherPartyPhone={custInfo.phone}
+            isOpen={isThisChatOpen}
+            onOpenChange={(open) => {
+              if (open) setActiveChatRide(ride);
+              else if (activeChatRide?.id === ride.id) setActiveChatRide(null);
+            }}
+            onUnreadCountChange={(count) => {
+              setUnreadChats(prev => ({ ...prev, [ride.id]: count }));
+            }}
+          />
+        );
+      })}
     </section>
   );
 }
