@@ -109,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#f56b00" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "Orange Taxi" },
       { name: "application-name", content: "Orange Taxi" },
     ],
@@ -151,6 +151,30 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateStandalone = () => {
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.matchMedia("(display-mode: minimal-ui)").matches ||
+        (window.navigator as any).standalone === true;
+
+      if (isStandalone) {
+        document.documentElement.classList.add("is-standalone-pwa");
+      } else {
+        document.documentElement.classList.remove("is-standalone-pwa");
+      }
+    };
+
+    updateStandalone();
+    const mql = window.matchMedia("(display-mode: standalone)");
+    if (mql.addEventListener) {
+      mql.addEventListener("change", updateStandalone);
+      return () => mql.removeEventListener("change", updateStandalone);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

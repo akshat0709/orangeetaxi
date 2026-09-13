@@ -235,3 +235,65 @@
   --background: oklch(0.95 0.008 65);
 }
 
+/*
+ * Mobile & Standalone PWA Safe Area Management
+ * Ensures header, navigation, and modals clear the device status bar (clock, battery, 5G icons)
+ * and bottom navigation gestures / home indicator.
+ */
+
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+.site-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Standalone installed PWA or mobile browser with edge-to-edge overlay */
+@media all and (display-mode: standalone) and (max-width: 1023px),
+       all and (display-mode: fullscreen) and (max-width: 1023px),
+       all and (display-mode: minimal-ui) and (max-width: 1023px) {
+  .site-header {
+    /* Guarantees status bar clearance (at least 2.5rem / 40px) on Android & iOS notch devices */
+    padding-top: max(env(safe-area-inset-top, 0px), 2.5rem);
+  }
+
+  .site-sheet-content {
+    padding-top: max(calc(env(safe-area-inset-top, 0px) + 1.5rem), 3.25rem) !important;
+  }
+}
+
+html.is-standalone-pwa .site-header {
+  @media (max-width: 1023px) {
+    padding-top: max(env(safe-area-inset-top, 0px), 2.5rem);
+  }
+}
+
+html.is-standalone-pwa .site-sheet-content {
+  @media (max-width: 1023px) {
+    padding-top: max(calc(env(safe-area-inset-top, 0px) + 1.5rem), 3.25rem) !important;
+  }
+}
+
+/* Ensure Sonner toast notifications don't get covered by status bar on mobile */
+[data-sonner-toaster] {
+  top: max(env(safe-area-inset-top, 0px), 1rem) !important;
+}
+
+@media all and (display-mode: standalone) and (max-width: 1023px),
+       all and (display-mode: fullscreen) and (max-width: 1023px) {
+  [data-sonner-toaster] {
+    top: max(env(safe-area-inset-top, 0px), 3.25rem) !important;
+  }
+}
+
+html.is-standalone-pwa [data-sonner-toaster] {
+  @media (max-width: 1023px) {
+    top: max(env(safe-area-inset-top, 0px), 3.25rem) !important;
+  }
+}
+
+

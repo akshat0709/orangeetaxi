@@ -33,7 +33,7 @@ export function SiteHeader() {
     router.navigate({ to: "/" });
   }
 
-  return <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
+  return <header className="site-header sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
     <div className="section-shell flex h-16 sm:h-18 items-center justify-between gap-4 min-w-0 max-w-full">
       <Brand />
       <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
@@ -128,7 +128,7 @@ export function SiteHeader() {
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent className="w-[88%] bg-background p-7 sm:max-w-md">
+          <SheetContent className="site-sheet-content w-[88%] bg-background p-7 sm:max-w-md">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex items-center justify-between">
             <Brand />
