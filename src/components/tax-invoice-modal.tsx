@@ -220,7 +220,7 @@ export function TaxInvoiceModal({
                 <p><strong>PAN:</strong> <span className="font-mono text-foreground font-semibold">{profile.pan}</span></p>
                 <p><strong>GSTIN:</strong> <span className="font-mono text-foreground font-semibold">{profile.gstin}</span></p>
                 <p><strong>Reg. Office:</strong> {profile.address}</p>
-                <p><strong>State:</strong> {profile.state} (State Code: <strong className="font-mono">{profile.stateCode}</strong>)</p>
+                <p><strong>Corporate HQ:</strong> {profile.state} (State Code: <strong className="font-mono">{profile.stateCode}</strong>)</p>
               </div>
             </div>
 
@@ -246,7 +246,7 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Place of Supply (POS): </span>
-                  <strong>{gst.posCode} - {gst.placeOfSupply}</strong>
+                  <strong className="text-primary font-bold">{gst.posCode} - {gst.placeOfSupply}</strong>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Reverse Charge: </span>
@@ -279,7 +279,7 @@ export function TaxInvoiceModal({
                   <p className="text-muted-foreground">Email: {customer.email}</p>
                 )}
                 <p className="text-muted-foreground">
-                  Place of Embarkation: {booking.pickup_area} ({gst.posCode})
+                  Place of Embarkation: {booking.pickup_area} ({gst.posCode} - {gst.placeOfSupply})
                 </p>
               </div>
             </div>
@@ -328,7 +328,7 @@ export function TaxInvoiceModal({
                   {!gst.isInterState ? (
                     <>
                       <th className="px-4 py-3 text-right">CGST (2.5%)</th>
-                      <th className="px-4 py-3 text-right">SGST (2.5%)</th>
+                      <th className="px-4 py-3 text-right">SGST/UTGST (2.5%)</th>
                     </>
                   ) : (
                     <th className="px-4 py-3 text-right">IGST (5.0%)</th>
@@ -389,7 +389,7 @@ export function TaxInvoiceModal({
                     <span className="font-mono">₹{gst.cgstAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground">SGST @ 2.5%:</span>
+                    <span className="text-muted-foreground">SGST @ 2.5% ({gst.placeOfSupply}):</span>
                     <span className="font-mono">₹{gst.sgstAmount.toFixed(2)}</span>
                   </div>
                 </>

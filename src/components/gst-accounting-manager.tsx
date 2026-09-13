@@ -96,6 +96,7 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
   let totalIGST = 0;
   let cashTotal = 0;
   let upiTotal = 0;
+  const intraStates = new Set<string>();
 
   filteredBookings.forEach((b) => {
     const fare = Number(b.final_fare || b.estimated_fare || 0);
@@ -108,9 +109,18 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
     totalCGST += g.cgstAmount;
     totalSGST += g.sgstAmount;
     totalIGST += g.igstAmount;
+
+    if (!g.isInterState && g.placeOfSupply) {
+      intraStates.add(`${g.placeOfSupply} (${g.posCode})`);
+    }
   });
 
   const totalGSTLiability = totalCGST + totalSGST + totalIGST;
+  const intraStateSubtitle = intraStates.size === 1
+    ? `${Array.from(intraStates)[0]} · 2.5% + 2.5%`
+    : intraStates.size > 1
+    ? Array.from(intraStates).join(", ")
+    : "CGST (2.5%) + SGST (2.5%)";
 
   function handleSaveGSTIN() {
     setIsSavingGSTIN(true);
@@ -212,7 +222,7 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
               <span>·</span>
               <span>PAN: <strong className="text-foreground">{profile.pan}</strong></span>
               <span>·</span>
-              <span>State: <strong className="text-foreground">{profile.state} (Code {profile.stateCode})</strong></span>
+              <span>Principal Reg. HQ: <strong className="text-foreground">{profile.state} (Code {profile.stateCode})</strong></span>
             </div>
           </div>
 
@@ -296,19 +306,19 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Intra-State GST (Delhi)</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Intra-State GST (CGST+SGST)</p>
           <p className="mt-1 text-xl font-bold font-mono text-foreground">
             ₹{(totalCGST + totalSGST).toFixed(2)}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            CGST: ₹{totalCGST.toFixed(1)} · SGST: ₹{totalSGST.toFixed(1)}
+          <p className="text-[11px] text-muted-foreground mt-1 truncate" title={intraStateSubtitle}>
+            {intraStateSubtitle}
           </p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Inter-State IGST (NCR)</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Inter-State IGST (5%)</p>
           <p className="mt-1 text-xl font-bold font-mono text-foreground">₹{totalIGST.toFixed(2)}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Gurugram / Noida (5%)</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Cross-Border / Inter-State</p>
         </div>
 
         <div className="col-span-2 sm:col-span-1 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-sm">
@@ -379,8 +389,8 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
                         <span>{b.drop_area}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-mono text-[10px]">
-                          {gst.posCode}
+                        <Badge variant="outline" className="font-mono text-[10px] font-semibold whitespace-nowrap">
+                          {gst.posCode} · {gst.placeOfSupply}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right font-mono">₹{gst.taxableValue.toFixed(2)}</td>
