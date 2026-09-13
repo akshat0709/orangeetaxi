@@ -164,15 +164,15 @@ function TalkToOrangePage() {
 
   return <>
     {/* Hero */}
-    <section className="relative overflow-hidden bg-night py-24 text-background md:py-32">
+    <section className="relative overflow-hidden bg-night py-24 text-white md:py-32">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklab,var(--primary)_15%,transparent),transparent_60%)]" />
       <div className="section-shell relative">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Talk to Orange</p>
-        <h1 className="display-serif mt-5 text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.92]">Better rides<br /><span className="text-primary">for your business.</span></h1>
-        <p className="mt-7 max-w-lg text-base leading-7 text-background/70 md:text-lg">Employee transport, client transfers, airport runs — tell us what you need and we'll build a solution around your team.</p>
+        <h1 className="display-serif mt-5 text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.92] text-white">Better rides<br /><span className="text-primary">for your business.</span></h1>
+        <p className="mt-7 max-w-lg text-base leading-7 text-white/70 md:text-lg">Employee transport, client transfers, airport runs — tell us what you need and we'll build a solution around your team.</p>
         <div className="mt-8 flex flex-wrap gap-3">
           {["Corporate bookings", "Employee transportation", "Airport transfers", "Client transportation", "Centralized billing"].map(x => (
-            <span key={x} className="flex items-center gap-2 rounded-full border border-background/20 px-4 py-2 text-xs font-semibold text-background/80"><Check className="size-3 text-primary" />{x}</span>
+            <span key={x} className="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80"><Check className="size-3 text-primary" />{x}</span>
           ))}
         </div>
       </div>
@@ -305,7 +305,7 @@ function TalkToOrangePage() {
           {pricing && (
             <div className="border-t border-border px-6 py-4">
               <p className="text-xs text-muted-foreground">
-                {pricing.surge_enabled && <span className="mr-4 rounded bg-amber-100 px-2 py-0.5 text-amber-700">Surge active: {pricing.surge_multiplier}×</span>}
+                {pricing.surge_enabled && <span className="mr-4 rounded bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40">Surge active: {pricing.surge_multiplier}×</span>}
                 {pricing.tax_percent > 0 && <span className="mr-4">+{pricing.tax_percent}% tax applies</span>}
                 {pricing.platform_fee > 0 && <span className="mr-4">+₹{pricing.platform_fee} platform fee</span>}
                 Fares shown are estimates. Actual fares may vary by traffic and demand. {pricing.demo_note}

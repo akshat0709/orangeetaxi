@@ -173,26 +173,26 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-night py-16 text-background">
+    <footer className="bg-night py-16 text-white">
       <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
-            <span className="text-sm font-bold tracking-[0.14em]">ORANGE TAXI</span>
+            <span className="text-sm font-bold tracking-[0.14em] text-white">ORANGE TAXI</span>
           </div>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-background/70">
+          <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
             <strong>ORANGE TAXI LIMITED</strong> — India's zero-emission premium electric mobility network.
           </p>
           
           {/* Statutory Corporate Identification under Companies Act, 2013 */}
-          <div className="mt-5 space-y-1.5 border-t border-background/15 pt-4 text-xs text-background/60">
-            <p><span className="font-semibold text-background/80">CIN:</span> U49224DL2026PLC461350</p>
-            <p><span className="font-semibold text-background/80">Registered Office:</span> S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi 110017, India</p>
+          <div className="mt-5 space-y-1.5 border-t border-white/15 pt-4 text-xs text-white/60">
+            <p><span className="font-semibold text-white/80">CIN:</span> U49224DL2026PLC461350</p>
+            <p><span className="font-semibold text-white/80">Registered Office:</span> S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi 110017, India</p>
             <p className="pt-1">
-              <span className="font-semibold text-background/80">24x7 Helpline:</span> +91 11 4000 7000 · <span className="font-semibold text-background/80">Email:</span> support@orange-taxi.com
+              <span className="font-semibold text-white/80">24x7 Helpline:</span> +91 11 4000 7000 · <span className="font-semibold text-white/80">Email:</span> support@orange-taxi.com
             </p>
             <p>
-              <span className="font-semibold text-background/80">Grievance Officer:</span> grievance@orange-taxi.com
+              <span className="font-semibold text-white/80">Grievance Officer:</span> grievance@orange-taxi.com
             </p>
           </div>
         </div>
@@ -230,7 +230,7 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <div className="section-shell mt-12 flex flex-col gap-3 border-t border-background/15 pt-6 text-xs text-background/50 sm:flex-row sm:items-center sm:justify-between">
+      <div className="section-shell mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
         <span>© 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.</span>
         <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
       </div>
@@ -239,5 +239,5 @@ export function SiteFooter() {
 }
 
 function FooterGroup({ title, items }: { title: string; items: readonly (readonly [string, string])[] }) {
-  return <div><h2 className="text-xs font-bold uppercase tracking-[0.14em] text-background/45">{title}</h2><ul className="mt-4 space-y-3">{items.map(([label, to]) => <li key={to}><Link to={to as any} className="text-sm text-background/75 transition-colors hover:text-background">{label}</Link></li>)}</ul></div>;
+  return <div><h2 className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">{title}</h2><ul className="mt-4 space-y-3">{items.map(([label, to]) => <li key={to}><Link to={to as any} className="text-sm text-white/75 transition-colors hover:text-white">{label}</Link></li>)}</ul></div>;
 }

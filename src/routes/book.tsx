@@ -447,23 +447,23 @@ function PassengerPage() {
   }
 
   return <>
-    <section className="relative overflow-hidden bg-night text-background">
+    <section className="relative overflow-hidden bg-night text-white">
       <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
       <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
         <div className="max-w-2xl animate-gentle-rise min-w-0">
-          <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">For passengers</p>
-          <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95]">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
-          <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-background/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
+          <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For passengers</p>
+          <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-white">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
+          <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-white/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
           <Button asChild size="lg" className="mt-5 md:mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
         </div>
       </div>
     </section>
 
-    <section id="booking" className="bg-night py-8 md:py-24 text-background min-w-0 max-w-full overflow-hidden">
+    <section id="booking" className="bg-night py-8 md:py-24 text-white min-w-0 max-w-full overflow-hidden">
       <div className="section-shell min-w-0 max-w-full">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Book your Orange</p>
-        <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight">{step === 4 ? "You're all set." : "Plan your journey."}</h2>
+        <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-white">{step === 4 ? "You're all set." : "Plan your journey."}</h2>
 
         {step !== 4 && (
           <div className="mt-6 md:mt-8 min-w-0 max-w-full">
@@ -471,32 +471,32 @@ function PassengerPage() {
             <div className="hidden sm:flex items-center gap-3">
               {([1, 2, 3] as const).map((s, i) => (
                 <div key={s} className="flex items-center gap-3">
-                  <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-background/30 text-background/40"}`}>
+                  <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-white/30 text-white/40"}`}>
                     {step > s ? <Check className="size-3.5" /> : s}
                   </div>
-                  <span className={`text-xs font-semibold ${step === s ? "text-background" : "text-background/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
-                  {i < 2 && <ChevronRight className="size-4 text-background/30" />}
+                  <span className={`text-xs font-semibold ${step === s ? "text-white" : "text-white/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
+                  {i < 2 && <ChevronRight className="size-4 text-white/30" />}
                 </div>
               ))}
             </div>
 
             {/* Mobile compact stepper */}
-            <div className="sm:hidden flex items-center justify-between rounded-xl border border-background/15 bg-background/5 px-4 py-2.5">
+            <div className="sm:hidden flex items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="flex size-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                   {step}
                 </span>
-                <span className="text-xs font-semibold text-background">
+                <span className="text-xs font-semibold text-white">
                   {step === 1 ? "Choose Vehicle" : step === 2 ? "Select Route & Destination" : "Confirm Ride"}
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-background/60">Step {step} of 3</span>
+              <span className="text-[11px] font-medium text-white/60">Step {step} of 3</span>
             </div>
           </div>
         )}
 
         <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start min-w-0 max-w-full">
-          <div className="min-w-0 max-w-full rounded-2xl border border-background/15 bg-background/5 p-4 sm:p-7 shadow-lg">
+          <div className="min-w-0 max-w-full rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-7 shadow-lg">
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="size-8 animate-spin text-primary" />
@@ -596,20 +596,20 @@ function PassengerPage() {
 /* ---------- STEP 1 to 3 components omitted for brevity, keeping same logic ---------- */
 function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
   return <div className="space-y-4 min-w-0 max-w-full">
-    <p className="text-sm font-semibold text-background">Choose your ride</p>
+    <p className="text-sm font-semibold text-white">Choose your ride</p>
     <div className="space-y-3 min-w-0 max-w-full">
       {vehicles.map((v: any) => (
-        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-xl border p-3.5 sm:p-5 text-left transition-all min-w-0 max-w-full ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
+        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-xl border p-3.5 sm:p-5 text-left transition-all min-w-0 max-w-full ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-white/15 hover:border-white/30"}`}>
           <div className="flex items-start justify-between gap-3 min-w-0">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary shrink-0" /><span className="text-sm font-bold text-background truncate">{v.name}</span></div>
-              <p className="mt-1 text-xs text-background/60 truncate">{v.tagline}</p>
-              <p className="mt-1.5 text-xs text-background/50">{v.seats} seats</p>
+              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary shrink-0" /><span className="text-sm font-bold text-white truncate">{v.name}</span></div>
+              <p className="mt-1 text-xs text-white/60 truncate">{v.tagline}</p>
+              <p className="mt-1.5 text-xs text-white/50">{v.seats} seats</p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-lg font-bold text-primary">₹{v.base_fare}</p>
-              <p className="text-[11px] text-background/50">base + ₹{v.per_km}/km</p>
-              <p className="text-[10px] text-background/40">min ₹{v.minimum_fare}</p>
+              <p className="text-[11px] text-white/50">base + ₹{v.per_km}/km</p>
+              <p className="text-[10px] text-white/40">min ₹{v.minimum_fare}</p>
             </div>
           </div>
           {selected?.id === v.id && <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary"><Check className="size-3" />Selected</div>}
@@ -646,7 +646,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
   if (subStep === "pickup") {
     return (
       <div className="space-y-3 min-w-0 max-w-full">
-        <div className="flex items-center justify-between rounded-xl bg-background/10 px-3.5 py-2.5 text-xs text-background border border-background/15 min-w-0">
+        <div className="flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-2.5 text-xs text-white border border-white/15 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <MapPin className="size-4 text-primary shrink-0" />
             <span className="font-semibold truncate">Select or Adjust Pickup Pin</span>
@@ -679,7 +679,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
   return (
     <div className="space-y-4 min-w-0 max-w-full">
       {/* Pickup Location Status Banner (100% Zero-Click Auto-GPS) */}
-      <div className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3 sm:p-3.5 text-xs text-background shadow-xs min-w-0 max-w-full">
+      <div className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3 sm:p-3.5 text-xs text-white shadow-xs min-w-0 max-w-full">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
             {locatingGPS ? (
@@ -695,7 +695,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
                 {locatingGPS ? "Syncing..." : "Live GPS Locked"}
               </span>
             </div>
-            <p className="truncate font-medium text-background text-xs">
+            <p className="truncate font-medium text-white text-xs">
               {pickupGPS?.name || "Indiranagar 100ft Road, Bengaluru"}
             </p>
           </div>
@@ -726,9 +726,9 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 min-w-0 max-w-full">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-wider text-primary">Fare estimate ({selectedVehicle?.name})</p>
-            <span className="text-[11px] text-background/60 shrink-0">~{Math.round(distKm * 10) / 10} km · {Math.max(1, Math.round(distKm / 0.5))} min</span>
+            <span className="text-[11px] text-white/60 shrink-0">~{Math.round(distKm * 10) / 10} km · {Math.max(1, Math.round(distKm / 0.5))} min</span>
           </div>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold text-background font-mono">₹{Math.round(fareBreakdown.total)}</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-bold text-white font-mono">₹{Math.round(fareBreakdown.total)}</p>
         </div>
       )}
 
@@ -771,15 +771,15 @@ function Step3Confirm({
 
   return (
     <div className="space-y-4 min-w-0 max-w-full">
-      <p className="text-sm font-semibold text-background">Review & Customize Ride</p>
+      <p className="text-sm font-semibold text-white">Review & Customize Ride</p>
       <div className="space-y-3 min-w-0 max-w-full">
         {/* Journey Card */}
-        <div className="rounded-xl border border-background/15 p-4 sm:p-5 space-y-3 min-w-0 max-w-full">
+        <div className="rounded-xl border border-white/15 p-4 sm:p-5 space-y-3 min-w-0 max-w-full">
           <Row label="Vehicle" value={selectedVehicle.name} />
           <Row label="Pickup" value={pickupPillar ? `${pickup.name} (${pickupPillar})` : pickup.name} />
           <Row label="Drop-off" value={drop.name} />
-          <div className="flex items-center justify-between border-t border-background/10 pt-3">
-            <span className="font-bold text-background">Total Fare</span>
+          <div className="flex items-center justify-between border-t border-white/10 pt-3">
+            <span className="font-bold text-white">Total Fare</span>
             <span className="text-xl font-bold text-primary font-mono">₹{Math.round(fareBreakdown.total)}</span>
           </div>
         </div>
@@ -789,12 +789,12 @@ function Step3Confirm({
           <div className="rounded-xl border border-primary/40 bg-primary/10 p-3.5 space-y-2">
             <div className="flex items-center gap-1.5">
               <MapPin className="size-3.5 text-primary" />
-              <label className="text-[11px] font-bold uppercase tracking-wider text-background">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-white">
                 Select Pickup Pillar / Gate Landmark (Optional)
               </label>
             </div>
             <Select value={pickupPillar} onValueChange={onPickupPillarChange}>
-              <SelectTrigger className="bg-background/20 border-background/30 text-background text-xs h-10">
+              <SelectTrigger className="bg-white/10 border-white/20 text-white text-xs h-10">
                 <SelectValue placeholder="Select Pickup Pillar or Gate (e.g. T2 Pillar 4B)" />
               </SelectTrigger>
               <SelectContent>
@@ -811,9 +811,9 @@ function Step3Confirm({
         )}
 
         {/* Pre-Ride Cabin Climate Preference */}
-        <div className="rounded-xl border border-background/15 bg-background/5 p-3.5 space-y-2.5">
+        <div className="rounded-xl border border-white/15 bg-white/5 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-background/80 flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
               <Snowflake className="size-3.5 text-primary" />
               Cabin Climate Preference
             </span>
@@ -831,27 +831,27 @@ function Step3Confirm({
                 onClick={() => onCabinClimateChange(item.id)}
                 className={`rounded-xl border p-2 text-center transition-all ${
                   cabinClimate === item.id
-                    ? "border-primary bg-primary/20 text-background font-bold shadow-sm scale-102"
-                    : "border-background/20 bg-background/10 text-background/70 hover:border-background/40 hover:text-background"
+                    ? "border-primary bg-primary/20 text-white font-bold shadow-sm scale-102"
+                    : "border-white/20 bg-white/10 text-white/70 hover:border-white/40 hover:text-white"
                 }`}
               >
                 <span className="text-sm block">{item.icon}</span>
                 <span className="text-xs block font-bold mt-0.5">{item.label}</span>
-                <span className="text-[10px] text-background/60 block">{item.temp}</span>
+                <span className="text-[10px] text-white/60 block">{item.temp}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Quiet Ride Mode Toggle */}
-        <div className="rounded-xl border border-background/15 bg-background/5 p-3 flex items-center justify-between gap-3">
+        <div className="rounded-xl border border-white/15 bg-white/5 p-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
               <VolumeX className="size-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-background">Quiet Ride Mode</p>
-              <p className="text-[10px] text-background/60">Executive peace — no conversation or music (work calls / resting)</p>
+              <p className="text-xs font-bold text-white">Quiet Ride Mode</p>
+              <p className="text-[10px] text-white/60">Executive peace — no conversation or music (work calls / resting)</p>
             </div>
           </div>
           <input
@@ -864,13 +864,13 @@ function Step3Confirm({
 
         {/* Payment Method */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Payment method</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Payment method</p>
           <RadioGroup value={paymentMethod} onValueChange={onPaymentChange} className="mt-2.5 flex gap-3">
             {([["cash", "Cash"], ["upi", "UPI"]] as const).map(([val, label]) => (
-              <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-background/15 hover:border-background/30"}`}>
-                <RadioGroupItem value={val} className="border-background/40 text-primary" />
+              <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-white/15 hover:border-white/30"}`}>
+                <RadioGroupItem value={val} className="border-white/40 text-primary" />
                 <Wallet className="size-4 text-primary shrink-0" />
-                <span className="text-sm font-semibold text-background">{label}</span>
+                <span className="text-sm font-semibold text-white">{label}</span>
               </label>
             ))}
           </RadioGroup>
@@ -878,11 +878,11 @@ function Step3Confirm({
       </div>
 
       {/* Affirmative Booking Consent under Consumer Protection Rules */}
-      <div className="mt-4 rounded-lg border border-background/15 bg-background/5 p-3 text-[11px] text-background/65 leading-relaxed min-w-0">
+      <div className="mt-4 rounded-lg border border-white/15 bg-white/5 p-3 text-[11px] text-white/65 leading-relaxed min-w-0">
         By confirming, you agree to our <Link to="/terms" target="_blank" className="text-primary underline">Terms of Service</Link>, <Link to="/privacy" target="_blank" className="text-primary underline">Privacy Policy</Link>, and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
       </div>
       <div className="mt-5 flex gap-3 min-w-0">
-        <Button variant="ghost" className="text-background/70 hover:text-background" onClick={onBack}>Back</Button>
+        <Button variant="ghost" className="text-white/70 hover:text-white" onClick={onBack}>Back</Button>
         <Button size="lg" className="flex-1" onClick={onConfirm} disabled={submitting}>
           {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Confirm Ride <ArrowRight /></>}
         </Button>
@@ -892,7 +892,7 @@ function Step3Confirm({
 }
 
 function Row({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between gap-3 text-sm min-w-0"><span className="text-background/60 shrink-0">{label}</span><span className="font-semibold text-background truncate text-right">{value}</span></div>;
+  return <div className="flex justify-between gap-3 text-sm min-w-0"><span className="text-white/60 shrink-0">{label}</span><span className="font-semibold text-white truncate text-right">{value}</span></div>;
 }
 
 /* ---------- STEP 4: Live Tracking ---------- */
@@ -1099,19 +1099,19 @@ function Step4Confirmed({
   }, []);
 
   return <div className="flex flex-col py-2">
-    <div className="flex items-center gap-4 border-b border-background/10 pb-6">
+    <div className="flex items-center gap-4 border-b border-white/10 pb-6">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/20 text-primary"><CheckCircle className="size-6" /></span>
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{status === "searching" ? "Finding driver" : status.replace("_", " ")}</p>
-        <p className="display-serif text-2xl text-background">Ref: {bookingData.reference}</p>
+        <p className="display-serif text-2xl text-white">Ref: {bookingData.reference}</p>
       </div>
     </div>
 
     {/* OTP Display */}
     <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-5 text-center">
       <p className="text-xs font-bold uppercase tracking-wider text-primary">Ride OTP</p>
-      <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-background">{bookingData.otp}</p>
-      <p className="mt-2 text-xs text-background/60">Show this code to your driver to start the ride</p>
+      <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-white">{bookingData.otp}</p>
+      <p className="mt-2 text-xs text-white/60">Show this code to your driver to start the ride</p>
     </div>
 
     {/* Live Waiting Fee Countdown Bar */}
@@ -1123,9 +1123,9 @@ function Step4Confirmed({
 
     {/* Driver Info Card */}
     {driverInfo ? (
-      <div className="mt-6 rounded-2xl border border-background/15 bg-background/5 p-5 backdrop-blur-xs">
-        <div className="flex items-center justify-between border-b border-background/10 pb-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-background/60">Your Driver & Assigned Vehicle</p>
+      <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-white/60">Your Driver & Assigned Vehicle</p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
             <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" /> Assigned & Active
           </span>
@@ -1137,19 +1137,19 @@ function Step4Confirmed({
               {/* High-Resolution Driver Photo / Verified Avatar (Clause 14.9) */}
               <div className="relative size-12 shrink-0 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
                 <span>{driverInfo.full_name?.charAt(0) || "D"}</span>
-                <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
+                <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-neutral-900 flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
                   ✓
                 </span>
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-bold text-background flex items-center gap-2">
+                <p className="text-lg font-bold text-white flex items-center gap-2">
                   {driverInfo.full_name}
                   <span className="rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-semibold text-emerald-400 px-1.5 py-0.5">
                     Verified Driver
                   </span>
                 </p>
-                <div className="flex items-center gap-2 text-xs text-background/60 flex-wrap">
-                  <span className="flex items-center gap-1 text-background/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
+                <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
+                  <span className="flex items-center gap-1 text-white/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
                   <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
                     {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
                   </span>
@@ -1169,7 +1169,7 @@ function Step4Confirmed({
                   navigator.clipboard.writeText(activeDriverPhone);
                   toast.success(`Copied driver phone: ${activeDriverPhone}`);
                 }}
-                className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-background/70 hover:text-background hover:bg-background/10 transition-colors border border-background/20"
+                className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/20"
                 title="Copy phone number to clipboard"
               >
                 <Copy className="size-3" /> Copy
@@ -1225,15 +1225,15 @@ function Step4Confirmed({
         </div>
 
         {(!driverInfo.phone || driverInfo.phone.trim() === "") && (
-          <p className="mt-3 text-[11px] text-background/50 italic">
+          <p className="mt-3 text-[11px] text-white/50 italic">
             * Direct line being connected. Calling connects to the 24/7 Orange Fleet Helpline.
           </p>
         )}
       </div>
     ) : (
-      <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-background/15 py-10">
+      <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 py-10">
         <Loader2 className="size-6 animate-spin text-primary" />
-        <p className="mt-3 text-sm text-background/60">Matching you with the nearest {vehicle.name}...</p>
+        <p className="mt-3 text-sm text-white/60">Matching you with the nearest {vehicle.name}...</p>
       </div>
     )}
 
@@ -1252,7 +1252,7 @@ function Step4Confirmed({
               24/7 Safety
             </span>
           </div>
-          <p className="text-xs text-background/70 mt-0.5">
+          <p className="text-xs text-white/70 mt-0.5">
             {guardianContact
               ? `Guardian: ${guardianContact.name} (${guardianContact.phone})`
               : "Set emergency contact for 1-tap guardian call & live ride alerts"}
@@ -1274,8 +1274,8 @@ function Step4Confirmed({
 
     {/* Fee-Exempt Cancellation Option (Clause 18 MV Aggregator Guidelines) */}
     {(status === "searching" || status === "accepted" || status === "arrived") && (
-      <div className="mt-4 flex items-center justify-between rounded-xl border border-background/10 bg-background/5 p-3 text-xs">
-        <span className="text-background/60">Need to change your ride?</span>
+      <div className="mt-4 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3 text-xs">
+        <span className="text-white/60">Need to change your ride?</span>
         <button
           type="button"
           onClick={() => setCancelModalOpen(true)}
@@ -1408,8 +1408,8 @@ function Step4Confirmed({
             <FileText className="size-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-foreground">Official GST Tax Invoice Ready</p>
-            <p className="text-[11px] text-background/70">ORANGE TAXI LIMITED · SAC 996412 · 5% GST</p>
+            <p className="text-xs font-bold text-white">Official GST Tax Invoice Ready</p>
+            <p className="text-[11px] text-white/70">ORANGE TAXI LIMITED · SAC 996412 · 5% GST</p>
           </div>
         </div>
         <Button
@@ -1446,8 +1446,8 @@ function Step4Confirmed({
     <div className="mt-6 space-y-2 text-sm">
       <Row label="Pickup" value={pickup.name} />
       <Row label="Drop-off" value={drop.name} />
-      <div className="flex justify-between border-t border-background/10 pt-3">
-        <span className="text-background/60">Estimated fare</span>
+      <div className="flex justify-between border-t border-white/10 pt-3">
+        <span className="text-white/60">Estimated fare</span>
         <span className="font-bold text-primary">₹{Math.round(fare)}</span>
       </div>
     </div>
@@ -1455,7 +1455,7 @@ function Step4Confirmed({
     <div className="mt-8 flex justify-center">
       <Button
         variant="ghost"
-        className="text-background/60 hover:text-background"
+        className="text-white/70 hover:text-white"
         onClick={() => {
           if (onReset) onReset();
           else window.location.reload();

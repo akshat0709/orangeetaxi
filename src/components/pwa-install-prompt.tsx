@@ -100,7 +100,7 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-in fade-in slide-in-from-bottom-5 duration-300">
-      <div className="flex items-start justify-between gap-3.5 rounded-2xl border border-primary/30 bg-night/95 p-4 text-background shadow-2xl backdrop-blur-xl dark:border-primary/40">
+      <div className="flex items-start justify-between gap-3.5 rounded-2xl border border-primary/30 bg-night/95 p-4 text-white shadow-2xl backdrop-blur-xl dark:border-primary/40">
         <div className="flex items-center gap-3">
           <img
             src="/pwa-192x192.png"
@@ -109,12 +109,12 @@ export function PWAInstallPrompt() {
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <h4 className="text-sm font-bold text-foreground dark:text-background">Orange Taxi App</h4>
+              <h4 className="text-sm font-bold text-white">Orange Taxi App</h4>
               <span className="rounded bg-primary/20 px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider text-primary">
                 Fast & 1-Tap
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-background/70">
+            <p className="mt-0.5 text-xs text-white/70">
               {isIOS
                 ? "Install on your home screen for full-screen live tracking"
                 : "Add to home screen for instant booking & real-time dispatch"}
@@ -124,7 +124,7 @@ export function PWAInstallPrompt() {
 
         <button
           onClick={handleDismiss}
-          className="text-background/50 hover:text-background p-1 -mr-1 -mt-1 transition-colors"
+          className="text-white/50 hover:text-white p-1 -mr-1 -mt-1 transition-colors"
           aria-label="Close"
         >
           <X className="size-4" />
@@ -155,7 +155,7 @@ export function PWAInstallPrompt() {
             onClick={handleDismiss}
             variant="outline"
             size="sm"
-            className="border-white/15 bg-white/5 text-xs text-background hover:bg-white/10"
+            className="border-white/15 bg-white/5 text-xs text-white hover:bg-white/10"
           >
             Later
           </Button>

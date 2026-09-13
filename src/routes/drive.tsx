@@ -51,14 +51,14 @@ const requirements = [
 
 function DriverPage() {
   return <>
-    <section className="relative overflow-hidden bg-night text-background">
+    <section className="relative overflow-hidden bg-night text-white">
       <img src={driverAppImage} alt="A professional Orange Taxi driver standing beside his orange electric car" width={1408} height={1056} fetchPriority="high" className="absolute inset-0 size-full object-cover object-[68%_center]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
       <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
         <div className="max-w-2xl animate-gentle-rise">
-          <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-background/70">For drivers</p>
-          <h1 className="display-serif text-[clamp(2.85rem,7vw,6.2rem)] leading-[0.92]">Drive with dignity.<br/><span className="text-primary">Earn with stability.</span></h1>
-          <p className="mt-7 max-w-xl text-base leading-7 text-background/75 md:text-lg">A professional driving career built on a fixed salary, performance rewards and genuine respect — not per-trip commissions and endless uncertainty.</p>
+          <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For drivers</p>
+          <h1 className="display-serif text-[clamp(2.85rem,7vw,6.2rem)] leading-[0.92] text-white">Drive with dignity.<br/><span className="text-primary">Earn with stability.</span></h1>
+          <p className="mt-7 max-w-xl text-base leading-7 text-white/75 md:text-lg">A professional driving career built on a fixed salary, performance rewards and genuine respect — not per-trip commissions and endless uncertainty.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg"><a href="#join">Join Orange <ArrowRight /></a></Button>
             <Button asChild size="lg" variant="light"><a href="#earnings">How earning works</a></Button>
@@ -115,21 +115,21 @@ function DriverPage() {
       </ol>
     </div></section>
 
-    <section className="bg-night py-24 text-background md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
+    <section className="bg-night py-24 text-white md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Your driver app</p>
-        <h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">Everything you need, in one place.</h2>
-        <p className="mt-6 max-w-lg leading-7 text-background/65">The Orange driver app is being designed around clarity: your schedule, your earnings and your progress — always visible, never confusing.</p>
-        <ul className="mt-8 space-y-4 text-sm text-background/70">
+        <h2 className="display-serif mt-4 text-5xl leading-none text-white md:text-6xl">Everything you need, in one place.</h2>
+        <p className="mt-6 max-w-lg leading-7 text-white/65">The Orange driver app is being designed around clarity: your schedule, your earnings and your progress — always visible, never confusing.</p>
+        <ul className="mt-8 space-y-4 text-sm text-white/70">
           {["Daily schedule and ride assignments","Earnings and incentives at a glance","Milestone progress towards rewards","Training and service feedback"].map((x) => <li key={x} className="flex items-center gap-3"><Gauge className="size-4 text-primary" />{x}</li>)}
         </ul>
       </div>
-      <div className="rounded-xl border border-background/15 bg-background/5 p-7 md:p-9">
-        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.14em] text-background/50">Concept preview</p><span className="rounded-full border border-primary/40 px-3 py-1 text-xs font-bold text-primary">Illustrative only</span></div>
+      <div className="rounded-xl border border-white/15 bg-white/5 p-7 md:p-9">
+        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">Concept preview</p><span className="rounded-full border border-primary/40 px-3 py-1 text-xs font-bold text-primary">Illustrative only</span></div>
         <div className="mt-6 space-y-3">
-          {[["This week's earnings","—"],["Performance incentives","—"],["Next milestone","—"],["Service rating","—"]].map(([label]) => <div key={label} className="flex items-center justify-between rounded-lg border border-background/10 bg-night/40 px-5 py-4"><span className="text-sm text-background/70">{label}</span><span className="text-sm font-bold text-background/40">—</span></div>)}
+          {[["This week's earnings","—"],["Performance incentives","—"],["Next milestone","—"],["Service rating","—"]].map(([label]) => <div key={label} className="flex items-center justify-between rounded-lg border border-white/10 bg-neutral-900/60 px-5 py-4"><span className="text-sm text-white/70">{label}</span><span className="text-sm font-bold text-white/40">—</span></div>)}
         </div>
-        <p className="mt-5 text-xs leading-5 text-background/45">A design concept for the future driver dashboard. Figures will appear once the driver app launches.</p>
+        <p className="mt-5 text-xs leading-5 text-white/45">A design concept for the future driver dashboard. Figures will appear once the driver app launches.</p>
       </div>
     </div></section>
 

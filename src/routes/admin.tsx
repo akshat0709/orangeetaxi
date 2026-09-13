@@ -30,16 +30,16 @@ interface Enquiry { id: string; company_name: string; contact_name: string; emai
 interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; }
 
 const STATUS_BADGE: Record<string, string> = {
-  accepted: "bg-blue-100 text-blue-700",
-  arrived: "bg-violet-100 text-violet-700",
-  in_progress: "bg-orange-100 text-orange-700",
-  completed: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
-  new: "bg-slate-100 text-slate-700",
-  reviewed: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  contacted: "bg-purple-100 text-purple-700",
+  accepted: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
+  arrived: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 dark:border dark:border-violet-800/40",
+  in_progress: "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
+  completed: "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 dark:border dark:border-green-800/40",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border dark:border-red-800/40",
+  new: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  reviewed: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
+  approved: "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 dark:border dark:border-green-800/40",
+  rejected: "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border dark:border-red-800/40",
+  contacted: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:border dark:border-purple-800/40",
 };
 
 function AdminPage() {

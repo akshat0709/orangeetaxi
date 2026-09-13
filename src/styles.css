@@ -171,6 +171,16 @@
   --sidebar-ring: oklch(0.69 0.19 48);
 }
 
+/*
+ * Inside .bg-night sections:
+ * The background is always dark night in both light and dark modes.
+ * Ensures default text color is crisp light cream tone.
+ */
+.bg-night {
+  background-color: var(--night);
+  color: oklch(0.985 0.008 75);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -220,20 +230,7 @@
   .animate-delay-2 { animation-delay: 200ms; }
 }
 
-/*
- * Dark mode text-on-dark-background fix.
- *
- * The design uses `text-background` to mean "light text on dark sections".
- * In light mode: --background is cream/white — correct contrast on bg-night.
- * In dark mode: --background becomes dark charcoal — invisible on bg-night!
- *
- * Fix: scope --background to always be light inside dark-surface sections,
- * so text-background renders as cream regardless of the active theme.
- */
-.dark .bg-night,
-.dark footer {
-  --background: oklch(0.95 0.008 65);
-}
+
 
 /*
  * Mobile & Standalone PWA Safe Area Management

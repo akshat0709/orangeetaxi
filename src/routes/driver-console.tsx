@@ -49,12 +49,12 @@ const STATUS_FLOW: Record<string, { label: string; next: string; nextLabel: stri
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  searching: "bg-amber-100 text-amber-700 border-amber-200",
-  accepted: "bg-blue-100 text-blue-700 border-blue-200",
-  arrived: "bg-violet-100 text-violet-700 border-violet-200",
-  in_progress: "bg-orange-100 text-orange-700 border-orange-200",
-  completed: "bg-green-100 text-green-700 border-green-200",
-  cancelled: "bg-red-100 text-red-700 border-red-200",
+  searching: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40",
+  accepted: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/40",
+  arrived: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/60 dark:text-violet-300 dark:border-violet-800/40",
+  in_progress: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800/40",
+  completed: "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/60 dark:text-green-300 dark:border-green-800/40",
+  cancelled: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/40",
 };
 
 function playRideRequestChime() {
