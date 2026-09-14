@@ -13,6 +13,7 @@ import {
   CompanyGSTProfile,
 } from "@/lib/gst-utils";
 import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
+import { SendInvoicePayload } from "@/lib/send-invoice-email";
 
 interface TaxInvoiceModalProps {
   open: boolean;
@@ -85,13 +86,56 @@ export function TaxInvoiceModal({
   }
 
   async function handleSendEmail() {
+    let targetEmail = customer?.email || booking.customer_email;
+    if (!targetEmail || !targetEmail.includes("@")) {
+      const promptEmail = window.prompt("Enter recipient email address for GST invoice:", "orangeetaxi@gmail.com");
+      if (!promptEmail) return;
+      targetEmail = promptEmail.trim();
+    }
+
     setEmailing(true);
-    // Simulate email dispatch with rich confirmation
-    const targetEmail = customer?.email || booking.customer_email || "your registered email";
-    setTimeout(() => {
+    try {
+      const payload: SendInvoicePayload = {
+        to: targetEmail,
+        invoiceNumber,
+        customerName: customer?.full_name || booking.customer_name,
+        customerPhone: customer?.phone || booking.customer_phone,
+        pickupArea: booking.pickup_area || "Pickup Location",
+        dropArea: booking.drop_area || "Destination",
+        completedAt: completedDateStr,
+        vehicleName: booking.vehicle_name || "Mahindra BE.6",
+        vehiclePlate: getBookingVehiclePlate(booking, driver),
+        paymentMethod: booking.payment_method || "CASH",
+        subtotal: subtotalAmount,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        igst: igstAmount,
+        totalFare: totalAmount,
+        distanceKm: booking.distance_km,
+        durationMinutes: booking.duration_mins,
+        corporateName: b2bMode ? corporateName : undefined,
+        corporateGstin: b2bMode ? corporateGstin : undefined,
+        profile,
+      };
+
+      const res = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to send invoice");
+      }
+
+      toast.success(`Tax invoice #${invoiceNumber} successfully sent to ${targetEmail} from billing@orange-taxi.com! ✉️`);
+    } catch (err: any) {
+      console.error("Invoice email failed:", err);
+      toast.error(`Email dispatch error: ${err.message || "Could not deliver invoice"}`);
+    } finally {
       setEmailing(false);
-      toast.success(`Tax invoice ${invoiceNumber} sent to ${targetEmail}! ✉️`);
-    }, 900);
+    }
   }
 
   function handleCopyInvoiceNo() {

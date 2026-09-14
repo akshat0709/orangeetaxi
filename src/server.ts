@@ -44,9 +44,67 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+import { generateInvoiceHtml, SendInvoicePayload } from "./lib/send-invoice-email";
+
+async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Response> {
+  try {
+    const body = (await request.json()) as SendInvoicePayload;
+    if (!body || !body.to || !body.invoiceNumber) {
+      return new Response(JSON.stringify({ error: "Missing required fields (to, invoiceNumber)" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    const apiKey =
+      (env as any)?.RESEND_API_KEY ||
+      (typeof process !== "undefined" ? process.env?.RESEND_API_KEY : undefined) ||
+      "re_GnGbP7X3_ALB8BwSfKRdougXVkmBii7S3";
+
+    const html = generateInvoiceHtml(body);
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Orange Taxi Invoices <billing@orange-taxi.com>",
+        to: [body.to],
+        subject: `GST Tax Invoice #${body.invoiceNumber} — Orange Taxi`,
+        html,
+      }),
+    });
+
+    const resendData = (await resendRes.json()) as any;
+    if (!resendRes.ok) {
+      return new Response(JSON.stringify({ error: resendData?.message || "Failed to dispatch email via Resend" }), {
+        status: resendRes.status,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message || "Failed to process invoice email request" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (url.pathname === "/api/send-invoice" && request.method === "POST") {
+        return await handleSendInvoiceApi(request, env);
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
