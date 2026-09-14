@@ -80,11 +80,68 @@ export function RideChatSheet({
   const [sharingLocation, setSharingLocation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
-  const isOpenRef = useRef(isOpen);
 
+  const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
 
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+
+  const onUnreadCountChangeRef = useRef(onUnreadCountChange);
+  onUnreadCountChangeRef.current = onUnreadCountChange;
+
+  const currentUserTypeRef = useRef(currentUserType);
+  currentUserTypeRef.current = currentUserType;
+
+  const currentUserNameRef = useRef(currentUserName);
+  currentUserNameRef.current = currentUserName;
+
+  const messagesRef = useRef<ChatMessage[]>([]);
+  messagesRef.current = messages;
+
   const storageKey = `orange_chat_${bookingId}`;
+
+  // Helper to merge new incoming messages without duplicates and trigger notifications
+  const mergeIncomingMessages = (incomingList: ChatMessage[]) => {
+    if (!incomingList || incomingList.length === 0) return;
+
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const brandNew = incomingList.filter((m) => m && m.id && !existingIds.has(m.id));
+      if (brandNew.length === 0) return prev;
+
+      const merged = [...prev, ...brandNew].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(merged));
+      } catch (e) {}
+
+      // Trigger chime and notification if any message is from the other party
+      const fromOther = brandNew.filter((m) => m.sender !== currentUserTypeRef.current);
+      if (fromOther.length > 0) {
+        playChatChime();
+        if (!isOpenRef.current) {
+          const addedCount = fromOther.length;
+          setUnreadCount((c) => {
+            const next = c + addedCount;
+            onUnreadCountChangeRef.current?.(next);
+            return next;
+          });
+          const latest = fromOther[fromOther.length - 1];
+          toast.info(`💬 ${latest.senderName}: "${latest.text}"`, {
+            action: {
+              label: "Reply",
+              onClick: () => onOpenChangeRef.current?.(true),
+            },
+          });
+        }
+      }
+
+      return merged;
+    });
+  };
 
   const shareMyLocation = () => {
     if (!navigator.geolocation) {
@@ -112,7 +169,7 @@ export function RideChatSheet({
     );
   };
 
-  // Load persisted chat history for this booking
+  // Load initial persisted chat history
   useEffect(() => {
     if (!bookingId) return;
     try {
@@ -126,13 +183,37 @@ export function RideChatSheet({
     }
   }, [bookingId, storageKey]);
 
-  // Reset unread count when opened
+  // When drawer opens, clear unread, re-sync from localStorage, and request latest history from peer
   useEffect(() => {
     if (isOpen) {
       setUnreadCount(0);
-      onUnreadCountChange?.(0);
+      onUnreadCountChangeRef.current?.(0);
+
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const parsed: ChatMessage[] = JSON.parse(stored);
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const brandNew = parsed.filter((m) => m && m.id && !existingIds.has(m.id));
+            if (brandNew.length === 0) return prev;
+            return [...prev, ...brandNew].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+          });
+        }
+      } catch (e) {}
+
+      // Broadcast history request so the other party sends any messages we might have missed
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: "broadcast",
+          event: "request_chat_history",
+          payload: { requester: currentUserTypeRef.current },
+        }).catch(() => {});
+      }
     }
-  }, [isOpen, onUnreadCountChange]);
+  }, [isOpen, storageKey]);
 
   // Scroll to bottom on message change or open
   useEffect(() => {
@@ -143,54 +224,78 @@ export function RideChatSheet({
     }
   }, [messages, isOpen]);
 
-  // Subscribe to real-time chat broadcast channel
+  // Stable multi-channel subscription (Supabase Realtime + BroadcastChannel + Window Storage)
   useEffect(() => {
     if (!bookingId) return;
 
+    // 1. Supabase Realtime Broadcast (cross-device)
     const channel = supabase.channel(`ride-chat-${bookingId}`, {
-      config: { broadcast: { self: false } },
+      config: { broadcast: { self: false, ack: true } },
     });
 
     channel
       .on("broadcast", { event: "chat_message" }, (payload) => {
-        const incoming: ChatMessage = payload.payload;
-        if (!incoming || !incoming.id) return;
-
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === incoming.id)) return prev;
-          const updated = [...prev, incoming];
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(updated));
-          } catch (e) {}
-          return updated;
-        });
-
-        // Notify if incoming from the other party
-        if (incoming.sender !== currentUserType) {
-          playChatChime();
-          if (!isOpenRef.current) {
-            setUnreadCount((c) => {
-              const next = c + 1;
-              onUnreadCountChange?.(next);
-              return next;
-            });
-            toast.info(`💬 ${incoming.senderName}: "${incoming.text}"`, {
-              action: {
-                label: "Reply",
-                onClick: () => onOpenChange(true),
-              },
-            });
-          }
+        if (payload?.payload) {
+          mergeIncomingMessages([payload.payload]);
+        }
+      })
+      .on("broadcast", { event: "request_chat_history" }, () => {
+        // If other peer requested chat history, send our current messages list
+        if (messagesRef.current.length > 0 && channelRef.current) {
+          channelRef.current.send({
+            type: "broadcast",
+            event: "sync_chat_history",
+            payload: { messages: messagesRef.current },
+          }).catch(() => {});
+        }
+      })
+      .on("broadcast", { event: "sync_chat_history" }, (payload) => {
+        if (payload?.payload?.messages) {
+          mergeIncomingMessages(payload.payload.messages);
         }
       })
       .subscribe();
 
     channelRef.current = channel;
 
+    // 2. Browser BroadcastChannel (instant zero-latency same-browser / multi-tab sync)
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel(`orange_chat_bc_${bookingId}`);
+      bc.onmessage = (event) => {
+        if (event.data) {
+          if (Array.isArray(event.data)) mergeIncomingMessages(event.data);
+          else mergeIncomingMessages([event.data]);
+        }
+      };
+    } catch {}
+
+    // 3. LocalStorage Event listener (multi-tab cross sync)
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === storageKey && e.newValue) {
+        try {
+          const parsed: ChatMessage[] = JSON.parse(e.newValue);
+          mergeIncomingMessages(parsed);
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handleStorageEvent);
+
+    // 4. Custom window event (same-page cross-component dispatch)
+    const handleCustomLocalEvent = (e: any) => {
+      if (e.detail?.bookingId === bookingId && e.detail?.message) {
+        mergeIncomingMessages([e.detail.message]);
+      }
+    };
+    window.addEventListener("orange_chat_local_event", handleCustomLocalEvent);
+
     return () => {
       supabase.removeChannel(channel);
+      bc?.close();
+      window.removeEventListener("storage", handleStorageEvent);
+      window.removeEventListener("orange_chat_local_event", handleCustomLocalEvent);
     };
-  }, [bookingId, currentUserType, onOpenChange, onUnreadCountChange, storageKey]);
+  }, [bookingId, storageKey]);
 
   const sendMessage = async (textToSend: string) => {
     const text = textToSend.trim();
@@ -198,13 +303,13 @@ export function RideChatSheet({
 
     const newMsg: ChatMessage = {
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      sender: currentUserType,
-      senderName: currentUserName || (currentUserType === "driver" ? "Driver" : "Passenger"),
+      sender: currentUserTypeRef.current,
+      senderName: currentUserNameRef.current || (currentUserTypeRef.current === "driver" ? "Driver" : "Passenger"),
       text,
       timestamp: new Date().toISOString(),
     };
 
-    // Update local state and storage
+    // 1. Update local state and localStorage
     setMessages((prev) => {
       const updated = [...prev, newMsg];
       try {
@@ -215,13 +320,32 @@ export function RideChatSheet({
 
     setInputText("");
 
-    // Broadcast across Supabase channel to other party
+    // 2. Dispatch locally for in-page and cross-tab listeners
+    try {
+      window.dispatchEvent(
+        new CustomEvent("orange_chat_local_event", {
+          detail: { bookingId, message: newMsg },
+        })
+      );
+    } catch {}
+
+    try {
+      const bc = new BroadcastChannel(`orange_chat_bc_${bookingId}`);
+      bc.postMessage(newMsg);
+      bc.close();
+    } catch {}
+
+    // 3. Broadcast across Supabase Realtime channel to other devices
     if (channelRef.current) {
-      await channelRef.current.send({
-        type: "broadcast",
-        event: "chat_message",
-        payload: newMsg,
-      });
+      try {
+        await channelRef.current.send({
+          type: "broadcast",
+          event: "chat_message",
+          payload: newMsg,
+        });
+      } catch (err) {
+        console.warn("Realtime broadcast send notice:", err);
+      }
     }
   };
 
