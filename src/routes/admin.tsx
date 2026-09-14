@@ -647,7 +647,15 @@ function AdminPage() {
 
           {/* DRIVERS */}
           <TabsContent value="drivers">
-            <DriverAnalyticsPanel drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+            <DriverAnalyticsPanel
+              drivers={drivers}
+              bookings={bookings}
+              onRefresh={loadAll}
+              onNavigateTab={(tab) => {
+                setActiveTab(tab);
+                navigate({ to: "/admin", search: { tab }, replace: true });
+              }}
+            />
           </TabsContent>
 
           {/* FLEET & BAYS */}
@@ -682,10 +690,46 @@ function AdminPage() {
   );
 }
 
-function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Driver[]; bookings: any[]; onRefresh: () => void }) {
+function isCommissionDriver(d: Driver): boolean {
+  if (d.driver_type === "partner") return true;
+  if (d.driver_type === "company") return false;
+  if (d.vehicle_code && typeof d.vehicle_code === "string") {
+    if (d.vehicle_code.includes('"type":"partner"')) return true;
+    if (d.vehicle_code.includes('"type":"company"')) return false;
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
+      if (pCars.some((pv: any) =>
+        (d.id && pv.driver_id === d.id) ||
+        (d.phone && pv.owner_phone && pv.owner_phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
+        (d.full_name && pv.owner_name && pv.owner_name.toLowerCase() === d.full_name.toLowerCase())
+      )) {
+        return true;
+      }
+    } catch (e) {}
+  }
+  return false;
+}
+
+function DriverAnalyticsPanel({
+  drivers,
+  bookings,
+  onRefresh,
+  onNavigateTab
+}: {
+  drivers: Driver[];
+  bookings: any[];
+  onRefresh: () => void;
+  onNavigateTab?: (tab: string) => void;
+}) {
   const [search, setSearch] = useState("");
+  const [driverSegment, setDriverSegment] = useState<"company" | "commission" | "all">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
+  const [editingPartnerVehicleId, setEditingPartnerVehicleId] = useState<string | null>(null);
+  const [partnerPlateInput, setPartnerPlateInput] = useState("");
+  const [partnerModelInput, setPartnerModelInput] = useState("");
   const [fleetVehicles, setFleetVehicles] = useState<any[]>([]);
   const [customEntryDriverId, setCustomEntryDriverId] = useState<string | null>(null);
 
@@ -737,7 +781,6 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
   }
 
   async function assignBayVehicleToDriver(vehicle: any, driver: Driver) {
-    // 1. If driver already has an older vehicle in fleet, return it to bay
     const olderVeh = fleetVehicles.find(v => v.assigned_driver_id === driver.id && v.id !== vehicle.id);
     if (olderVeh) {
       const olderParked = {
@@ -751,7 +794,6 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
       toast.info(`🅿️ Older car ${olderVeh.plate_number} parked back in ${olderParked.bay_number}.`);
     }
 
-    // 2. Mark selected vehicle as assigned
     const assigned = {
       ...vehicle,
       status: "assigned",
@@ -760,7 +802,6 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
     };
     await updateFleetVehicleInDbOrLocal(assigned);
 
-    // 3. Update driver in Supabase
     await supabase.from("drivers").update({
       vehicle_number: vehicle.plate_number,
       vehicle_model: vehicle.model
@@ -806,12 +847,129 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
     onRefresh();
   }
 
+  async function updatePartnerVehicle(driver: Driver, plate: string, model: string) {
+    if (!plate || !plate.trim()) {
+      toast.error("Please enter a valid EV registration number");
+      return;
+    }
+    const cleanPlate = plate.trim().toUpperCase();
+    const cleanModel = model.trim() || "Tata Nexon EV";
+
+    const metaObj = {
+      photo: driver.photo_url || "",
+      plate: cleanPlate,
+      model: cleanModel,
+      type: "partner",
+    };
+    const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
+
+    const { error } = await supabase.from("drivers").update({
+      vehicle_number: cleanPlate,
+      vehicle_model: cleanModel,
+      vehicle_code: updatedCode,
+    }).eq("id", driver.id);
+
+    if (error) {
+      toast.error("Could not update partner vehicle: " + error.message);
+    } else {
+      try {
+        const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
+        const idx = pCars.findIndex((c: any) => c.driver_id === driver.id || c.plate_number === cleanPlate);
+        if (idx >= 0) {
+          pCars[idx].plate_number = cleanPlate;
+          pCars[idx].model = cleanModel;
+        } else {
+          pCars.unshift({
+            id: "car-pv-" + Date.now(),
+            plate_number: cleanPlate,
+            model: cleanModel,
+            owner_name: driver.full_name,
+            owner_phone: driver.phone || "",
+            driver_id: driver.id,
+            status: "active",
+            is_ev: true,
+            created_at: new Date().toISOString()
+          });
+        }
+        localStorage.setItem("orange_partner_vehicles", JSON.stringify(pCars));
+      } catch (e) {}
+
+      toast.success(`Partner EV updated to ${cleanPlate} (${cleanModel})!`);
+      setEditingPartnerVehicleId(null);
+      onRefresh();
+    }
+  }
+
+  async function switchDriverType(driver: Driver, targetType: "company" | "partner") {
+    const isPartner = targetType === "partner";
+    let targetPlate = driver.vehicle_number;
+    let targetModel = driver.vehicle_model;
+
+    if (isPartner) {
+      if (!targetPlate || targetPlate === "Unassigned") {
+        const p = prompt(`Enter Partner EV Registration Plate for ${driver.full_name}:`, "KA 01 EV 4421");
+        if (p === null) return;
+        targetPlate = p.trim().toUpperCase() || "KA 01 EV 4421";
+      }
+      if (!targetModel) targetModel = "Tata Nexon EV";
+    } else {
+      targetPlate = "Unassigned";
+      targetModel = "Mahindra BE.6";
+    }
+
+    const metaObj = {
+      photo: driver.photo_url || "",
+      plate: targetPlate,
+      model: targetModel,
+      type: targetType,
+    };
+    const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
+
+    const { error } = await supabase.from("drivers").update({
+      vehicle_number: targetPlate,
+      vehicle_model: targetModel,
+      vehicle_code: updatedCode,
+    }).eq("id", driver.id);
+
+    if (error) {
+      toast.error("Could not update driver classification: " + error.message);
+    } else {
+      if (isPartner) {
+        try {
+          const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
+          if (!pCars.some((c: any) => c.plate_number === targetPlate)) {
+            pCars.unshift({
+              id: "car-pv-" + Date.now(),
+              plate_number: targetPlate,
+              model: targetModel,
+              owner_name: driver.full_name,
+              owner_phone: driver.phone || "",
+              driver_id: driver.id,
+              status: "active",
+              is_ev: true,
+              created_at: new Date().toISOString()
+            });
+            localStorage.setItem("orange_partner_vehicles", JSON.stringify(pCars));
+          }
+        } catch (e) {}
+      }
+      toast.success(`${driver.full_name} is now classified as ${isPartner ? "Commission Based Driver (Partner)" : "Company Owned Driver (Fleet)"}!`);
+      onRefresh();
+    }
+  }
+
+  const allCompanyDrivers = drivers.filter(d => !isCommissionDriver(d));
+  const allCommissionDrivers = drivers.filter(d => isCommissionDriver(d));
 
   const filtered = drivers.filter(d =>
     d.full_name.toLowerCase().includes(search.toLowerCase()) ||
     d.city?.toLowerCase().includes(search.toLowerCase()) ||
-    d.vehicle_number?.toLowerCase().includes(search.toLowerCase())
+    d.vehicle_number?.toLowerCase().includes(search.toLowerCase()) ||
+    d.phone?.includes(search)
   );
+
+  const filteredCompanyDrivers = filtered.filter(d => !isCommissionDriver(d));
+  const filteredCommissionDrivers = filtered.filter(d => isCommissionDriver(d));
 
   function driverBookings(driverId: string) {
     return bookings.filter(b => b.driver_id === driverId && b.status === "completed");
@@ -828,100 +986,143 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
     return { count: rides.length, total, upi, cash, todayTotal, todayCount: todayRides.length };
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          placeholder="Search drivers by name, city or vehicle number..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-            <X className="size-4" />
-          </button>
-        )}
-      </div>
+  function renderDriverCard(d: Driver) {
+    const isPartner = isCommissionDriver(d);
+    const stats = driverStats(d.id);
+    const isExpanded = expanded === d.id;
+    const isEditingVehicle = editingVehicleId === d.id;
+    const isEditingPartnerVehicle = editingPartnerVehicleId === d.id;
+    const rides = driverBookings(d.id);
 
-      {filtered.length === 0 && (
-        <p className="py-10 text-center text-sm text-muted-foreground">No drivers found.</p>
-      )}
-
-      {/* Driver cards */}
-      {filtered.map(d => {
-        const stats = driverStats(d.id);
-        const isExpanded = expanded === d.id;
-        const isEditingVehicle = editingVehicleId === d.id;
-        const rides = driverBookings(d.id);
-
-        return (
-          <div key={d.id} className="rounded-xl border border-border bg-background overflow-hidden">
-            {/* Driver header */}
-            <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-4">
-                {d.photo_url ? (
-                  <img
-                    src={d.photo_url}
-                    alt={d.full_name}
-                    className="size-10 shrink-0 rounded-full object-cover border border-primary/40 shadow-xs"
-                  />
-                ) : (
-                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {d.full_name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold">{d.full_name}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${d.is_online ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
-                      {d.is_online ? "● Online" : "Offline"}
-                    </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      d.driver_type === "partner"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
-                    }`}>
-                      {d.driver_type === "partner" ? "⚡ Partner Owner" : "🏢 Company Fleet"}
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{d.city}</span>
-                    <span className="text-muted-foreground text-xs">·</span>
-                    <span className="inline-flex items-center gap-1 rounded bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs font-semibold text-primary">
-                      <Car className="size-3" />
-                      <span>{d.vehicle_model || "Mahindra BE.6"}</span>
-                      <span className="font-mono font-bold">
-                        {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "⚠️ No car assigned"}
-                      </span>
-                    </span>
-                    <span className="text-muted-foreground text-xs">·</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newPhone = prompt(`Enter phone number for ${d.full_name}:`, d.phone || "");
-                        if (newPhone !== null && newPhone.trim() !== "") {
-                          supabase.from("drivers").update({ phone: newPhone.trim() }).eq("id", d.id).then(({ error }) => {
-                            if (error) toast.error("Could not update phone: " + error.message);
-                            else {
-                              toast.success("Driver phone updated!");
-                              onRefresh();
-                            }
-                          });
-                        }
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-primary transition-colors underline cursor-pointer"
-                      title="Click to edit driver phone number"
-                    >
-                      <Phone className="size-3" />
-                      <span>{d.phone || "Add Phone ✏️"}</span>
-                    </button>
-                  </div>
+    return (
+      <div key={d.id} className="rounded-xl border border-border bg-background overflow-hidden shadow-xs hover:border-primary/40 transition-colors">
+        {/* Driver header */}
+        <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className="relative size-11 shrink-0">
+              {d.photo_url ? (
+                <img
+                  src={d.photo_url}
+                  alt={d.full_name}
+                  className="size-11 rounded-full object-cover border-2 border-primary/40 shadow-xs"
+                />
+              ) : (
+                <div className="grid size-11 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary border border-primary/20">
+                  {d.full_name.charAt(0).toUpperCase()}
                 </div>
-              </div>
+              )}
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-background ${
+                  d.is_online ? "bg-emerald-500" : "bg-muted-foreground"
+                }`}
+                title={d.is_online ? "Online & Ready" : "Offline"}
+              />
+            </div>
+            <div>
               <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-bold text-base text-foreground">{d.full_name}</p>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${d.is_online ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-muted-foreground"}`}>
+                  {d.is_online ? "● Online" : "Offline"}
+                </span>
+                {isPartner ? (
+                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
+                    <Handshake className="size-3" /> Commission Partner (15%)
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
+                    <Building2 className="size-3" /> Company Fleet (Fixed Salary)
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground font-medium">{d.city || "Bengaluru"}</span>
+                <span className="text-muted-foreground text-xs">·</span>
+                {isPartner ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    <Car className="size-3" />
+                    <span>{d.vehicle_model || "Tata Nexon EV"}</span>
+                    <span className="font-mono font-bold uppercase">
+                      {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "KA 01 EV 4421"}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary">
+                    <Car className="size-3" />
+                    <span>{d.vehicle_model || "Mahindra BE.6"}</span>
+                    <span className="font-mono font-bold">
+                      {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "⚠️ No car assigned"}
+                    </span>
+                  </span>
+                )}
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPhone = prompt(`Enter phone number for ${d.full_name}:`, d.phone || "");
+                    if (newPhone !== null && newPhone.trim() !== "") {
+                      supabase.from("drivers").update({ phone: newPhone.trim() }).eq("id", d.id).then(({ error }) => {
+                        if (error) toast.error("Could not update phone: " + error.message);
+                        else {
+                          toast.success("Driver phone updated!");
+                          onRefresh();
+                        }
+                      });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-primary transition-colors underline cursor-pointer"
+                  title="Click to edit driver phone number"
+                >
+                  <Phone className="size-3" />
+                  <span>{d.phone || "Add Phone ✏️"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {isPartner ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+                  onClick={() => {
+                    setEditingPartnerVehicleId(isEditingPartnerVehicle ? null : d.id);
+                    setPartnerPlateInput(d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "KA 01 EV 4421");
+                    setPartnerModelInput(d.vehicle_model || "Tata Nexon EV");
+                  }}
+                >
+                  <Car className="size-3.5" />
+                  {isEditingPartnerVehicle ? "Close" : "Edit Partner EV"}
+                </Button>
+                {onNavigateTab && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs gap-1.5 border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                    onClick={() => onNavigateTab("commissions")}
+                  >
+                    <Percent className="size-3.5 text-emerald-600" />
+                    Commission Ledger
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    if (confirm(`Switch ${d.full_name} from Commission Partner to Company Fleet Driver?`)) {
+                      switchDriverType(d, "company");
+                    }
+                  }}
+                  title="Convert to Company Fleet (Fixed Salary) Driver"
+                >
+                  ⇄ To Company Fleet
+                </Button>
+              </>
+            ) : (
+              <>
                 <Button
                   size="sm"
                   variant="outline"
@@ -931,218 +1132,550 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
                   <Car className="size-3.5" />
                   {isEditingVehicle ? "Close" : (d.vehicle_number && d.vehicle_number !== "Unassigned" ? "Change Vehicle" : "Assign Daily Vehicle")}
                 </Button>
-                <Button size="sm" variant="ghost" className="h-8 text-xs"
-                  onClick={async () => { await supabase.from("drivers").update({ status: d.status === "active" ? "inactive" : "active" }).eq("id", d.id); onRefresh(); }}>
-                  {d.status === "active" ? "Deactivate" : "Activate"}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs text-muted-foreground hover:text-emerald-600"
+                  onClick={() => {
+                    if (confirm(`Switch ${d.full_name} from Company Fleet to Commission Based Driver (Partner)?`)) {
+                      switchDriverType(d, "partner");
+                    }
+                  }}
+                  title="Convert to Commission Based Driver (Partner Owner-Operator)"
+                >
+                  ⇄ To Commission Driver
                 </Button>
-                <button onClick={() => setExpanded(isExpanded ? null : d.id)} className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors">
-                  {isExpanded ? <><ChevronUp className="size-3" /> Hide</> : <><ChevronDown className="size-3" /> View Analytics</>}
-                </button>
+              </>
+            )}
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={async () => {
+                await supabase.from("drivers").update({ status: d.status === "active" ? "inactive" : "active" }).eq("id", d.id);
+                onRefresh();
+              }}
+            >
+              {d.status === "active" ? "Deactivate" : "Activate"}
+            </Button>
+            <button
+              onClick={() => setExpanded(isExpanded ? null : d.id)}
+              className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors"
+            >
+              {isExpanded ? <><ChevronUp className="size-3" /> Hide</> : <><ChevronDown className="size-3" /> View Analytics</>}
+            </button>
+          </div>
+        </div>
+
+        {/* Inline Partner Vehicle Editor */}
+        {isPartner && isEditingPartnerVehicle && (
+          <div className="border-t border-border bg-emerald-500/5 p-5 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Car className="size-4" /> Partner EV Registration — {d.full_name}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Commission drivers operate their own verified Orange EV. Updates plate & vehicle model across customer bookings and live tracking instantly.
+                </p>
+              </div>
+              <button onClick={() => setEditingPartnerVehicleId(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                <div className="sm:col-span-4">
+                  <label className="text-[11px] uppercase font-bold text-foreground">Partner EV Model</label>
+                  <input
+                    value={partnerModelInput}
+                    onChange={(e) => setPartnerModelInput(e.target.value)}
+                    placeholder="e.g. Tata Nexon EV, Mahindra BE.6"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="sm:col-span-5">
+                  <label className="text-[11px] uppercase font-bold text-foreground">EV Plate Number (Registration)</label>
+                  <input
+                    value={partnerPlateInput}
+                    onChange={(e) => setPartnerPlateInput(e.target.value)}
+                    placeholder="e.g. KA 01 EV 4421"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <Button
+                    size="sm"
+                    className="w-full h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                    onClick={() => updatePartnerVehicle(d, partnerPlateInput, partnerModelInput)}
+                  >
+                    <Check className="size-3.5" /> Save Partner EV
+                  </Button>
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Daily Vehicle Assignment Form */}
-            {isEditingVehicle && (() => {
-              const bayVehicles = fleetVehicles.filter(v => v.status === "in_bay");
+        {/* Company Daily Vehicle Assignment Form */}
+        {!isPartner && isEditingVehicle && (() => {
+          const bayVehicles = fleetVehicles.filter(v => v.status === "in_bay");
 
-              return (
-                <div className="border-t border-border bg-primary/5 p-5 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                        <Car className="size-4" /> Daily Vehicle Assignment — {d.full_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Select an available vehicle from the bay. Updates customer booking screens & driver console in real-time.
-                      </p>
-                    </div>
-                    <button onClick={() => setEditingVehicleId(null)} className="text-muted-foreground hover:text-foreground">
-                      <X className="size-4" />
-                    </button>
+          return (
+            <div className="border-t border-border bg-primary/5 p-5 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Car className="size-4" /> Daily Vehicle Allocation — {d.full_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Select an available vehicle from the fleet bay. Updates customer booking screens & driver console in real-time.
+                  </p>
+                </div>
+                <button onClick={() => setEditingVehicleId(null)} className="text-muted-foreground hover:text-foreground">
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm space-y-3">
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <ParkingSquare className="size-3.5 text-blue-600" />
+                      Vehicles in Bay Available to Assign ({bayVehicles.length})
+                    </span>
+                    {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
+                      <span className="text-[11px] font-normal text-muted-foreground">
+                        Current: <strong className="font-mono text-primary">{d.vehicle_number}</strong>
+                      </span>
+                    )}
+                  </label>
+
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2.5">
+                    <select
+                      id={`select-bay-veh-${d.id}`}
+                      defaultValue=""
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      <option value="">-- Choose a Vehicle Currently in Bay --</option>
+                      {bayVehicles.map(v => (
+                        <option key={v.id || v.plate_number} value={v.id || v.plate_number}>
+                          {v.plate_number} · {v.model} — 🅿️ {v.bay_number || "Bay A-1"} (🔋 {v.battery_percentage}%)
+                        </option>
+                      ))}
+                      {bayVehicles.length === 0 && (
+                        <option disabled value="">No vehicles currently in bay. Register one or park one back.</option>
+                      )}
+                    </select>
+
+                    <Button
+                      size="sm"
+                      className="h-10 px-5 text-xs font-semibold gap-1.5 shrink-0"
+                      onClick={async () => {
+                        const selectEl = document.getElementById(`select-bay-veh-${d.id}`) as HTMLSelectElement;
+                        const selectedVal = selectEl?.value;
+                        if (!selectedVal) {
+                          toast.error("Please select a vehicle from the bay dropdown");
+                          return;
+                        }
+                        const selectedVeh = fleetVehicles.find(v => (v.id === selectedVal || v.plate_number === selectedVal));
+                        if (!selectedVeh) return;
+
+                        await assignBayVehicleToDriver(selectedVeh, d);
+                      }}
+                    >
+                      <Check className="size-3.5" /> Assign Selected Car
+                    </Button>
+
+                    {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-10 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 gap-1.5"
+                        onClick={async () => {
+                          await unassignDriverVehicle(d);
+                        }}
+                      >
+                        <ParkingSquare className="size-3.5" /> Return Current Car to Bay
+                      </Button>
+                    )}
                   </div>
+                </div>
 
-                  <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm space-y-3">
-                    <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <ParkingSquare className="size-3.5 text-blue-600" />
-                          Vehicles in Bay Available to Assign ({bayVehicles.length})
-                        </span>
-                        {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
-                          <span className="text-[11px] font-normal text-muted-foreground">
-                            Current: <strong className="font-mono text-primary">{d.vehicle_number}</strong>
-                          </span>
-                        )}
-                      </label>
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                  <Zap className="size-3 text-emerald-600 shrink-0" />
+                  Assigning a car moves it out of the bay. If {d.full_name} already has an assigned vehicle, the older one is automatically parked back in the bay.
+                </p>
 
-                      <div className="mt-2 flex flex-col sm:flex-row gap-2.5">
-                        <select
-                          id={`select-bay-veh-${d.id}`}
-                          defaultValue=""
-                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2.5 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
-                        >
-                          <option value="">-- Choose a Vehicle Currently in Bay --</option>
-                          {bayVehicles.map(v => (
-                            <option key={v.id || v.plate_number} value={v.id || v.plate_number}>
-                              {v.plate_number} · {v.model} — 🅿️ {v.bay_number || "Bay A-1"} (🔋 {v.battery_percentage}%)
-                            </option>
-                          ))}
-                          {bayVehicles.length === 0 && (
-                            <option disabled value="">No vehicles currently in bay. Register one or park one back.</option>
-                          )}
-                        </select>
+                {/* Manual entry fallback */}
+                <div className="pt-2 border-t border-border/70">
+                  <button
+                    type="button"
+                    onClick={() => setCustomEntryDriverId(customEntryDriverId === d.id ? null : d.id)}
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                  >
+                    {customEntryDriverId === d.id ? "▲ Close manual plate entry" : "▼ Need to enter custom / external plate manually?"}
+                  </button>
 
+                  {customEntryDriverId === d.id && (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end bg-muted/40 p-3 rounded-lg border border-border">
+                      <div className="sm:col-span-5">
+                        <label className="text-[10px] uppercase font-semibold text-muted-foreground">Model</label>
+                        <input
+                          id={`manual-model-${d.id}`}
+                          defaultValue={d.vehicle_model || "Mahindra BE.6"}
+                          className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        <label className="text-[10px] uppercase font-semibold text-muted-foreground">Plate Number</label>
+                        <input
+                          id={`manual-plate-${d.id}`}
+                          placeholder="e.g. DL 01 EV 9999"
+                          className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
                         <Button
                           size="sm"
-                          className="h-10 px-5 text-xs font-semibold gap-1.5 shrink-0"
+                          variant="secondary"
+                          className="w-full h-8 text-xs font-semibold"
                           onClick={async () => {
-                            const selectEl = document.getElementById(`select-bay-veh-${d.id}`) as HTMLSelectElement;
-                            const selectedVal = selectEl?.value;
-                            if (!selectedVal) {
-                              toast.error("Please select a vehicle from the bay dropdown");
-                              return;
-                            }
-                            const selectedVeh = fleetVehicles.find(v => (v.id === selectedVal || v.plate_number === selectedVal));
-                            if (!selectedVeh) return;
-
-                            await assignBayVehicleToDriver(selectedVeh, d);
+                            const m = (document.getElementById(`manual-model-${d.id}`) as HTMLInputElement)?.value;
+                            const p = (document.getElementById(`manual-plate-${d.id}`) as HTMLInputElement)?.value;
+                            if (!p?.trim()) { toast.error("Please enter a plate number"); return; }
+                            await assignCustomVehicle(p.trim().toUpperCase(), m?.trim() || "Mahindra BE.6", d);
                           }}
                         >
-                          <Check className="size-3.5" /> Assign Selected Car
+                          Assign Custom Plate
                         </Button>
-
-                        {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-10 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0 gap-1.5"
-                            onClick={async () => {
-                              await unassignDriverVehicle(d);
-                            }}
-                          >
-                            <ParkingSquare className="size-3.5" /> Return Current Car to Bay
-                          </Button>
-                        )}
                       </div>
                     </div>
-
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-                      <Zap className="size-3 text-emerald-600 shrink-0" />
-                      Assigning a car moves it out of the bay. If {d.full_name} already has an assigned vehicle, the older one is automatically parked back in the bay.
-                    </p>
-
-                    {/* Manual entry fallback */}
-                    <div className="pt-2 border-t border-border/70">
-                      <button
-                        type="button"
-                        onClick={() => setCustomEntryDriverId(customEntryDriverId === d.id ? null : d.id)}
-                        className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
-                      >
-                        {customEntryDriverId === d.id ? "▲ Close manual plate entry" : "▼ Need to enter custom / external plate manually?"}
-                      </button>
-
-                      {customEntryDriverId === d.id && (
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end bg-muted/40 p-3 rounded-lg border border-border">
-                          <div className="sm:col-span-5">
-                            <label className="text-[10px] uppercase font-semibold text-muted-foreground">Model</label>
-                            <input
-                              id={`manual-model-${d.id}`}
-                              defaultValue={d.vehicle_model || "Mahindra BE.6"}
-                              className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
-                            />
-                          </div>
-                          <div className="sm:col-span-4">
-                            <label className="text-[10px] uppercase font-semibold text-muted-foreground">Plate Number</label>
-                            <input
-                              id={`manual-plate-${d.id}`}
-                              placeholder="e.g. DL 01 EV 9999"
-                              className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
-                            />
-                          </div>
-                          <div className="sm:col-span-3">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="w-full h-8 text-xs font-semibold"
-                              onClick={async () => {
-                                const m = (document.getElementById(`manual-model-${d.id}`) as HTMLInputElement)?.value;
-                                const p = (document.getElementById(`manual-plate-${d.id}`) as HTMLInputElement)?.value;
-                                if (!p?.trim()) { toast.error("Please enter a plate number"); return; }
-                                await assignCustomVehicle(p.trim().toUpperCase(), m?.trim() || "Mahindra BE.6", d);
-                              }}
-                            >
-                              Assign Custom Plate
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })()}
-
-
-
-            {/* Analytics row — always visible */}
-            <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4 lg:grid-cols-6">
-              {[
-                { label: "Total Rides", value: stats.count },
-                { label: "Total Earned", value: `₹${Math.round(stats.total)}` },
-                { label: "UPI", value: `₹${Math.round(stats.upi)}`, color: "text-blue-600" },
-                { label: "Cash", value: `₹${Math.round(stats.cash)}`, color: "text-green-600" },
-                { label: "Today's Rides", value: stats.todayCount },
-                { label: "Today Earned", value: `₹${Math.round(stats.todayTotal)}`, color: "text-primary" },
-              ].map(s => (
-                <div key={s.label} className="bg-background px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">{s.label}</p>
-                  <p className={`mt-1 text-lg font-bold ${s.color ?? ""}`}>{s.value}</p>
-                </div>
-              ))}
+              </div>
             </div>
+          );
+        })()}
 
-            {/* Expandable ride history */}
-            {isExpanded && (
-              <div className="border-t border-border">
-                <div className="px-6 py-3 bg-muted/30">
-                  <p className="text-xs font-bold uppercase text-muted-foreground">Ride History ({rides.length} completed)</p>
-                </div>
-                {rides.length === 0 ? (
-                  <p className="px-6 py-6 text-sm text-muted-foreground">No completed rides yet.</p>
-                ) : (
-                  <div className="divide-y divide-border max-h-72 overflow-y-auto">
-                    {rides.slice(0, 50).map(b => {
-                      const ridePlate = getBookingVehiclePlate(b, d);
-                      return (
-                        <div key={b.id} className="flex items-center justify-between px-6 py-3 gap-4 text-sm hover:bg-muted/20">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-mono text-xs font-bold text-foreground">{b.reference}</p>
-                              {ridePlate && (
-                                <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                  {ridePlate}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{b.pickup_area} → {b.drop_area}</p>
-                            <p className="text-xs text-muted-foreground">{b.completed_at ? new Date(b.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
-                            {b.payment_method?.toUpperCase()}
-                          </span>
-                          <span className="font-bold text-primary">₹{Math.round(b.final_fare ?? b.estimated_fare)}</span>
+        {/* Analytics row — always visible */}
+        <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: "Total Rides", value: stats.count },
+            { label: "Gross Earned", value: `₹${Math.round(stats.total)}` },
+            { label: "UPI", value: `₹${Math.round(stats.upi)}`, color: "text-blue-600" },
+            { label: "Cash Collected", value: `₹${Math.round(stats.cash)}`, color: "text-green-600" },
+            {
+              label: isPartner ? "15% Company Comm." : "Today's Rides",
+              value: isPartner ? `₹${Math.round(stats.total * 0.15)}` : stats.todayCount,
+              color: isPartner ? "text-emerald-600 font-extrabold" : ""
+            },
+            { label: "Today Earned", value: `₹${Math.round(stats.todayTotal)}`, color: "text-primary" },
+          ].map(s => (
+            <div key={s.label} className="bg-background px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{s.label}</p>
+              <p className={`mt-1 text-lg font-bold ${s.color ?? ""}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Expandable ride history */}
+        {isExpanded && (
+          <div className="border-t border-border">
+            <div className="px-6 py-3 bg-muted/30 flex items-center justify-between">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Ride History ({rides.length} completed)</p>
+              {isPartner && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Partner Keeps 85% · Company Receives 15%
+                </span>
+              )}
+            </div>
+            {rides.length === 0 ? (
+              <p className="px-6 py-6 text-sm text-muted-foreground">No completed rides yet.</p>
+            ) : (
+              <div className="divide-y divide-border max-h-72 overflow-y-auto">
+                {rides.slice(0, 50).map(b => {
+                  const ridePlate = getBookingVehiclePlate(b, d);
+                  const fare = Math.round(b.final_fare ?? b.estimated_fare);
+                  const comm = Math.round(fare * 0.15);
+                  const driverNet = fare - comm;
+
+                  return (
+                    <div key={b.id} className="flex items-center justify-between px-6 py-3 gap-4 text-sm hover:bg-muted/20">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-xs font-bold text-foreground">{b.reference}</p>
+                          {ridePlate && (
+                            <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              {ridePlate}
+                            </span>
+                          )}
                         </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{b.pickup_area} → {b.drop_area}</p>
+                        <p className="text-xs text-muted-foreground">{b.completed_at ? new Date(b.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
                       </div>
-                    );
-                  })}
-                  </div>
-                )}
+                      <div className="flex items-center gap-2.5 shrink-0 text-right">
+                        {isPartner && (
+                          <div className="text-right text-[11px] hidden sm:block">
+                            <span className="text-emerald-600 font-semibold">Driver: ₹{driverNet}</span>
+                            <span className="text-muted-foreground text-[10px] block">Comm: ₹{comm}</span>
+                          </div>
+                        )}
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                          {b.payment_method?.toUpperCase()}
+                        </span>
+                        <span className="font-bold text-primary">₹{fare}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
-        );
-      })}
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Division Navigation Pills */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/70 rounded-xl border border-border">
+          <button
+            type="button"
+            onClick={() => setDriverSegment("company")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              driverSegment === "company"
+                ? "bg-background text-foreground shadow-xs border border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Building2 className="size-3.5 text-blue-600" />
+            <span>Company Owned Drivers</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              driverSegment === "company" ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" : "bg-muted text-muted-foreground"
+            }`}>
+              {allCompanyDrivers.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDriverSegment("commission")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              driverSegment === "commission"
+                ? "bg-background text-foreground shadow-xs border border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Handshake className="size-3.5 text-emerald-600" />
+            <span>Commission Based Drivers</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              driverSegment === "commission" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-muted-foreground"
+            }`}>
+              {allCommissionDrivers.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDriverSegment("all")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              driverSegment === "all"
+                ? "bg-background text-foreground shadow-xs border border-border"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="size-3.5 text-foreground" />
+            <span>All Drivers</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+              driverSegment === "all" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+            }`}>
+              {drivers.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Legend */}
+        <div className="text-xs text-muted-foreground hidden md:flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-blue-500" />
+            <strong>Company Fleet:</strong> Fixed Salary · Daily Bay Allocation
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-emerald-500" />
+            <strong>Commission Partner:</strong> 15% Platform Split · Own EV
+          </span>
+        </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-10 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          placeholder="Search by driver name, phone, city, or EV number plate..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {/* VIEW: COMPANY OWNED DRIVERS ONLY */}
+      {driverSegment === "company" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                  <Building2 className="size-5 text-blue-600" /> Company Owned Drivers (Fixed Salary Fleet)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Full-time salaried chauffeurs operating company-owned Mahindra BE.6 EVs. Vehicles are allocated daily from company charging bays.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Employed</p>
+                  <p className="text-sm font-bold text-foreground">{allCompanyDrivers.length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Online</p>
+                  <p className="text-sm font-bold text-emerald-600">{allCompanyDrivers.filter(d => d.is_online).length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Car Assigned</p>
+                  <p className="text-sm font-bold text-blue-600">
+                    {allCompanyDrivers.filter(d => d.vehicle_number && d.vehicle_number !== "Unassigned").length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {filteredCompanyDrivers.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">No company owned drivers matching your search.</p>
+          ) : (
+            <div className="space-y-4">
+              {filteredCompanyDrivers.map(d => renderDriverCard(d))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW: COMMISSION BASED DRIVERS ONLY */}
+      {driverSegment === "commission" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                  <Handshake className="size-5 text-emerald-600" /> Commission Based Drivers (Partner Owner-Operators)
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Independent driver-partners bringing their own EV. Operates on a 15% platform commission model with their verified vehicle plate.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Partners</p>
+                  <p className="text-sm font-bold text-foreground">{allCommissionDrivers.length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Online</p>
+                  <p className="text-sm font-bold text-emerald-600">{allCommissionDrivers.filter(d => d.is_online).length}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Comm. Split</p>
+                  <p className="text-sm font-bold text-emerald-600">85% / 15%</p>
+                </div>
+                {onNavigateTab && (
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9" onClick={() => onNavigateTab("commissions")}>
+                    Open Ledger →
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {filteredCommissionDrivers.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">No commission based drivers matching your search.</p>
+          ) : (
+            <div className="space-y-4">
+              {filteredCommissionDrivers.map(d => renderDriverCard(d))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW: ALL DRIVERS DIVIDED INTO TWO CLEAR SECTIONS */}
+      {driverSegment === "all" && (
+        <div className="space-y-8">
+          {/* Section 1: Company Owned Drivers */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-blue-500/30 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Building2 className="size-5 text-blue-600" />
+                <h3 className="font-bold text-base text-foreground">
+                  Company Owned Drivers <span className="text-sm font-normal text-muted-foreground">(Fixed Salary Fleet · {filteredCompanyDrivers.length})</span>
+                </h3>
+              </div>
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-500/20">
+                Company Fleet
+              </span>
+            </div>
+
+            {filteredCompanyDrivers.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No company drivers in this view.</p>
+            ) : (
+              <div className="space-y-4">
+                {filteredCompanyDrivers.map(d => renderDriverCard(d))}
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Commission Based Drivers */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between border-b border-emerald-500/30 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Handshake className="size-5 text-emerald-600" />
+                <h3 className="font-bold text-base text-foreground">
+                  Commission Based Drivers <span className="text-sm font-normal text-muted-foreground">(Partner Owner-Operators · {filteredCommissionDrivers.length})</span>
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab("commissions")}
+                    className="text-xs text-emerald-600 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    View Commission Ledger →
+                  </button>
+                )}
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  15% Commission
+                </span>
+              </div>
+            </div>
+
+            {filteredCommissionDrivers.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No commission drivers in this view.</p>
+            ) : (
+              <div className="space-y-4">
+                {filteredCommissionDrivers.map(d => renderDriverCard(d))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
