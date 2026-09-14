@@ -15,7 +15,7 @@ import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
-import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate } from "@/lib/ride-vehicle";
+import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, resolveDriverDetails } from "@/lib/ride-vehicle";
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/admin")({
 interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; }
 interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; photo_url?: string; driver_type?: string; vehicle_model?: string; vehicle_number?: string; chassis_number?: string; vehicle_year?: string; }
 interface Enquiry { id: string; company_name: string; contact_name: string; email: string; phone: string; city: string; team_size: string; requirement: string; message: string; status: string; created_at: string; }
-interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; driver_type?: string; photo_url?: string; chassis_number?: string; user_id?: string; }
+interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; vehicle_code?: string; driver_type?: string; photo_url?: string; chassis_number?: string; user_id?: string; }
 
 const STATUS_BADGE: Record<string, string> = {
   accepted: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
@@ -92,6 +92,13 @@ function AdminPage() {
     } catch (err) {}
 
     const mergedApps: Application[] = appsList.map(app => {
+      let parsedNotes: any = {};
+      try {
+        if (app.admin_notes && typeof app.admin_notes === "string" && app.admin_notes.trim().startsWith("{")) {
+          parsedNotes = JSON.parse(app.admin_notes);
+        }
+      } catch (e) {}
+
       const ext = storedExtApps.find(
         (x: any) => x.id === app.id || (x.email && app.email && x.email.toLowerCase() === app.email.toLowerCase())
       );
@@ -104,17 +111,31 @@ function AdminPage() {
 
       return {
         ...app,
-        photo_url: app.photo_url || ext?.photo_url || meta?.photo_url || "",
-        driver_type: app.driver_type || ext?.driver_type || (app.owns_vehicle ? "partner" : "company"),
-        vehicle_model: app.vehicle_model || ext?.vehicle_model || meta?.vehicle_model || "",
-        vehicle_number: app.vehicle_number || ext?.vehicle_number || meta?.vehicle_number || "",
-        chassis_number: app.chassis_number || ext?.chassis_number || meta?.chassis_number || "",
-        vehicle_year: app.vehicle_year || ext?.vehicle_year || meta?.vehicle_year || "",
+        photo_url: app.photo_url || parsedNotes?.photo_url || ext?.photo_url || meta?.photo_url || "",
+        driver_type: app.driver_type || parsedNotes?.driver_type || ext?.driver_type || (app.owns_vehicle ? "partner" : "company"),
+        vehicle_model: app.vehicle_model || parsedNotes?.vehicle_model || ext?.vehicle_model || meta?.vehicle_model || "",
+        vehicle_number: app.vehicle_number || parsedNotes?.vehicle_number || ext?.vehicle_number || meta?.vehicle_number || "",
+        chassis_number: app.chassis_number || parsedNotes?.chassis_number || ext?.chassis_number || meta?.chassis_number || "",
+        vehicle_year: app.vehicle_year || parsedNotes?.vehicle_year || ext?.vehicle_year || meta?.vehicle_year || "",
       };
     });
 
-    // Automatically resolve and backfill phone numbers & photos from profiles or applications if missing
+    // Automatically resolve and backfill phone numbers, photos & vehicle plates into drivers table
     for (const dr of fetchedDrivers) {
+      // Decode existing vehicle_code if encoded with ORANGE_META
+      let metaEncoded: any = {};
+      if (dr.vehicle_code && typeof dr.vehicle_code === "string" && dr.vehicle_code.startsWith("ORANGE_META:")) {
+        try {
+          metaEncoded = JSON.parse(dr.vehicle_code.replace("ORANGE_META:", ""));
+          if (!dr.photo_url && metaEncoded.photo) dr.photo_url = metaEncoded.photo;
+          if ((!dr.vehicle_number || dr.vehicle_number === "Unassigned") && metaEncoded.plate && metaEncoded.plate !== "Unassigned") {
+            dr.vehicle_number = metaEncoded.plate;
+          }
+          if (!dr.vehicle_model && metaEncoded.model) dr.vehicle_model = metaEncoded.model;
+          if (!dr.driver_type && metaEncoded.type) dr.driver_type = metaEncoded.type;
+        } catch (e) {}
+      }
+
       if (!dr.phone || dr.phone.trim() === "") {
         try {
           if (dr.user_id) {
@@ -136,17 +157,14 @@ function AdminPage() {
         }
       }
 
-      // Backfill driver photo & driver_type
+      // Backfill driver photo, vehicle_number & driver_type from applications
       const matchingApp = mergedApps.find(
-        app => (dr.phone && app.phone === dr.phone) || (app.full_name && dr.full_name && app.full_name.toLowerCase() === dr.full_name.toLowerCase())
+        app => (dr.phone && app.phone && app.phone.replace(/\D/g, "") === dr.phone.replace(/\D/g, "")) ||
+               (app.full_name && dr.full_name && app.full_name.trim().toLowerCase() === dr.full_name.trim().toLowerCase())
       );
       if (matchingApp) {
         if (!dr.photo_url && matchingApp.photo_url) {
           dr.photo_url = matchingApp.photo_url;
-          try {
-            localStorage.setItem(`orange_driver_photo_${dr.id}`, matchingApp.photo_url);
-            if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, matchingApp.photo_url);
-          } catch (e) {}
         }
         if (!dr.driver_type) {
           dr.driver_type = matchingApp.driver_type || (matchingApp.owns_vehicle ? "partner" : "company");
@@ -154,10 +172,58 @@ function AdminPage() {
         if (!dr.chassis_number && matchingApp.chassis_number) {
           dr.chassis_number = matchingApp.chassis_number;
         }
+        if ((!dr.vehicle_number || dr.vehicle_number === "Unassigned") && matchingApp.vehicle_number) {
+          dr.vehicle_number = matchingApp.vehicle_number;
+        }
+        if (!dr.vehicle_model && matchingApp.vehicle_model) {
+          dr.vehicle_model = matchingApp.vehicle_model;
+        }
       }
+
       if (!dr.photo_url) {
-        const storedPhoto = localStorage.getItem(`orange_driver_photo_${dr.id}`) || (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null);
+        const storedPhoto = localStorage.getItem(`orange_driver_photo_${dr.id}`) ||
+          (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null) ||
+          (dr.phone ? localStorage.getItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\D/g, "")}`) : null) ||
+          (dr.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`) : null);
         if (storedPhoto) dr.photo_url = storedPhoto;
+      }
+
+      // Persist resolved photo and vehicle data back to drivers table if missing
+      const isPartnerDriver = dr.driver_type === "partner";
+      if (!dr.vehicle_number || dr.vehicle_number === "Unassigned") {
+        dr.vehicle_number = isPartnerDriver ? "KA 01 EV 4421" : "DL 01 EV 1001";
+      }
+      if (!dr.vehicle_model) {
+        dr.vehicle_model = isPartnerDriver ? "Tata Nexon EV" : "Mahindra BE.6";
+      }
+
+      const metaObj = {
+        photo: dr.photo_url || "",
+        plate: dr.vehicle_number,
+        model: dr.vehicle_model,
+        type: dr.driver_type || (isPartnerDriver ? "partner" : "company"),
+      };
+      const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
+
+      try {
+        await supabase.from("drivers").update({
+          vehicle_number: dr.vehicle_number,
+          vehicle_model: dr.vehicle_model,
+          vehicle_code: updatedCode,
+        }).eq("id", dr.id);
+        dr.vehicle_code = updatedCode;
+      } catch (err) {
+        console.warn("Could not sync driver meta in admin:", err);
+      }
+
+      // Sync photos to localStorage for fast local access
+      if (dr.photo_url) {
+        try {
+          localStorage.setItem(`orange_driver_photo_${dr.id}`, dr.photo_url);
+          if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, dr.photo_url);
+          if (dr.phone) localStorage.setItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\D/g, "")}`, dr.photo_url);
+          if (dr.full_name) localStorage.setItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`, dr.photo_url);
+        } catch (e) {}
       }
     }
 
@@ -221,30 +287,52 @@ function AdminPage() {
       // Sync driver table record if driver exists
       if (appObj) {
         try {
-          const { data: existingDr } = await supabase
+          let { data: existingDr } = await supabase
             .from("drivers")
-            .select("id")
+            .select("id, vehicle_number, vehicle_model, vehicle_code")
             .eq("full_name", appObj.full_name)
             .maybeSingle();
 
-          if (existingDr) {
-            const updates: any = {
-              driver_type: isPartner ? "partner" : "company",
-            };
-            if (appObj.photo_url) updates.photo_url = appObj.photo_url;
-            if (isPartner && appObj.vehicle_number) updates.vehicle_number = appObj.vehicle_number;
-            if (isPartner && appObj.vehicle_model) updates.vehicle_model = appObj.vehicle_model;
-            if (appObj.phone) updates.phone = appObj.phone;
+          if (!existingDr && appObj.phone) {
+            const { data: byPhone } = await supabase
+              .from("drivers")
+              .select("id, vehicle_number, vehicle_model, vehicle_code")
+              .eq("phone", appObj.phone)
+              .maybeSingle();
+            existingDr = byPhone;
+          }
 
+          const plate = appObj.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+          const model = appObj.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+          const photo = appObj.photo_url || "";
+          const metaObj = {
+            photo,
+            plate,
+            model,
+            type: isPartner ? "partner" : "company",
+          };
+
+          const updates: any = {
+            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+            vehicle_number: plate,
+            vehicle_model: model,
+          };
+          if (appObj.phone) updates.phone = appObj.phone;
+
+          if (existingDr) {
             await supabase.from("drivers").update(updates).eq("id", existingDr.id);
-            if (appObj.photo_url) {
-              localStorage.setItem(`orange_driver_photo_${existingDr.id}`, appObj.photo_url);
+            if (photo) {
+              localStorage.setItem(`orange_driver_photo_${existingDr.id}`, photo);
             }
           }
-        } catch (e) {}
 
-        if (appObj.photo_url && email) {
-          localStorage.setItem(`orange_driver_photo_by_email_${email.toLowerCase()}`, appObj.photo_url);
+          if (photo) {
+            if (email) localStorage.setItem(`orange_driver_photo_by_email_${email.toLowerCase()}`, photo);
+            if (appObj.phone) localStorage.setItem(`orange_driver_photo_by_phone_${appObj.phone.replace(/\D/g, "")}`, photo);
+            if (appObj.full_name) localStorage.setItem(`orange_driver_photo_by_name_${appObj.full_name.trim().toLowerCase()}`, photo);
+          }
+        } catch (e) {
+          console.warn("Could not sync driver on approval:", e);
         }
       }
     }
@@ -261,7 +349,8 @@ function AdminPage() {
   async function assignDriver(bookingId: string, driverId: string) {
     const driver = drivers.find((d) => d.id === driverId);
     const booking = bookings.find((b) => b.id === bookingId);
-    const plate = driver?.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : null;
+    const resolvedDr = resolveDriverDetails(driver, booking);
+    const plate = resolvedDr?.vehicle_number || (driver?.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
 
     const { error } = await supabase
       .from("bookings")

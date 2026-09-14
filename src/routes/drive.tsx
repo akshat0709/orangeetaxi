@@ -328,6 +328,16 @@ function DriverApplicationForm() {
 
     setSubmitting(true);
 
+    const metaData = {
+      photo_url: photoDataUrl,
+      driver_type: values.owns_vehicle ? "partner" : "company",
+      vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
+      vehicle_number: values.owns_vehicle ? (values.vehicle_number || "").trim().toUpperCase() : "",
+      chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
+      vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
+    };
+    const metaJson = JSON.stringify(metaData);
+
     const payload = {
       full_name: values.full_name,
       email: values.email,
@@ -337,27 +347,59 @@ function DriverApplicationForm() {
       experience_years: values.experience_years,
       owns_vehicle: values.owns_vehicle,
       message: values.message ?? "",
-      // Extended fields
+      admin_notes: metaJson,
+      // Extended fields (if columns exist in remote table)
       photo_url: photoDataUrl,
       driver_type: values.owns_vehicle ? "partner" : "company",
       vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
-      vehicle_number: values.owns_vehicle ? values.vehicle_number : "",
-      chassis_number: values.owns_vehicle ? values.chassis_number : "",
+      vehicle_number: values.owns_vehicle ? values.vehicle_number.trim().toUpperCase() : "",
+      chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
       vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
     };
 
     // Store in local backup for resilient admin sync
     try {
-      localStorage.setItem(`orange_app_meta_${values.email}`, JSON.stringify(payload));
-      const existingApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "{}");
-      existingApps[values.email] = payload;
-      localStorage.setItem("orange_extended_apps", JSON.stringify(existingApps));
+      const emailKey = values.email.toLowerCase();
+      const phoneKey = values.phone.replace(/[^0-9]/g, "");
+      localStorage.setItem(`orange_app_meta_${emailKey}`, JSON.stringify(payload));
+      if (photoDataUrl) {
+        localStorage.setItem(`orange_driver_photo_by_email_${emailKey}`, photoDataUrl);
+        localStorage.setItem(`orange_driver_photo_by_phone_${phoneKey}`, photoDataUrl);
+        localStorage.setItem(`orange_driver_photo_by_name_${values.full_name.trim().toLowerCase()}`, photoDataUrl);
+      }
+      
+      const existingApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
+      const appArray = Array.isArray(existingApps) ? existingApps : Object.values(existingApps);
+      appArray.unshift({ ...payload, email: emailKey });
+      localStorage.setItem("orange_extended_apps", JSON.stringify(appArray));
+
+      // If partner vehicle, auto-save in partner fleet storage
+      if (values.owns_vehicle && values.vehicle_number) {
+        const existingCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
+        const cleanPlate = values.vehicle_number.trim().toUpperCase();
+        if (!existingCars.some((c: any) => c.plate_number === cleanPlate)) {
+          existingCars.unshift({
+            id: "car-pv-" + Date.now(),
+            plate_number: cleanPlate,
+            chassis_number: (values.chassis_number || "").trim().toUpperCase(),
+            model: values.vehicle_model || "Mahindra BE.6",
+            year: values.vehicle_year || "2024",
+            owner_name: values.full_name,
+            owner_phone: values.phone,
+            owner_email: emailKey,
+            status: "pending_inspection",
+            is_ev: true,
+            created_at: new Date().toISOString()
+          });
+          localStorage.setItem("orange_partner_vehicles", JSON.stringify(existingCars));
+        }
+      }
     } catch {}
 
-    // Primary database insert (with graceful fallback if extra columns aren't in Supabase table yet)
+    // Primary database insert (fallback to basePayload with admin_notes JSON if custom columns not in table yet)
     let { error } = await supabase.from("driver_applications").insert(payload);
     if (error) {
-      console.warn("Retrying with base schema if custom columns pending:", error);
+      console.warn("Retrying with base schema and admin_notes JSON metadata:", error);
       const basePayload = {
         full_name: values.full_name,
         email: values.email,
@@ -367,6 +409,7 @@ function DriverApplicationForm() {
         experience_years: values.experience_years,
         owns_vehicle: values.owns_vehicle,
         message: values.message ?? "",
+        admin_notes: metaJson,
       };
       const retry = await supabase.from("driver_applications").insert(basePayload);
       if (retry.error) {

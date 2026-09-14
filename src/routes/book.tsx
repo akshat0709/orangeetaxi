@@ -21,6 +21,8 @@ import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
+import { getBookingVehiclePlate, resolveDriverDetails } from "@/lib/ride-vehicle";
+
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export const Route = createFileRoute("/book")({
@@ -35,7 +37,20 @@ interface VehicleCategory {
   base_fare: number; per_km: number; minimum_fare: number;
 }
 interface ServiceArea { id: string; name: string; lat: number; lng: number; is_airport: boolean; }
-interface DriverInfo { full_name: string; phone: string; vehicle_model: string; vehicle_number: string; rating: number; current_lat?: number; current_lng?: number; }
+interface DriverInfo {
+  id?: string;
+  user_id?: string;
+  full_name: string;
+  phone: string;
+  vehicle_model: string;
+  vehicle_number: string;
+  vehicle_code?: string;
+  rating: number;
+  driver_type?: string;
+  photo_url?: string;
+  current_lat?: number;
+  current_lng?: number;
+}
 
 const comforts = [
   { icon: Droplets, title: "Complimentary Water", text: "A chilled bottle is always waiting in your Orange." },
@@ -926,6 +941,7 @@ function Step4Confirmed({
   const { user } = useAuth();
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
   const [arrivedAt, setArrivedAt] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
@@ -980,33 +996,72 @@ function Step4Confirmed({
           }
         } catch (e) {}
       }
-      if (!phone || phone.trim() === "") {
+
+      // Check application for photo, plate, and driver type
+      let appData: any = null;
+      try {
+        const { data: app } = await supabase
+          .from("driver_applications")
+          .select("*")
+          .or(`full_name.eq.${d.full_name}${phone ? `,phone.eq.${phone}` : ""}`)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        appData = app;
+      } catch (e) {}
+
+      let parsedNotes: any = {};
+      try {
+        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+          parsedNotes = JSON.parse(appData.admin_notes);
+        }
+      } catch (e) {}
+
+      // Decode existing vehicle_code if encoded with ORANGE_META
+      let metaEncoded: any = {};
+      if (d.vehicle_code && typeof d.vehicle_code === "string" && d.vehicle_code.startsWith("ORANGE_META:")) {
         try {
-          const { data: app } = await supabase.from("driver_applications").select("phone, photo_url").eq("full_name", d.full_name).order("created_at", { ascending: false }).limit(1).maybeSingle();
-          if (app?.phone && app.phone.trim()) {
-            phone = app.phone.trim();
-            await supabase.from("drivers").update({ phone }).eq("id", d.id);
-          }
-          if (!d.photo_url && app?.photo_url) {
-            d.photo_url = app.photo_url;
-          }
+          metaEncoded = JSON.parse(d.vehicle_code.replace("ORANGE_META:", ""));
         } catch (e) {}
       }
 
-      let photoUrl = d.photo_url;
-      if (!photoUrl || photoUrl.trim() === "") {
-        const storedPhoto = localStorage.getItem(`orange_driver_photo_${d.id}`) || (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null);
-        if (storedPhoto) photoUrl = storedPhoto;
-      }
-      if (!photoUrl || photoUrl.trim() === "") {
-        try {
-          const storedExt = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
-          const found = storedExt.find((x: any) => (d.phone && x.phone === d.phone) || (x.full_name && d.full_name && x.full_name.toLowerCase() === d.full_name.toLowerCase()));
-          if (found?.photo_url) photoUrl = found.photo_url;
-        } catch (e) {}
+      let photoUrl = d.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";
+      if (!photoUrl) {
+        photoUrl = localStorage.getItem(`orange_driver_photo_${d.id}`) ||
+          (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null) ||
+          (phone ? localStorage.getItem(`orange_driver_photo_by_phone_${phone.replace(/\D/g, "")}`) : null) ||
+          (d.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${d.full_name.trim().toLowerCase()}`) : null) || "";
       }
 
-      return { ...d, phone: phone || "", photo_url: photoUrl || "" };
+      const isPartner = Boolean(
+        d.driver_type === "partner" ||
+        metaEncoded.type === "partner" ||
+        appData?.owns_vehicle ||
+        appData?.driver_type === "partner" ||
+        parsedNotes.driver_type === "partner"
+      );
+
+      let vehicleNumber = d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "";
+      if (!vehicleNumber) {
+        vehicleNumber = metaEncoded.plate && metaEncoded.plate !== "Unassigned" ? metaEncoded.plate : "";
+      }
+      if (!vehicleNumber) {
+        vehicleNumber = appData?.vehicle_number || parsedNotes.vehicle_number || "";
+      }
+
+      let vehicleModel = d.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "";
+
+      const rawDriver = {
+        ...d,
+        phone: phone || d.phone || "",
+        photo_url: photoUrl,
+        vehicle_number: vehicleNumber,
+        vehicle_model: vehicleModel,
+        driver_type: isPartner ? "partner" : "company",
+      };
+
+      const resolved = resolveDriverDetails(rawDriver, currentBooking || bookingData);
+      return resolved;
     } catch (e) {
       console.warn("Could not fetch driver details:", e);
       return null;
@@ -1022,16 +1077,18 @@ function Step4Confirmed({
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drivers", filter: `id=eq.${driverId}` }, (driverPayload) => {
           setDriverInfo(prev => {
             const updated = prev ? { ...prev, ...driverPayload.new } : (driverPayload.new as any);
-            onDriverUpdate?.(updated);
-            return updated;
+            const fullyResolved = resolveDriverDetails(updated, currentBooking || bookingData);
+            onDriverUpdate?.(fullyResolved);
+            return fullyResolved;
           });
         }).subscribe();
     }
 
     // 1. Initial load: immediately check if driver is already assigned to this booking
     async function loadInitial() {
-      const { data: b } = await supabase.from("bookings").select("status, driver_id, rating, arrived_at").eq("id", bookingData.id).single();
+      const { data: b } = await supabase.from("bookings").select("*, driver_id, status, rating, arrived_at, vehicle_name, reference").eq("id", bookingData.id).single();
       if (b) {
+        setCurrentBooking(b);
         if (b.status === "cancelled") {
           onReset?.();
           return;
@@ -1063,6 +1120,7 @@ function Step4Confirmed({
     const bookingChannel = supabase.channel(`booking-${bookingData.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` }, async (payload) => {
         const newStatus = payload.new.status;
+        setCurrentBooking((prev: any) => ({ ...prev, ...payload.new }));
         if (payload.new.arrived_at) {
           setArrivedAt(payload.new.arrived_at);
         }
@@ -1215,7 +1273,7 @@ function Step4Confirmed({
                 <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
                   <span className="flex items-center gap-1 text-white/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
                   <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
-                    {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : "Plate: Pending Assignment"}
+                    {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : getBookingVehiclePlate(currentBooking || bookingData, driverInfo)}
                   </span>
                 </div>
               </div>

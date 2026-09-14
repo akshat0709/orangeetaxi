@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveRideMap } from "@/components/live-ride-map";
+import { getBookingVehiclePlate, resolveDriverDetails } from "@/lib/ride-vehicle";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -128,11 +129,49 @@ function TrackPage() {
             .eq("id", bData.driver_id)
             .maybeSingle();
           if (dData) {
-            let photoUrl = dData.photo_url;
-            if (!photoUrl) {
-              photoUrl = localStorage.getItem(`orange_driver_photo_${dData.id}`) || (dData.user_id ? localStorage.getItem(`orange_driver_photo_${dData.user_id}`) : null);
+            let appData: any = null;
+            try {
+              const { data: app } = await supabase
+                .from("driver_applications")
+                .select("*")
+                .or(`full_name.eq.${dData.full_name}${dData.phone ? `,phone.eq.${dData.phone}` : ""}`)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              appData = app;
+            } catch (e) {}
+
+            let parsedNotes: any = {};
+            try {
+              if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+                parsedNotes = JSON.parse(appData.admin_notes);
+              }
+            } catch (e) {}
+
+            let metaEncoded: any = {};
+            if (dData.vehicle_code && typeof dData.vehicle_code === "string" && dData.vehicle_code.startsWith("ORANGE_META:")) {
+              try {
+                metaEncoded = JSON.parse(dData.vehicle_code.replace("ORANGE_META:", ""));
+              } catch (e) {}
             }
-            setDriver({ ...dData, photo_url: photoUrl || "" });
+
+            let photoUrl = dData.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";
+            if (!photoUrl) {
+              photoUrl = localStorage.getItem(`orange_driver_photo_${dData.id}`) ||
+                (dData.user_id ? localStorage.getItem(`orange_driver_photo_${dData.user_id}`) : null) ||
+                (dData.phone ? localStorage.getItem(`orange_driver_photo_by_phone_${dData.phone.replace(/\D/g, "")}`) : null) ||
+                (dData.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${dData.full_name.trim().toLowerCase()}`) : null) || "";
+            }
+
+            const rawDriver = {
+              ...dData,
+              photo_url: photoUrl,
+              vehicle_number: (dData.vehicle_number && dData.vehicle_number !== "Unassigned" ? dData.vehicle_number : "") || metaEncoded.plate || appData?.vehicle_number || parsedNotes.vehicle_number || "",
+              vehicle_model: dData.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "",
+            };
+
+            const resolved = resolveDriverDetails(rawDriver, bData);
+            setDriver(resolved);
           }
 
           // Subscribe to live driver updates (GPS coordinates)
@@ -147,7 +186,10 @@ function TrackPage() {
                 filter: `id=eq.${bData.driver_id}`,
               },
               (payload) => {
-                setDriver((prev: any) => ({ ...prev, ...payload.new }));
+                setDriver((prev: any) => {
+                  const updated = prev ? { ...prev, ...payload.new } : (payload.new as any);
+                  return resolveDriverDetails(updated, bData);
+                });
               }
             )
             .subscribe();
@@ -174,11 +216,8 @@ function TrackPage() {
                   .eq("id", updated.driver_id)
                   .maybeSingle();
                 if (d) {
-                  let photoUrl = d.photo_url;
-                  if (!photoUrl) {
-                    photoUrl = localStorage.getItem(`orange_driver_photo_${d.id}`) || (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null);
-                  }
-                  setDriver({ ...d, photo_url: photoUrl || "" });
+                  const resolved = resolveDriverDetails(d, updated);
+                  setDriver(resolved);
                 }
               }
             }
@@ -416,9 +455,7 @@ function TrackPage() {
                         <span className="font-medium text-foreground">{driver.vehicle_model || booking.vehicle_name}</span>
                         <span>•</span>
                         <span className="font-mono font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded text-[11px]">
-                          {driver.vehicle_number && driver.vehicle_number !== "Unassigned"
-                            ? driver.vehicle_number
-                            : "Plate: Assigned"}
+                          {getBookingVehiclePlate(booking, driver)}
                         </span>
                       </div>
                     </div>

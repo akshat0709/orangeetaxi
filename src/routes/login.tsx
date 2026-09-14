@@ -63,20 +63,61 @@ function LoginPage() {
       }
 
       if (userPhone && (roleList.includes("driver") || roleList.includes("admin"))) {
-        const { data: existingDriver } = await supabase.from("drivers").select("id, phone").eq("user_id", data.user.id).maybeSingle();
+        const { data: existingDriver } = await supabase.from("drivers").select("id, phone, vehicle_number, vehicle_model, vehicle_code").eq("user_id", data.user.id).maybeSingle();
+
+        // Check if there is an application for this driver
+        let appData: any = null;
+        try {
+          const { data: app } = await supabase
+            .from("driver_applications")
+            .select("*")
+            .or(`email.eq.${data.user.email}${userPhone ? `,phone.eq.${userPhone}` : ""}`)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          appData = app;
+        } catch (e) {}
+
+        let parsedNotes: any = {};
+        try {
+          if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+            parsedNotes = JSON.parse(appData.admin_notes);
+          }
+        } catch (e) {}
+
+        const isPartner = Boolean(appData?.owns_vehicle || appData?.driver_type === "partner" || parsedNotes.driver_type === "partner");
+        const plate = appData?.vehicle_number || parsedNotes.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+        const model = appData?.vehicle_model || parsedNotes.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+        const photo = appData?.photo_url || parsedNotes.photo_url || "";
+        const metaObj = { photo, plate, model, type: isPartner ? "partner" : "company" };
+
         if (existingDriver) {
+          const updates: any = {};
           if (!existingDriver.phone || existingDriver.phone.trim() !== userPhone) {
-            await supabase.from("drivers").update({ phone: userPhone }).eq("id", existingDriver.id);
+            updates.phone = userPhone;
+          }
+          if ((!existingDriver.vehicle_number || existingDriver.vehicle_number === "Unassigned") && plate) {
+            updates.vehicle_number = plate;
+          }
+          if (!existingDriver.vehicle_model && model) {
+            updates.vehicle_model = model;
+          }
+          if (!existingDriver.vehicle_code || !existingDriver.vehicle_code.startsWith("ORANGE_META:")) {
+            updates.vehicle_code = "ORANGE_META:" + JSON.stringify(metaObj);
+          }
+          if (Object.keys(updates).length > 0) {
+            await supabase.from("drivers").update(updates).eq("id", existingDriver.id);
           }
         } else if (roleList.includes("driver")) {
           await supabase.from("drivers").insert({
             user_id: data.user.id,
-            full_name: data.user.user_metadata?.full_name || data.user.email?.split("@")[0] || "Driver",
+            full_name: data.user.user_metadata?.full_name || appData?.full_name || data.user.email?.split("@")[0] || "Driver",
             phone: userPhone,
-            city: "Bengaluru",
+            city: appData?.city || "Bengaluru",
             status: "active",
-            vehicle_model: "Mahindra BE.6",
-            vehicle_number: "Unassigned",
+            vehicle_model: model,
+            vehicle_number: plate,
+            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
           });
         }
       }
@@ -113,14 +154,19 @@ function LoginPage() {
       // 2. If signing up as driver, immediately create driver profile with the exact phone
       if (values.role === "driver") {
         try {
+          const defaultPlate = "DL 01 EV 1001";
+          const defaultModel = "Mahindra BE.6";
+          const metaObj = { photo: "", plate: defaultPlate, model: defaultModel, type: "company" };
+
           await supabase.from("drivers").upsert({
             user_id: data.user.id,
             full_name: values.fullName,
             phone: cleanPhone,
             city: "Bengaluru",
             status: "active",
-            vehicle_model: "Mahindra BE.6",
-            vehicle_number: "Unassigned",
+            vehicle_model: defaultModel,
+            vehicle_number: defaultPlate,
+            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
           }, { onConflict: "user_id" });
         } catch (e) {}
       }

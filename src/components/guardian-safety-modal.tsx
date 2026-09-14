@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 
 export interface GuardianContact {
   name: string;
@@ -205,7 +206,7 @@ export function GuardianSafetyModal({
     const carModel = driverInfo?.vehicle_model || vehicle?.name || "Mahindra BE.6";
     const carPlate = driverInfo?.vehicle_number && driverInfo.vehicle_number !== "Unassigned"
       ? driverInfo.vehicle_number
-      : "Plate Assigned";
+      : getBookingVehiclePlate(bookingData, driverInfo);
     const pName = pickup?.name || "Pickup Point";
     const dName = drop?.name || "Destination";
     const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;

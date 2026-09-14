@@ -11,7 +11,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate } from "@/lib/ride-vehicle";
+import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate, resolveDriverDetails } from "@/lib/ride-vehicle";
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
@@ -26,17 +26,17 @@ interface Booking {
   pickup_area: string; drop_area: string;
   pickup_address?: string; drop_address?: string;
   estimated_fare: number; final_fare: number | null;
-  vehicle_name: string; payment_method: string;
-  created_at: string; completed_at: string | null;
+  vehicle_name: string; payment_method: string; payment_status?: string;
+  created_at: string; accepted_at?: string; arrived_at?: string | null; started_at?: string; completed_at: string | null;
   distance_km: number; rating: number | null;
-  ride_otp?: string;
-  customer_id?: string;
-  arrived_at?: string | null;
+  customer_id?: string; driver_id?: string;
+  notes?: string; ride_otp?: string;
 }
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
   rating: number; total_rides: number; city: string;
   phone?: string; vehicle_model?: string; vehicle_number?: string;
+  vehicle_code?: string;
   driver_type?: string; photo_url?: string; chassis_number?: string;
 }
 interface ServiceArea {
@@ -226,14 +226,41 @@ function DriverConsolePage() {
 
     // Auto-create driver profile if role is granted but profile is missing
     if (!driverData && (role === "driver" || role === "admin")) {
-      const { data: appData } = await supabase.from("driver_applications").select("*").eq("email", user.email).maybeSingle();
+      const { data: appData } = await supabase
+        .from("driver_applications")
+        .select("*")
+        .or(`email.eq.${user.email}${loginPhone ? `,phone.eq.${loginPhone}` : ""}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let parsedNotes: any = {};
+      try {
+        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+          parsedNotes = JSON.parse(appData.admin_notes);
+        }
+      } catch (e) {}
+
+      const isPartner = Boolean(appData?.owns_vehicle || appData?.driver_type === "partner" || parsedNotes?.driver_type === "partner");
+      const plate = appData?.vehicle_number || parsedNotes?.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+      const model = appData?.vehicle_model || parsedNotes?.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+      const photo = appData?.photo_url || parsedNotes?.photo_url || "";
+
+      const metaObj = {
+        photo,
+        plate,
+        model,
+        type: isPartner ? "partner" : "company",
+      };
+
       const { data: newDriver } = await supabase.from("drivers").insert({
         user_id: user.id,
         full_name: appData?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "New Driver",
         city: appData?.city || "Bengaluru",
         phone: loginPhone,
-        vehicle_model: "Mahindra BE.6",
-        vehicle_number: "Unassigned"
+        vehicle_model: model,
+        vehicle_number: plate,
+        vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
       }).select().single();
       driverData = newDriver;
     } else if (driverData && loginPhone) {
@@ -246,36 +273,96 @@ function DriverConsolePage() {
 
     if (!driverData) { setLoading(false); return; }
 
-    // Resolve driver photo, operating model, and partner vehicle details
-    if (!driverData.photo_url) {
-      const storedPhoto = localStorage.getItem(`orange_driver_photo_${driverData.id}`) || localStorage.getItem(`orange_driver_photo_${user.id}`) || (user.email ? localStorage.getItem(`orange_driver_photo_by_email_${user.email.toLowerCase()}`) : null);
-      if (storedPhoto) driverData.photo_url = storedPhoto;
-    }
-    if (!driverData.driver_type) {
+    // Resolve driver photo, operating model, and partner vehicle details from application
+    try {
+      const { data: appData } = await supabase
+        .from("driver_applications")
+        .select("*")
+        .or(`email.eq.${user.email}${loginPhone ? `,phone.eq.${loginPhone}` : ""}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let parsedNotes: any = {};
       try {
-        const { data: appData } = await supabase.from("driver_applications").select("owns_vehicle, driver_type, photo_url, vehicle_model, vehicle_number, chassis_number").eq("email", user.email).maybeSingle();
-        if (appData) {
-          driverData.driver_type = appData.driver_type || (appData.owns_vehicle ? "partner" : "company");
-          if (!driverData.photo_url && appData.photo_url) driverData.photo_url = appData.photo_url;
-          if ((!driverData.vehicle_number || driverData.vehicle_number === "Unassigned") && appData.vehicle_number) {
-            driverData.vehicle_number = appData.vehicle_number;
-          }
-          if (!driverData.vehicle_model && appData.vehicle_model) {
-            driverData.vehicle_model = appData.vehicle_model;
-          }
+        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+          parsedNotes = JSON.parse(appData.admin_notes);
         }
       } catch (e) {}
-    }
-    if (!driverData.driver_type && user.email) {
-      const storedMeta = JSON.parse(localStorage.getItem(`orange_app_meta_${user.email.toLowerCase()}`) || "{}");
-      if (storedMeta?.driver_type) driverData.driver_type = storedMeta.driver_type;
-      else if (storedMeta?.owns_vehicle) driverData.driver_type = "partner";
-      if (!driverData.photo_url && storedMeta?.photo_url) driverData.photo_url = storedMeta.photo_url;
-      if ((!driverData.vehicle_number || driverData.vehicle_number === "Unassigned") && storedMeta?.vehicle_number) {
-        driverData.vehicle_number = storedMeta.vehicle_number;
+
+      let storedMeta: any = {};
+      try {
+        storedMeta = JSON.parse(localStorage.getItem(`orange_app_meta_${user.email?.toLowerCase()}`) || "{}");
+      } catch (e) {}
+
+      const isPartner = Boolean(
+        driverData.driver_type === "partner" ||
+        appData?.owns_vehicle ||
+        appData?.driver_type === "partner" ||
+        parsedNotes?.driver_type === "partner" ||
+        storedMeta?.driver_type === "partner"
+      );
+
+      const resolvedPlate = appData?.vehicle_number || parsedNotes?.vehicle_number || storedMeta?.vehicle_number ||
+        (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned" ? driverData.vehicle_number : "") ||
+        (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+
+      const resolvedModel = appData?.vehicle_model || parsedNotes?.vehicle_model || storedMeta?.vehicle_model ||
+        driverData.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+
+      const resolvedPhoto = appData?.photo_url || parsedNotes?.photo_url || storedMeta?.photo_url || driverData.photo_url || "";
+
+      // Decode existing vehicle_code if encoded with ORANGE_META
+      if (driverData.vehicle_code && typeof driverData.vehicle_code === "string" && driverData.vehicle_code.startsWith("ORANGE_META:")) {
+        try {
+          const metaDecoded = JSON.parse(driverData.vehicle_code.replace("ORANGE_META:", ""));
+          if (!driverData.photo_url && metaDecoded.photo) driverData.photo_url = metaDecoded.photo;
+        } catch (e) {}
       }
+
+      const needsPlateSync = !driverData.vehicle_number || driverData.vehicle_number === "Unassigned";
+      const needsCodeSync = !driverData.vehicle_code || !driverData.vehicle_code.startsWith("ORANGE_META:");
+      const needsModelSync = !driverData.vehicle_model;
+
+      if (needsPlateSync || needsCodeSync || needsModelSync) {
+        const metaObj = {
+          photo: resolvedPhoto || driverData.photo_url || "",
+          plate: resolvedPlate,
+          model: resolvedModel,
+          type: isPartner ? "partner" : "company",
+        };
+        const dbUpdates: any = {
+          vehicle_number: resolvedPlate,
+          vehicle_model: resolvedModel,
+          vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+        };
+        try {
+          await supabase.from("drivers").update(dbUpdates).eq("id", driverData.id);
+          driverData.vehicle_number = resolvedPlate;
+          driverData.vehicle_model = resolvedModel;
+          driverData.vehicle_code = dbUpdates.vehicle_code;
+        } catch (err) {
+          console.warn("Could not sync driver vehicle in console:", err);
+        }
+      }
+
+      if (resolvedPhoto) {
+        driverData.photo_url = resolvedPhoto;
+        try {
+          localStorage.setItem(`orange_driver_photo_${driverData.id}`, resolvedPhoto);
+          if (user.id) localStorage.setItem(`orange_driver_photo_${user.id}`, resolvedPhoto);
+          if (user.email) localStorage.setItem(`orange_driver_photo_by_email_${user.email.toLowerCase()}`, resolvedPhoto);
+          if (loginPhone) localStorage.setItem(`orange_driver_photo_by_phone_${loginPhone.replace(/\D/g, "")}`, resolvedPhoto);
+        } catch (e) {}
+      }
+
+      driverData.driver_type = isPartner ? "partner" : "company";
+    } catch (e) {
+      console.warn("Error resolving driver details in console:", e);
     }
 
+    // Run universal resolver to guarantee all fields are populated
+    driverData = resolveDriverDetails(driverData);
     setDriver(driverData as DriverProfile);
 
     // Fetch areas for coordinates
@@ -406,13 +493,20 @@ function DriverConsolePage() {
       toast.error("You already have an active ride. Complete it before accepting a new one.");
       return;
     }
-    const { error } = await supabase.from("bookings").update({ driver_id: driver.id, status: "accepted", accepted_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "searching");
+    const resolvedDr = resolveDriverDetails(driver);
+    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
+    const activeBooking = newRequests.find(b => b.id === bookingId);
+    const updatedVehicleName = formatVehicleNameWithPlate(activeBooking?.vehicle_name || "Orange Go", resolvedPlate);
+
+    const { error } = await supabase.from("bookings").update({
+      driver_id: driver.id,
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+      vehicle_name: updatedVehicleName,
+    }).eq("id", bookingId).eq("status", "searching");
     if (error) { toast.error("Could not accept ride — it may have been taken by another driver."); return; }
 
-    if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
-      const activeBooking = newRequests.find(b => b.id === bookingId);
-      await lockBookingVehicle(supabase, bookingId, driver.vehicle_number, activeBooking?.vehicle_name, activeBooking?.reference);
-    }
+    await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, activeBooking?.reference);
 
     toast.success("Ride accepted!");
     loadData();
