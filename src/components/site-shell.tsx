@@ -228,6 +228,7 @@ export function SiteFooter() {
               ["Terms & Conditions", "/terms"],
               ["Customer Care & SLA", "/support"],
               ["Driver Code & Safety", "/drive"],
+              ["Sitemap (XML)", "/sitemap.xml"],
             ]}
           />
         </div>
@@ -242,5 +243,24 @@ export function SiteFooter() {
 }
 
 function FooterGroup({ title, items }: { title: string; items: readonly (readonly [string, string])[] }) {
-  return <div><h2 className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">{title}</h2><ul className="mt-4 space-y-3">{items.map(([label, to]) => <li key={to}><Link to={to as any} className="text-sm text-white/75 transition-colors hover:text-white">{label}</Link></li>)}</ul></div>;
+  return (
+    <div>
+      <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">{title}</h2>
+      <ul className="mt-4 space-y-3">
+        {items.map(([label, to]) => (
+          <li key={to}>
+            {to.endsWith(".xml") ? (
+              <a href={to} target="_blank" rel="noopener noreferrer" className="text-sm text-white/75 transition-colors hover:text-white">
+                {label}
+              </a>
+            ) : (
+              <Link to={to as any} className="text-sm text-white/75 transition-colors hover:text-white">
+                {label}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
