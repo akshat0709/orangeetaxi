@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map } from "lucide-react";
+import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,8 @@ interface Booking {
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
   rating: number; total_rides: number; city: string;
+  phone?: string; vehicle_model?: string; vehicle_number?: string;
+  driver_type?: string; photo_url?: string; chassis_number?: string;
 }
 interface ServiceArea {
   name: string; lat: number; lng: number;
@@ -119,6 +121,7 @@ function DriverConsolePage() {
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
+  const [commissionSettlements, setCommissionSettlements] = useState<any[]>([]);
   const [customerProfiles, setCustomerProfiles] = useState<Record<string, { full_name: string; phone: string }>>({});
   const [activeChatRide, setActiveChatRide] = useState<Booking | null>(null);
   const [unreadChats, setUnreadChats] = useState<Record<string, number>>({});
@@ -174,11 +177,13 @@ function DriverConsolePage() {
     const handleStorageUpdate = () => loadData();
     window.addEventListener("storage", handleStorageUpdate);
     window.addEventListener("cash_settlements_updated", handleStorageUpdate);
+    window.addEventListener("commission_settlements_updated", handleStorageUpdate);
 
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener("storage", handleStorageUpdate);
       window.removeEventListener("cash_settlements_updated", handleStorageUpdate);
+      window.removeEventListener("commission_settlements_updated", handleStorageUpdate);
     };
   }, [user, soundEnabled]);
 
@@ -240,6 +245,37 @@ function DriverConsolePage() {
     }
 
     if (!driverData) { setLoading(false); return; }
+
+    // Resolve driver photo, operating model, and partner vehicle details
+    if (!driverData.photo_url) {
+      const storedPhoto = localStorage.getItem(`orange_driver_photo_${driverData.id}`) || localStorage.getItem(`orange_driver_photo_${user.id}`) || (user.email ? localStorage.getItem(`orange_driver_photo_by_email_${user.email.toLowerCase()}`) : null);
+      if (storedPhoto) driverData.photo_url = storedPhoto;
+    }
+    if (!driverData.driver_type) {
+      try {
+        const { data: appData } = await supabase.from("driver_applications").select("owns_vehicle, driver_type, photo_url, vehicle_model, vehicle_number, chassis_number").eq("email", user.email).maybeSingle();
+        if (appData) {
+          driverData.driver_type = appData.driver_type || (appData.owns_vehicle ? "partner" : "company");
+          if (!driverData.photo_url && appData.photo_url) driverData.photo_url = appData.photo_url;
+          if ((!driverData.vehicle_number || driverData.vehicle_number === "Unassigned") && appData.vehicle_number) {
+            driverData.vehicle_number = appData.vehicle_number;
+          }
+          if (!driverData.vehicle_model && appData.vehicle_model) {
+            driverData.vehicle_model = appData.vehicle_model;
+          }
+        }
+      } catch (e) {}
+    }
+    if (!driverData.driver_type && user.email) {
+      const storedMeta = JSON.parse(localStorage.getItem(`orange_app_meta_${user.email.toLowerCase()}`) || "{}");
+      if (storedMeta?.driver_type) driverData.driver_type = storedMeta.driver_type;
+      else if (storedMeta?.owns_vehicle) driverData.driver_type = "partner";
+      if (!driverData.photo_url && storedMeta?.photo_url) driverData.photo_url = storedMeta.photo_url;
+      if ((!driverData.vehicle_number || driverData.vehicle_number === "Unassigned") && storedMeta?.vehicle_number) {
+        driverData.vehicle_number = storedMeta.vehicle_number;
+      }
+    }
+
     setDriver(driverData as DriverProfile);
 
     // Fetch areas for coordinates
@@ -326,6 +362,14 @@ function DriverConsolePage() {
         } catch (err) {}
       }
     }
+
+    try {
+      const storedComm = localStorage.getItem("orange_commission_settlements");
+      if (storedComm) {
+        const allComm = JSON.parse(storedComm);
+        setCommissionSettlements(allComm.filter((c: any) => c.driver_id === driverData.id || (driverData.full_name && c.driver_name?.toLowerCase() === driverData.full_name?.toLowerCase())));
+      }
+    } catch (e) {}
 
     try {
       const storedReviews = JSON.parse(localStorage.getItem("orange_driver_reviews") || "[]");
@@ -486,6 +530,16 @@ function DriverConsolePage() {
   const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
 
+  // Operating model
+  const isPartnerDriver = driver.driver_type === "partner" || Boolean((driver as any).owns_vehicle);
+
+  // Partner commission calculations (15% platform commission model)
+  const allTimeFares = recentRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const partnerCommissionPayable = Math.round(allTimeFares * 0.15);
+  const partnerCommissionPaid = commissionSettlements.reduce((s, c) => s + Math.round(Number(c.amount || 0)), 0);
+  const partnerCommissionDue = Math.max(0, partnerCommissionPayable - partnerCommissionPaid);
+  const partnerNetEarnings = Math.max(0, allTimeFares - partnerCommissionPayable);
+
   // Cash calculations & Admin settlement balance (Strict whole rupees)
   const totalCashCollected = recentRides
     .filter(r => r.payment_method === "cash")
@@ -500,30 +554,62 @@ function DriverConsolePage() {
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Driver Console</p>
-            <h1 className="display-serif mt-2 text-4xl">Welcome, {driver.full_name.split(" ")[0]}.</h1>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">{driver.city}</span>
-              <span className="text-muted-foreground text-xs">·</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <Car className="size-3.5" />
-                <span>{driver.vehicle_model || "Mahindra BE.6"}</span>
-                <span className="font-mono font-bold">
-                  {driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "No car assigned today"}
+          <div className="flex items-start gap-4">
+            {driver.photo_url ? (
+              <img
+                src={driver.photo_url}
+                alt={driver.full_name}
+                className="size-16 rounded-2xl object-cover border-2 border-primary/30 shadow-md shrink-0"
+              />
+            ) : (
+              <div className="grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary font-bold text-2xl shrink-0 border border-primary/20">
+                {driver.full_name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Driver Console</p>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                  isPartnerDriver 
+                    ? "bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
+                    : "bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800"
+                }`}>
+                  {isPartnerDriver ? "⚡ Partner Owner-Operator (15% Comm.)" : "🏢 Company Fleet (Fixed Salary)"}
                 </span>
-              </span>
-              <span className="text-muted-foreground text-xs">·</span>
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
-                currentCashHolding > 0
-                  ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
-                  : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
-              }`}>
-                <Banknote className="size-3.5" />
-                <span>Cash in Hand: <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong></span>
-              </span>
-              <span className="text-muted-foreground text-xs">·</span>
-              <button
+              </div>
+              <h1 className="display-serif mt-1 text-3xl sm:text-4xl">Welcome, {driver.full_name.split(" ")[0]}.</h1>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">{driver.city}</span>
+                <span className="text-muted-foreground text-xs">·</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  <Car className="size-3.5" />
+                  <span>{driver.vehicle_model || (isPartnerDriver ? "Private EV" : "Mahindra BE.6")}</span>
+                  <span className="font-mono font-bold">
+                    {driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "No car assigned today"}
+                  </span>
+                </span>
+                <span className="text-muted-foreground text-xs">·</span>
+                {isPartnerDriver ? (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    partnerCommissionDue > 0
+                      ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  }`}>
+                    <Percent className="size-3.5" />
+                    <span>Comm. Due: <strong className="font-mono">₹{partnerCommissionDue}</strong></span>
+                  </span>
+                ) : (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    currentCashHolding > 0
+                      ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  }`}>
+                    <Banknote className="size-3.5" />
+                    <span>Cash in Hand: <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong></span>
+                  </span>
+                )}
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
                 type="button"
                 onClick={async () => {
                   const newPhone = prompt("Update your contact phone number (used for passenger calls):", driver.phone || "");
@@ -544,6 +630,7 @@ function DriverConsolePage() {
               </button>
             </div>
           </div>
+        </div>
 
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -882,66 +969,141 @@ function DriverConsolePage() {
           </TabsContent>
 
           <TabsContent value="earnings">
-            {/* Cash in Hand & Admin Handover Card */}
-            <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-10 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50">
-                    <Banknote className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                      Cash in Hand (To Be Handed Over to Admin)
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Physical cash collected from riders. Reduces automatically when Admin records collection.
-                    </p>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
-                  <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
-                    ₹{Math.round(currentCashHolding)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-lg border border-border bg-background p-3.5">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase">Total Cash Collected (Rides)</p>
-                  <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Math.round(totalCashCollected)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">From all completed cash rides</p>
-                </div>
-
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3.5 dark:border-emerald-950 dark:bg-emerald-950/20">
-                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Cash Deposited with Admin</p>
-                  <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">₹{Math.round(totalCashSubmitted)}</p>
-                  <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">{settlements.length} verified handover{settlements.length !== 1 ? "s" : ""}</p>
-                </div>
-              </div>
-
-              {settlements.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-amber-200/70 dark:border-amber-900/40">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    Recent Handover Receipts from Admin
-                  </p>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {settlements.slice(0, 5).map(s => (
-                      <div key={s.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
-                        <div className="flex items-center gap-2">
-                          <Check className="size-3.5 text-emerald-600" />
-                          <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(s.amount)}</span>
-                          <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
-                        </div>
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+            {/* Operating Model Financial Card: Partner Commission Ledger vs Company Cash Handover */}
+            {isPartnerDriver ? (
+              <div className="mb-6 rounded-xl border border-amber-400/80 bg-gradient-to-br from-amber-50/70 via-background to-orange-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:from-amber-950/30 dark:to-orange-950/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-11 place-items-center rounded-xl bg-amber-500 text-white shadow-sm">
+                      <Percent className="size-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                          Partner Commission & Net Earnings
+                        </p>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                          15% Platform Commission Model
                         </span>
                       </div>
-                    ))}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        You drive your own EV and retain 85% of all rider fares. 15% platform commission is settled with Orange Taxi.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Balance Due</p>
+                    <p className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                      ₹{partnerCommissionDue}
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-border bg-background p-3.5">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Gross Fares Collected</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{allTimeFares}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Cash + UPI from all rides</p>
+                  </div>
+
+                  <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                    <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">Your Net Take-Home (85%)</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">₹{partnerNetEarnings}</p>
+                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Retained earnings after platform fee</p>
+                  </div>
+
+                  <div className="rounded-lg border border-border bg-background p-3.5">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Paid to Admin</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{partnerCommissionPaid}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{commissionSettlements.length} recorded settlement{commissionSettlements.length !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+
+                {commissionSettlements.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-amber-200/70 dark:border-amber-900/40">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Recent Commission Settlements Recorded by Admin
+                    </p>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                      {commissionSettlements.slice(0, 5).map(c => (
+                        <div key={c.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
+                          <div className="flex items-center gap-2">
+                            <Check className="size-3.5 text-emerald-600" />
+                            <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(c.amount)}</span>
+                            <span className="text-muted-foreground text-[11px]">
+                              via {c.payment_method?.toUpperCase() || "UPI"} {c.utr_reference ? `(UTR: ${c.utr_reference})` : ""}
+                            </span>
+                          </div>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-10 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50">
+                      <Banknote className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                        Cash in Hand (To Be Handed Over to Admin)
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Physical cash collected from riders. Reduces automatically when Admin records collection.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
+                    <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
+                      ₹{Math.round(currentCashHolding)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border bg-background p-3.5">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Total Cash Collected (Rides)</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Math.round(totalCashCollected)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">From all completed cash rides</p>
+                  </div>
+
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3.5 dark:border-emerald-950 dark:bg-emerald-950/20">
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Cash Deposited with Admin</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">₹{Math.round(totalCashSubmitted)}</p>
+                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">{settlements.length} verified handover{settlements.length !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+
+                {settlements.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-amber-200/70 dark:border-amber-900/40">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Recent Handover Receipts from Admin
+                    </p>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                      {settlements.slice(0, 5).map(s => (
+                        <div key={s.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
+                          <div className="flex items-center gap-2">
+                            <Check className="size-3.5 text-emerald-600" />
+                            <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(s.amount)}</span>
+                            <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
+                          </div>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Today's breakdown */}
             <div className="mb-6">

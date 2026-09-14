@@ -18,7 +18,9 @@ import {
   Copy,
   Users,
   Calendar,
-  DollarSign
+  DollarSign,
+  Building2,
+  Handshake
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -148,16 +150,22 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
     };
   }
 
-  // Fleet-wide cash metrics (Strictly whole rupees)
+  // Filter only Company-Salaried Drivers (partner owner-operators manage their own cash/fares and operate on a commission model in the Commission Ledger)
+  const companyDrivers = drivers.filter(d => d.driver_type !== "partner" && !d.owns_vehicle);
+  const companyDriverIds = new Set(companyDrivers.map(d => d.id));
+
+  // Fleet-wide cash metrics (Strictly whole rupees for company fleet only)
   const completedCashRides = bookings.filter(
-    b => b.status === "completed" && b.payment_method === "cash"
+    b => b.status === "completed" && b.payment_method === "cash" && (!b.driver_id || companyDriverIds.has(b.driver_id))
   );
   const fleetTotalCashDealt = completedCashRides.reduce((sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
-  const fleetTotalCashTaken = settlements.reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
+  const fleetTotalCashTaken = settlements
+    .filter(s => companyDriverIds.has(s.driver_id))
+    .reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
   const fleetCashToBeTaken = Math.max(0, fleetTotalCashDealt - fleetTotalCashTaken);
 
-  // Filtered drivers list
-  const filteredDrivers = drivers.filter(d => {
+  // Filtered drivers list (Strictly company salaried drivers)
+  const filteredDrivers = companyDrivers.filter(d => {
     const term = search.toLowerCase();
     return (
       d.full_name.toLowerCase().includes(term) ||
@@ -179,7 +187,7 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
       return;
     }
 
-    const driver = drivers.find(d => d.id === selectedDriverId);
+    const driver = companyDrivers.find(d => d.id === selectedDriverId) || drivers.find(d => d.id === selectedDriverId);
     if (!driver) return;
 
     setSubmitting(true);
@@ -264,17 +272,27 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
         </div>
       )}
 
+      {/* Operating Model Note */}
+      <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2.5">
+          <Building2 className="size-4 text-blue-600 shrink-0" />
+          <span>
+            <strong>Company Depot Cash Settlement:</strong> Tracking company-salaried fleet drivers depositing trip cash at depot. Partner owner-operators manage their fares independently and are tracked under the <strong>Commission Ledger</strong>.
+          </span>
+        </div>
+      </div>
+
       {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="display-serif text-2xl font-bold">Driver Cash Collection & Settlement</h2>
+            <h2 className="display-serif text-2xl font-bold">Company Driver Cash Settlement</h2>
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs">
-              Cash Operations
+              Depot Operations
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Collect physical cash fares from drivers, settle balances, and maintain a full ledger of handovers.
+            Collect physical cash fares from salaried fleet drivers, settle balances, and maintain a full ledger of handovers.
           </p>
         </div>
 
@@ -392,7 +410,7 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
               >
                 <option value="">-- Choose Driver --</option>
-                {drivers.map(d => {
+                {companyDrivers.map(d => {
                   const stats = getDriverCashStats(d.id);
                   return (
                     <option key={d.id} value={d.id}>

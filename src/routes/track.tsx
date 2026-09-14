@@ -127,7 +127,13 @@ function TrackPage() {
             .select("*")
             .eq("id", bData.driver_id)
             .maybeSingle();
-          if (dData) setDriver(dData);
+          if (dData) {
+            let photoUrl = dData.photo_url;
+            if (!photoUrl) {
+              photoUrl = localStorage.getItem(`orange_driver_photo_${dData.id}`) || (dData.user_id ? localStorage.getItem(`orange_driver_photo_${dData.user_id}`) : null);
+            }
+            setDriver({ ...dData, photo_url: photoUrl || "" });
+          }
 
           // Subscribe to live driver updates (GPS coordinates)
           driverChannel = supabase
@@ -167,7 +173,13 @@ function TrackPage() {
                   .select("*")
                   .eq("id", updated.driver_id)
                   .maybeSingle();
-                if (d) setDriver(d);
+                if (d) {
+                  let photoUrl = d.photo_url;
+                  if (!photoUrl) {
+                    photoUrl = localStorage.getItem(`orange_driver_photo_${d.id}`) || (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null);
+                  }
+                  setDriver({ ...d, photo_url: photoUrl || "" });
+                }
               }
             }
           )
@@ -378,8 +390,19 @@ function TrackPage() {
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-md shrink-0">
-                      {driver.full_name?.charAt(0) || "D"}
+                    <div className="relative size-12 shrink-0">
+                      {driver.photo_url ? (
+                        <img
+                          src={driver.photo_url}
+                          alt={driver.full_name}
+                          className="size-12 rounded-2xl object-cover border-2 border-primary shadow-md"
+                        />
+                      ) : (
+                        <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-md">
+                          {driver.full_name?.charAt(0) || "D"}
+                        </div>
+                      )}
+                      <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-emerald-500 border-2 border-card" title="Active Chauffeur" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">

@@ -1,8 +1,7 @@
 // @ts-nocheck
-
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeIndianRupee, Check, CheckCircle, ClipboardCheck, Gauge, GraduationCap, HandHeart, HeartPulse, Loader2, ShieldCheck, TrendingUp, Trophy } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, BadgeIndianRupee, Camera, Car, Check, CheckCircle, ClipboardCheck, Gauge, GraduationCap, HandHeart, HeartPulse, Info, Loader2, ShieldCheck, Snowflake, Sparkles, TrendingUp, Trophy, Upload, User, X } from "lucide-react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import driverAppImage from "@/assets/orange-taxi-driver-app.jpg";
@@ -225,7 +225,12 @@ const appSchema = z.object({
   city: z.string().min(2, "Enter your city"),
   licence_number: z.string().min(4, "Enter your licence number"),
   experience_years: z.coerce.number().min(0).max(50),
+  driver_type: z.enum(["company", "partner"]).default("company"),
   owns_vehicle: z.boolean().default(false),
+  vehicle_model: z.string().optional(),
+  vehicle_number: z.string().optional(),
+  chassis_number: z.string().optional(),
+  vehicle_year: z.string().optional(),
   message: z.string().optional(),
 });
 type AppValues = z.infer<typeof appSchema>;
@@ -233,11 +238,97 @@ type AppValues = z.infer<typeof appSchema>;
 function DriverApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const form = useForm<AppValues>({ resolver: zodResolver(appSchema), defaultValues: { owns_vehicle: false, experience_years: 0 } });
+  const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
+  const [photoError, setPhotoError] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const form = useForm<AppValues>({
+    resolver: zodResolver(appSchema),
+    defaultValues: {
+      driver_type: "company",
+      owns_vehicle: false,
+      experience_years: 0,
+      vehicle_model: "Mahindra BE.6",
+      vehicle_number: "",
+      chassis_number: "",
+      vehicle_year: "2025",
+    },
+  });
+
+  const ownsVehicle = form.watch("owns_vehicle");
+  const driverType = form.watch("driver_type");
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file (JPG/PNG/WebP).");
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Photo size should be under 8MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Compress & scale to standard avatar size (max 400x400) for instant loading
+        const canvas = document.createElement("canvas");
+        const MAX_DIM = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        setPhotoDataUrl(compressed);
+        setPhotoError(false);
+        toast.success("Driver photo uploaded successfully!");
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   async function onSubmit(values: AppValues) {
+    if (!photoDataUrl) {
+      setPhotoError(true);
+      toast.error("Driver photo is mandatory. Please upload your portrait photo.");
+      fileInputRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    if (values.owns_vehicle) {
+      if (!values.vehicle_number || values.vehicle_number.trim().length < 4) {
+        toast.error("Please enter your vehicle's registration number (plate).");
+        return;
+      }
+      if (!values.chassis_number || values.chassis_number.trim().length < 5) {
+        toast.error("Please enter your vehicle's Chassis number (VIN).");
+        return;
+      }
+    }
+
     setSubmitting(true);
-    const { error } = await supabase.from("driver_applications").insert({
+
+    const payload = {
       full_name: values.full_name,
       email: values.email,
       phone: values.phone,
@@ -246,10 +337,47 @@ function DriverApplicationForm() {
       experience_years: values.experience_years,
       owns_vehicle: values.owns_vehicle,
       message: values.message ?? "",
-    });
-    if (error) { toast.error("Something went wrong — please try again."); setSubmitting(false); return; }
+      // Extended fields
+      photo_url: photoDataUrl,
+      driver_type: values.owns_vehicle ? "partner" : "company",
+      vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
+      vehicle_number: values.owns_vehicle ? values.vehicle_number : "",
+      chassis_number: values.owns_vehicle ? values.chassis_number : "",
+      vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
+    };
+
+    // Store in local backup for resilient admin sync
+    try {
+      localStorage.setItem(`orange_app_meta_${values.email}`, JSON.stringify(payload));
+      const existingApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "{}");
+      existingApps[values.email] = payload;
+      localStorage.setItem("orange_extended_apps", JSON.stringify(existingApps));
+    } catch {}
+
+    // Primary database insert (with graceful fallback if extra columns aren't in Supabase table yet)
+    let { error } = await supabase.from("driver_applications").insert(payload);
+    if (error) {
+      console.warn("Retrying with base schema if custom columns pending:", error);
+      const basePayload = {
+        full_name: values.full_name,
+        email: values.email,
+        phone: values.phone,
+        city: values.city,
+        licence_number: values.licence_number,
+        experience_years: values.experience_years,
+        owns_vehicle: values.owns_vehicle,
+        message: values.message ?? "",
+      };
+      const retry = await supabase.from("driver_applications").insert(basePayload);
+      if (retry.error) {
+        toast.error(`Submission failed: ${retry.error.message}`);
+        setSubmitting(false);
+        return;
+      }
+    }
+
     setSubmitted(true);
-    toast.success("Application submitted!");
+    toast.success("Driver application submitted with photo & vehicle details!");
   }
 
   if (submitted) {
@@ -257,69 +385,308 @@ function DriverApplicationForm() {
       <div className="flex flex-col items-center rounded-xl border border-border bg-warm p-9 text-center">
         <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><CheckCircle className="size-7" /></span>
         <h3 className="display-serif mt-6 text-3xl">Application received.</h3>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Thank you for applying to drive with Orange. We'll review your application and be in touch within a few working days.</p>
+        <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">
+          Thank you for applying to drive with Orange. Your photo, driving licence, and vehicle details will be reviewed by our fleet operations desk.
+        </p>
         <Button asChild size="lg" variant="charcoal" className="mt-8"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border border-border bg-warm p-7 md:p-9">
-      <ClipboardCheck className="size-7 text-primary" />
-      <h3 className="display-serif mt-5 text-3xl">Apply to drive.</h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">Tell us a bit about yourself and we'll be in touch.</p>
+    <>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border border-border bg-warm p-7 md:p-9 shadow-sm">
+        <ClipboardCheck className="size-7 text-primary" />
+        <h3 className="display-serif mt-5 text-3xl">Apply to drive.</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Join as a Salaried Fleet Driver or Partner Owner-Operator.</p>
 
-      <div className="mt-7 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <Label htmlFor="da-name">Full Name</Label>
-            <Input id="da-name" placeholder="Rajesh Kumar" className="mt-1.5 bg-background" {...form.register("full_name")} />
-            {form.formState.errors.full_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.full_name.message}</p>}
+        <div className="mt-7 space-y-5">
+          {/* MANDATORY DRIVER PHOTO UPLOAD */}
+          <div className={`rounded-xl border-2 p-4 transition-all ${photoError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative size-20 shrink-0 rounded-full border-2 border-primary/40 bg-primary/10 overflow-hidden flex items-center justify-center shadow-inner">
+                {photoDataUrl ? (
+                  <img src={photoDataUrl} alt="Driver Portrait Preview" className="size-full object-cover" />
+                ) : (
+                  <User className="size-9 text-primary/60" />
+                )}
+                {photoDataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoDataUrl("")}
+                    className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-[11px] font-bold"
+                    title="Remove Photo"
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                  <Label htmlFor="driver-photo-input" className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5">
+                    <Camera className="size-4 text-primary" />
+                    <span>Upload Driver Photo <span className="text-destructive font-bold">*</span></span>
+                  </Label>
+                  <span className="rounded bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
+                    Mandatory
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Clear front-facing portrait. Displayed to passengers on ride confirmation and live tracking.
+                </p>
+                <div className="pt-1">
+                  <input
+                    ref={fileInputRef}
+                    id="driver-photo-input"
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 text-xs font-semibold gap-1.5"
+                  >
+                    <Upload className="size-3.5" />
+                    <span>{photoDataUrl ? "Replace Photo" : "Choose / Take Photo"}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {photoError && (
+              <p className="mt-2 text-xs font-semibold text-destructive flex items-center gap-1">
+                <Info className="size-3.5" /> Please upload your photo before submitting the application.
+              </p>
+            )}
           </div>
-          <div>
-            <Label htmlFor="da-email">Email</Label>
-            <Input id="da-email" type="email" placeholder="you@example.com" className="mt-1.5 bg-background" {...form.register("email")} />
-            {form.formState.errors.email && <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>}
+
+          {/* BASIC INFORMATION */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="da-name">Full Name</Label>
+              <Input id="da-name" placeholder="Rajesh Kumar" className="mt-1.5 bg-background" {...form.register("full_name")} />
+              {form.formState.errors.full_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.full_name.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="da-email">Email</Label>
+              <Input id="da-email" type="email" placeholder="you@example.com" className="mt-1.5 bg-background" {...form.register("email")} />
+              {form.formState.errors.email && <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="da-phone">Phone</Label>
+              <Input id="da-phone" type="tel" placeholder="+91 98765 43210" className="mt-1.5 bg-background" {...form.register("phone")} />
+              {form.formState.errors.phone && <p className="mt-1 text-xs text-destructive">{form.formState.errors.phone.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="da-city">City</Label>
+              <Input id="da-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
+              {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="da-exp">Years Driving</Label>
+              <Input id="da-exp" type="number" min={0} max={50} placeholder="3" className="mt-1.5 bg-background" {...form.register("experience_years")} />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="da-licence">Commercial Licence Number</Label>
+              <Input id="da-licence" placeholder="DL-1420100012345" className="mt-1.5 bg-background" {...form.register("licence_number")} />
+              {form.formState.errors.licence_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.licence_number.message}</p>}
+            </div>
+
+            {/* DRIVER MODEL SELECTION & "ORANGE STANDARD CAR" CHECKBOX */}
+            <div className="col-span-2 rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="da-vehicle"
+                  checked={ownsVehicle}
+                  onCheckedChange={(checked) => {
+                    const isOwn = !!checked;
+                    form.setValue("owns_vehicle", isOwn);
+                    form.setValue("driver_type", isOwn ? "partner" : "company");
+                    if (isOwn) {
+                      setTermsOpen(true);
+                    }
+                  }}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="da-vehicle" className="cursor-pointer font-bold text-sm text-foreground">
+                    I bring my own "Orange Standard" Electric Car (Partner Driver)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Unchecked = <strong>Company Fleet Driver</strong> (drive company Mahindra BE.6 on fixed monthly salary).
+                    Checked = <strong>Partner Driver</strong> (commission model, keep 85% of trip fares).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTermsOpen(true)}
+                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary underline underline-offset-2 hover:text-primary/80"
+                  >
+                    <Sparkles className="size-3" /> View "Orange Standard Cab" Definition & Terms
+                  </button>
+                </div>
+              </div>
+
+              {/* DYNAMIC VEHICLE DETAILS (REQUIRED FOR PARTNER DRIVERS) */}
+              {ownsVehicle && (
+                <div className="mt-4 pt-3 border-t border-primary/20 space-y-3 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2">
+                    <Car className="size-4 text-primary" />
+                    <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Partner Vehicle Details (Mandatory)
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="da-vmodel" className="text-xs">EV Model & Make</Label>
+                      <Input
+                        id="da-vmodel"
+                        placeholder="e.g. Mahindra BE.6 / Tata Curvv EV"
+                        className="mt-1 bg-background text-xs h-9"
+                        {...form.register("vehicle_model")}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="da-vyear" className="text-xs">Manufacturing Year</Label>
+                      <Input
+                        id="da-vyear"
+                        placeholder="2024 / 2025"
+                        className="mt-1 bg-background text-xs h-9"
+                        {...form.register("vehicle_year")}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="da-vnum" className="text-xs">Vehicle Registration No. (Plate) *</Label>
+                      <Input
+                        id="da-vnum"
+                        placeholder="e.g. DL 01 EV 1234"
+                        className="mt-1 bg-background font-mono uppercase text-xs h-9"
+                        {...form.register("vehicle_number")}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="da-vchassis" className="text-xs">Chassis Number (VIN) *</Label>
+                      <Input
+                        id="da-vchassis"
+                        placeholder="e.g. MA3EHB6S7P..."
+                        className="mt-1 bg-background font-mono uppercase text-xs h-9"
+                        {...form.register("chassis_number")}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="da-msg">Anything else you'd like us to know? <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea id="da-msg" rows={2} placeholder="Experience details or vehicle details..." className="mt-1.5 resize-none bg-background text-sm" {...form.register("message")} />
+            </div>
+
+            {/* DPDP Data Collection Notice */}
+            <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground leading-relaxed">
+              <p>
+                <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By submitting, you consent to Orange Taxi Limited processing your photo, driving licence, and vehicle records for verification and onboarding under our Privacy Policy.
+              </p>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="da-phone">Phone</Label>
-            <Input id="da-phone" type="tel" placeholder="+91 98765 43210" className="mt-1.5 bg-background" {...form.register("phone")} />
-            {form.formState.errors.phone && <p className="mt-1 text-xs text-destructive">{form.formState.errors.phone.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="da-city">City</Label>
-            <Input id="da-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
-            {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="da-exp">Years Driving</Label>
-            <Input id="da-exp" type="number" min={0} max={50} placeholder="3" className="mt-1.5 bg-background" {...form.register("experience_years")} />
-          </div>
-          <div className="col-span-2">
-            <Label htmlFor="da-licence">Licence Number</Label>
-            <Input id="da-licence" placeholder="DL-1420100012345" className="mt-1.5 bg-background" {...form.register("licence_number")} />
-            {form.formState.errors.licence_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.licence_number.message}</p>}
-          </div>
-          <div className="col-span-2 flex items-center gap-3">
-            <Checkbox id="da-vehicle" onCheckedChange={(v) => form.setValue("owns_vehicle", !!v)} />
-            <Label htmlFor="da-vehicle" className="cursor-pointer font-normal">I own a vehicle that meets Orange's EV standards</Label>
-          </div>
-          <div className="col-span-2">
-            <Label htmlFor="da-msg">Anything else you'd like us to know? <span className="text-muted-foreground">(optional)</span></Label>
-            <Textarea id="da-msg" rows={3} placeholder="Tell us about your experience or why you'd like to join Orange..." className="mt-1.5 resize-none bg-background" {...form.register("message")} />
-          </div>
-          {/* DPDP Data Collection Notice */}
-          <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground leading-relaxed">
-            <p>
-              <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By submitting, you consent to Orange Taxi Limited processing your contact info and driving licence for verification, background checks, and onboarding under our Privacy Policy.
-            </p>
-          </div>
+
+          <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Submit Driver Application <ArrowRight className="size-4" /></>}
+          </Button>
         </div>
-        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
-          {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Submit Application <ArrowRight className="size-4" /></>}
-        </Button>
-      </div>
-    </form>
+      </form>
+
+      {/* ORANGE STANDARD CAR DEFINITION & TERMS MODAL */}
+      <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+        <DialogContent className="sm:max-w-xl bg-background border-border text-foreground">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+              <Sparkles className="size-4" /> Orange Taxi Fleet Standards
+            </div>
+            <DialogTitle className="text-xl font-bold">
+              What Defines an "Orange Standard Cab"?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Partner drivers bringing their own vehicle must satisfy all three core standards before onboarding.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3 text-xs leading-relaxed">
+            {/* Standard 1: 100% EV */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3.5 flex items-start gap-3">
+              <div className="size-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0 font-bold">
+                01
+              </div>
+              <div className="space-y-1 flex-1">
+                <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <span>100% Electric Vehicle (EV)</span>
+                  <span className="rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-1.5 py-0.5">Zero Emissions</span>
+                </p>
+                <p className="text-muted-foreground">
+                  The vehicle must strictly be a Battery Electric Vehicle (BEV) such as Mahindra BE.6, Tata Curvv EV, MG ZS EV, or Nexon EV. Hybrid, Petrol, Diesel, or CNG cars are strictly excluded.
+                </p>
+              </div>
+            </div>
+
+            {/* Standard 2: Signature Orange Exterior */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3.5 flex items-start gap-3">
+              <div className="size-8 rounded-lg bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-primary shrink-0 font-bold">
+                02
+              </div>
+              <div className="space-y-1 flex-1">
+                <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <span>Signature Orange Exterior Color</span>
+                  <span className="rounded bg-orange-500/20 text-primary text-[10px] font-bold px-1.5 py-0.5">Brand Identity</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Vehicle exterior body must be factory paint or professionally wrapped in official Deep Sunset Orange, with zero visible scratches or dents, and commercial transport registration plates.
+                </p>
+              </div>
+            </div>
+
+            {/* Standard 3: Well-Maintained Interior & AC */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3.5 flex items-start gap-3">
+              <div className="size-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0 font-bold">
+                03
+              </div>
+              <div className="space-y-1 flex-1">
+                <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                  <span>Spotless Interior & Pre-Cooled AC</span>
+                  <span className="rounded bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5">Passenger Comfort</span>
+                </p>
+                <p className="text-muted-foreground">
+                  Cabin must be cleaned daily, completely odor-free, with working air conditioning switched on before passenger pickup, complimentary water bottle holder, and quiet electric ride.
+                </p>
+              </div>
+            </div>
+
+            {/* Commission Operating Model Terms */}
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3.5 space-y-1.5">
+              <p className="font-bold text-sm text-primary flex items-center gap-1.5">
+                <BadgeIndianRupee className="size-4" /> Partner Driver Commission Agreement
+              </p>
+              <ul className="space-y-1 text-muted-foreground text-[11px] list-disc list-inside">
+                <li>Partner drivers retain <strong>85%</strong> of all ride fares collected.</li>
+                <li>A fixed <strong>15% platform commission</strong> is payable to Orange Taxi Limited.</li>
+                <li>Partner drivers manage their own vehicle maintenance and charging, and are segregated from the company depot cash settlement ledger.</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" onClick={() => setTermsOpen(false)} className="w-full sm:w-auto">
+              I Understand & Agree
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

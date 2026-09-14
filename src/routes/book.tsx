@@ -982,14 +982,31 @@ function Step4Confirmed({
       }
       if (!phone || phone.trim() === "") {
         try {
-          const { data: app } = await supabase.from("driver_applications").select("phone").eq("full_name", d.full_name).order("created_at", { ascending: false }).limit(1).maybeSingle();
+          const { data: app } = await supabase.from("driver_applications").select("phone, photo_url").eq("full_name", d.full_name).order("created_at", { ascending: false }).limit(1).maybeSingle();
           if (app?.phone && app.phone.trim()) {
             phone = app.phone.trim();
             await supabase.from("drivers").update({ phone }).eq("id", d.id);
           }
+          if (!d.photo_url && app?.photo_url) {
+            d.photo_url = app.photo_url;
+          }
         } catch (e) {}
       }
-      return { ...d, phone: phone || "" };
+
+      let photoUrl = d.photo_url;
+      if (!photoUrl || photoUrl.trim() === "") {
+        const storedPhoto = localStorage.getItem(`orange_driver_photo_${d.id}`) || (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null);
+        if (storedPhoto) photoUrl = storedPhoto;
+      }
+      if (!photoUrl || photoUrl.trim() === "") {
+        try {
+          const storedExt = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
+          const found = storedExt.find((x: any) => (d.phone && x.phone === d.phone) || (x.full_name && d.full_name && x.full_name.toLowerCase() === d.full_name.toLowerCase()));
+          if (found?.photo_url) photoUrl = found.photo_url;
+        } catch (e) {}
+      }
+
+      return { ...d, phone: phone || "", photo_url: photoUrl || "" };
     } catch (e) {
       console.warn("Could not fetch driver details:", e);
       return null;
@@ -1167,8 +1184,18 @@ function Step4Confirmed({
           <div className="space-y-3">
             <div className="flex items-center gap-3.5">
               {/* High-Resolution Driver Photo / Verified Avatar (Clause 14.9) */}
-              <div className="relative size-12 shrink-0 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
-                <span>{driverInfo.full_name?.charAt(0) || "D"}</span>
+              <div className="relative size-12 shrink-0">
+                {driverInfo.photo_url ? (
+                  <img
+                    src={driverInfo.photo_url}
+                    alt={driverInfo.full_name}
+                    className="size-12 rounded-full object-cover border-2 border-primary shadow-sm"
+                  />
+                ) : (
+                  <div className="size-12 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
+                    <span>{driverInfo.full_name?.charAt(0) || "D"}</span>
+                  </div>
+                )}
                 <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-neutral-900 flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
                   ✓
                 </span>
@@ -1179,6 +1206,11 @@ function Step4Confirmed({
                   <span className="rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-semibold text-emerald-400 px-1.5 py-0.5">
                     Verified Driver
                   </span>
+                  {driverInfo.driver_type === "partner" && (
+                    <span className="rounded bg-primary/20 border border-primary/40 text-[10px] font-semibold text-primary px-1.5 py-0.5">
+                      Partner EV
+                    </span>
+                  )}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
                   <span className="flex items-center gap-1 text-white/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>

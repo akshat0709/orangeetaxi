@@ -1,5 +1,4 @@
 // @ts-nocheck
-
 import { useState, useEffect } from "react";
 import {
   Car,
@@ -23,7 +22,15 @@ import {
   ChevronUp,
   Clock,
   Phone,
-  Copy
+  Copy,
+  Building2,
+  Handshake,
+  ShieldCheck,
+  Sparkles,
+  CheckCircle2,
+  Trash2,
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +109,105 @@ export const DEFAULT_SAMPLE_FLEET: FleetVehicle[] = [
     bay_number: "Charging Bay 2",
   },
 ];
+
+export interface PartnerVehicle {
+  id: string;
+  plate_number: string;
+  chassis_number: string;
+  model: string;
+  year?: string;
+  color?: string;
+  owner_name: string;
+  owner_phone: string;
+  owner_email?: string;
+  status: "active" | "inspection_pending" | "inactive";
+  certified_standard: boolean;
+  onboarded_at: string;
+  notes?: string;
+}
+
+export const DEFAULT_SAMPLE_PARTNER_VEHICLES: PartnerVehicle[] = [
+  {
+    id: "pv-2001",
+    plate_number: "KA 01 EV 4421",
+    chassis_number: "MA3EHB6S7P8912304",
+    model: "Tata Nexon EV",
+    year: "2024",
+    color: "Signature Deep Orange",
+    owner_name: "Vikramaditya Rao",
+    owner_phone: "+91 98450 12345",
+    owner_email: "vikram.rao@gmail.com",
+    status: "active",
+    certified_standard: true,
+    onboarded_at: "2025-01-15T10:00:00.000Z",
+  },
+  {
+    id: "pv-2002",
+    plate_number: "KA 05 EV 8890",
+    chassis_number: "MB9EKD2R5N4410982",
+    model: "Mahindra BE.6",
+    year: "2025",
+    color: "Sunset Orange Wrap",
+    owner_name: "Sunil Gowda",
+    owner_phone: "+91 97422 98765",
+    owner_email: "sunil.gowda@gmail.com",
+    status: "active",
+    certified_standard: true,
+    onboarded_at: "2025-02-01T14:30:00.000Z",
+  },
+];
+
+export async function registerApprovedPartnerCar(carData: {
+  plate_number: string;
+  chassis_number: string;
+  model: string;
+  year?: string;
+  owner_name: string;
+  owner_phone: string;
+  owner_email?: string;
+}) {
+  try {
+    const cleanPlate = carData.plate_number.toUpperCase().trim();
+    const newCar: PartnerVehicle = {
+      id: "pv-" + Date.now(),
+      plate_number: cleanPlate,
+      chassis_number: carData.chassis_number?.toUpperCase().trim() || "N/A",
+      model: carData.model || "Electric Vehicle",
+      year: carData.year || "2024",
+      color: "Signature Orange",
+      owner_name: carData.owner_name,
+      owner_phone: carData.owner_phone,
+      owner_email: carData.owner_email,
+      status: "active",
+      certified_standard: true,
+      onboarded_at: new Date().toISOString(),
+    };
+
+    // Try Supabase insert
+    try {
+      await supabase.from("partner_vehicles").insert({
+        plate_number: newCar.plate_number,
+        chassis_number: newCar.chassis_number,
+        model: newCar.model,
+        year: newCar.year,
+        owner_name: newCar.owner_name,
+        owner_phone: newCar.owner_phone,
+        status: newCar.status,
+      });
+    } catch (e) {}
+
+    // Update localStorage
+    const stored = localStorage.getItem("orange_partner_vehicles");
+    let list: PartnerVehicle[] = stored ? JSON.parse(stored) : [...DEFAULT_SAMPLE_PARTNER_VEHICLES];
+    if (!list.some(v => v.plate_number === cleanPlate)) {
+      list.unshift(newCar);
+      localStorage.setItem("orange_partner_vehicles", JSON.stringify(list));
+      window.dispatchEvent(new Event("partner_vehicles_updated"));
+    }
+  } catch (err) {
+    console.warn("Could not register partner car:", err);
+  }
+}
 
 const STANDARD_BAYS = [
   "Bay A-1",
@@ -246,13 +352,29 @@ interface FleetManagerProps {
 }
 
 export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
+  // Sub-navigation: "company" (Depot & Bays) vs "partner" (Driver-Owned Cars)
+  const [activeSubTab, setActiveSubTab] = useState<"company" | "partner">("company");
+
+  // Company fleet state
   const [vehicles, setVehicles] = useState<FleetVehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "bay" | "assigned" | "low_battery">("all");
 
-  // Registration modal
+  // Partner fleet state
+  const [partnerVehicles, setPartnerVehicles] = useState<PartnerVehicle[]>([]);
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const [isRegisteringPartner, setIsRegisteringPartner] = useState(false);
+  const [partnerPlate, setPartnerPlate] = useState("");
+  const [partnerChassis, setPartnerChassis] = useState("");
+  const [partnerModel, setPartnerModel] = useState("Tata Nexon EV");
+  const [partnerYear, setPartnerYear] = useState("2024");
+  const [partnerOwnerName, setPartnerOwnerName] = useState("");
+  const [partnerOwnerPhone, setPartnerOwnerPhone] = useState("");
+  const [savingPartner, setSavingPartner] = useState(false);
+
+  // Registration modal (Company)
   const [isRegistering, setIsRegistering] = useState(false);
   const [newPlate, setNewPlate] = useState("");
   const [newModel, setNewModel] = useState("Mahindra BE.6");
@@ -279,7 +401,6 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         .order("created_at", { ascending: true });
 
       if (error || !data) {
-        // Fallback to local storage if table doesn't exist yet
         setIsUsingFallback(true);
         const stored = localStorage.getItem("orange_fleet_vehicles");
         if (stored) {
@@ -291,7 +412,6 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       } else {
         setIsUsingFallback(false);
         if (data.length === 0) {
-          // Seed initial vehicles
           for (const v of DEFAULT_SAMPLE_FLEET) {
             await supabase.from("fleet_vehicles").insert({
               plate_number: v.plate_number,
@@ -315,8 +435,85 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     setLoading(false);
   }
 
+  // Load partner fleet
+  async function loadPartnerFleet() {
+    try {
+      const { data, error } = await supabase
+        .from("partner_vehicles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data && data.length > 0) {
+        setPartnerVehicles(data as any[]);
+        return;
+      }
+    } catch (e) {}
+
+    const stored = localStorage.getItem("orange_partner_vehicles");
+    if (stored) {
+      try {
+        setPartnerVehicles(JSON.parse(stored));
+      } catch (e) {
+        setPartnerVehicles(DEFAULT_SAMPLE_PARTNER_VEHICLES);
+      }
+    } else {
+      setPartnerVehicles(DEFAULT_SAMPLE_PARTNER_VEHICLES);
+      localStorage.setItem("orange_partner_vehicles", JSON.stringify(DEFAULT_SAMPLE_PARTNER_VEHICLES));
+    }
+  }
+
+  async function handleRegisterPartner(e: React.FormEvent) {
+    e.preventDefault();
+    if (!partnerPlate.trim()) {
+      toast.error("Vehicle plate number is required");
+      return;
+    }
+    if (!partnerChassis.trim()) {
+      toast.error("Chassis number (VIN) is required for compliance");
+      return;
+    }
+    if (!partnerOwnerName.trim()) {
+      toast.error("Driver / Owner name is required");
+      return;
+    }
+
+    setSavingPartner(true);
+    await registerApprovedPartnerCar({
+      plate_number: partnerPlate,
+      chassis_number: partnerChassis,
+      model: partnerModel,
+      year: partnerYear,
+      owner_name: partnerOwnerName,
+      owner_phone: partnerOwnerPhone || "+91 98000 00000",
+    });
+
+    toast.success("Partner EV registered successfully into fleet!");
+    setPartnerPlate("");
+    setPartnerChassis("");
+    setPartnerOwnerName("");
+    setPartnerOwnerPhone("");
+    setIsRegisteringPartner(false);
+    setSavingPartner(false);
+    loadPartnerFleet();
+  }
+
+  async function removePartnerVehicle(id: string, plate: string) {
+    if (!confirm(`Are you sure you want to remove partner vehicle ${plate}?`)) return;
+    try {
+      await supabase.from("partner_vehicles").delete().eq("id", id);
+    } catch (e) {}
+    const updated = partnerVehicles.filter(v => v.id !== id);
+    setPartnerVehicles(updated);
+    localStorage.setItem("orange_partner_vehicles", JSON.stringify(updated));
+    toast.success(`Vehicle ${plate} unlinked from partner fleet`);
+  }
+
   useEffect(() => {
     loadFleet();
+    loadPartnerFleet();
+
+    const handlePartnerUpdate = () => loadPartnerFleet();
+    window.addEventListener("partner_vehicles_updated", handlePartnerUpdate);
+    window.addEventListener("storage", handlePartnerUpdate);
 
     // Subscribe to real-time changes
     const channel = supabase
@@ -328,6 +525,8 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("partner_vehicles_updated", handlePartnerUpdate);
+      window.removeEventListener("storage", handlePartnerUpdate);
     };
   }, []);
 
@@ -551,6 +750,19 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     return true;
   });
 
+  // Filtered partner vehicles
+  const filteredPartnerVehicles = partnerVehicles.filter(v => {
+    const term = partnerSearch.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      v.plate_number.toLowerCase().includes(term) ||
+      v.chassis_number.toLowerCase().includes(term) ||
+      v.model.toLowerCase().includes(term) ||
+      v.owner_name.toLowerCase().includes(term) ||
+      v.owner_phone?.toLowerCase().includes(term)
+    );
+  });
+
   // Calculate fleet stats
   const totalFleetCount = vehicles.length;
   const avgBattery = totalFleetCount > 0
@@ -586,8 +798,59 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         </div>
       )}
 
-      {/* Header & Registration CTA */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Operating Model Sub-Tabs: Company Fleet vs Partner Fleet */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl border border-border">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("company")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeSubTab === "company"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Building2 className="size-4" />
+            <span>Company-Owned Fleet (Depot & Bays)</span>
+            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
+              {vehicles.length}
+            </Badge>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("partner")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeSubTab === "partner"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Handshake className="size-4" />
+            <span>Partner / Driver-Owned Cars</span>
+            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
+              {partnerVehicles.length}
+            </Badge>
+          </button>
+        </div>
+
+        <div className="text-xs text-muted-foreground">
+          {activeSubTab === "company" ? (
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-blue-500" /> Fixed Salary Drivers · Depot Bays & Charging
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-emerald-500" /> 15% Platform Commission Model · Owner-Operators
+            </span>
+          )}
+        </div>
+      </div>
+
+      {activeSubTab === "company" ? (
+        <div className="space-y-6">
+          {/* Header & Registration CTA */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="display-serif text-2xl font-bold">Fleet & Bay Operations</h2>
@@ -1234,6 +1497,333 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   })}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+        </div>
+      ) : (
+        /* ================= PARTNER / DRIVER-OWNED CARS TAB ================= */
+        <div className="space-y-6">
+          {/* Header & Registration CTA */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="display-serif text-2xl font-bold">Partner / Driver-Owned Fleet</h2>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs flex items-center gap-1">
+                  <Sparkles className="size-3" /> Orange Standard Certified
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Vehicles brought by partner owner-operators under the 15% platform commission model. Segregated from company depot bays.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setIsRegisteringPartner(!isRegisteringPartner)}
+                className="gap-2 text-xs font-semibold h-9 bg-primary"
+              >
+                <Plus className="size-4" /> Register Partner Vehicle
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadPartnerFleet}
+                className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                title="Refresh Partner Fleet"
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Partner KPI Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">Partner Cars</span>
+                <Car className="size-4 text-primary" />
+              </div>
+              <p className="mt-2 text-2xl font-bold">{partnerVehicles.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Driver-owned EVs</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">Orange Standard</span>
+                <ShieldCheck className="size-4 text-emerald-600" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-emerald-600">100% BEV</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Zero Emissions & Clean AC</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">Operating Model</span>
+                <Handshake className="size-4 text-blue-600" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-blue-600">15% Comm.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Partner keeps 85% fare</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">Active Status</span>
+                <CheckCircle2 className="size-4 text-emerald-600" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-emerald-600">
+                {partnerVehicles.filter(v => v.status === "active").length}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Onboarded & Approved</p>
+            </div>
+          </div>
+
+          {/* Partner Vehicle Registration Form */}
+          {isRegisteringPartner && (
+            <form
+              onSubmit={handleRegisterPartner}
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
+            >
+              <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <Plus className="size-4 text-primary" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                    Register Partner-Owned Orange Standard EV
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisteringPartner(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Registration Plate (Plate No.) *
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerPlate}
+                    onChange={e => setPartnerPlate(e.target.value)}
+                    placeholder="e.g. DL 01 EV 8092"
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Chassis Number (VIN) *
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerChassis}
+                    onChange={e => setPartnerChassis(e.target.value)}
+                    placeholder="e.g. MA3EHB6S7P99999"
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Vehicle Model *
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerModel}
+                    onChange={e => setPartnerModel(e.target.value)}
+                    placeholder="e.g. Tata Nexon EV / Mahindra BE.6"
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Manufacturing Year
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerYear}
+                    onChange={e => setPartnerYear(e.target.value)}
+                    placeholder="2024 / 2025"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Owner / Driver Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerOwnerName}
+                    onChange={e => setPartnerOwnerName(e.target.value)}
+                    placeholder="e.g. Rajesh Sharma"
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Owner Contact Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={partnerOwnerPhone}
+                    onChange={e => setPartnerOwnerPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsRegisteringPartner(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={savingPartner}
+                  className="text-xs font-semibold gap-1.5"
+                >
+                  {savingPartner ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                  Add to Partner Fleet
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Search Bar */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search partner cars by plate, chassis number, model, or driver name..."
+                value={partnerSearch}
+                onChange={e => setPartnerSearch(e.target.value)}
+                className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-4 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            {partnerSearch && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPartnerSearch("")}
+                className="text-xs h-10 px-3"
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Partner Vehicles Grid */}
+          {filteredPartnerVehicles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center bg-background/50">
+              <Handshake className="size-10 text-muted-foreground/40" />
+              <p className="mt-3 text-sm font-semibold">No Partner Vehicles Found</p>
+              <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                Vehicles submitted by partner drivers at /drive will appear here upon admin approval, or you can register one manually.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPartnerVehicles.map(v => (
+                <div
+                  key={v.id}
+                  className="rounded-xl border border-border bg-background p-5 hover:border-primary/40 transition-all shadow-xs space-y-3.5"
+                >
+                  {/* Plate & Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-base font-black tracking-wider text-foreground bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-md inline-block">
+                        {v.plate_number}
+                      </span>
+                      <p className="text-xs font-semibold text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                        <Car className="size-3.5 text-primary" />
+                        <span>{v.model}</span>
+                        {v.year && <span className="opacity-70">({v.year})</span>}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3" /> Active
+                    </span>
+                  </div>
+
+                  {/* Chassis Number (VIN) */}
+                  <div className="rounded-lg bg-muted/40 p-2.5 text-xs flex items-center justify-between gap-2">
+                    <div className="space-y-0.5 overflow-hidden">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">Chassis / VIN</p>
+                      <p className="font-mono font-bold text-foreground truncate">{v.chassis_number || "N/A"}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(v.chassis_number);
+                        toast.success("Chassis number copied!");
+                      }}
+                      className="size-7 rounded bg-background border border-border grid place-items-center text-muted-foreground hover:text-foreground shrink-0"
+                      title="Copy Chassis No."
+                    >
+                      <Copy className="size-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Owner / Driver Details */}
+                  <div className="space-y-1.5 text-xs pt-1 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Owner / Driver:</span>
+                      <span className="font-bold text-foreground">{v.owner_name}</span>
+                    </div>
+                    {v.owner_phone && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground font-medium">Phone:</span>
+                        <a
+                          href={`tel:${v.owner_phone.replace(/\s+/g, "")}`}
+                          className="font-mono text-primary font-semibold hover:underline flex items-center gap-1"
+                        >
+                          <Phone className="size-3" /> {v.owner_phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Orange Standard Badge & Commission Info */}
+                  <div className="pt-2 border-t border-border/80 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <ShieldCheck className="size-3.5" /> Orange Standard EV
+                    </span>
+                    <span className="rounded bg-primary/10 text-primary font-bold px-2 py-0.5 text-[10px]">
+                      15% Commission
+                    </span>
+                  </div>
+
+                  {/* Remove button */}
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => removePartnerVehicle(v.id, v.plate_number)}
+                      className="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+                    >
+                      <Trash2 className="size-3" /> Unlink Car
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

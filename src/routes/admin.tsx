@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap, Building2, Handshake, Percent, Sparkles, ShieldCheck, BadgeIndianRupee } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { FleetManager, DEFAULT_SAMPLE_FLEET } from "@/components/fleet-manager";
+import { FleetManager, DEFAULT_SAMPLE_FLEET, registerApprovedPartnerCar } from "@/components/fleet-manager";
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
+import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
 import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate } from "@/lib/ride-vehicle";
@@ -25,9 +26,9 @@ export const Route = createFileRoute("/admin")({
 });
 
 interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; }
-interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; }
+interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; photo_url?: string; driver_type?: string; vehicle_model?: string; vehicle_number?: string; chassis_number?: string; vehicle_year?: string; }
 interface Enquiry { id: string; company_name: string; contact_name: string; email: string; phone: string; city: string; team_size: string; requirement: string; message: string; status: string; created_at: string; }
-interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; }
+interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; driver_type?: string; photo_url?: string; chassis_number?: string; user_id?: string; }
 
 const STATUS_BADGE: Record<string, string> = {
   accepted: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
@@ -84,7 +85,35 @@ function AdminPage() {
     const fetchedDrivers = (d as Driver[]) ?? [];
     const appsList = (a as Application[]) ?? [];
 
-    // Automatically resolve and backfill phone numbers from profiles or driver_applications if missing
+    // Merge applications with extended details from localStorage (photo_url, vehicle details, driver_type)
+    let storedExtApps: any[] = [];
+    try {
+      storedExtApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
+    } catch (err) {}
+
+    const mergedApps: Application[] = appsList.map(app => {
+      const ext = storedExtApps.find(
+        (x: any) => x.id === app.id || (x.email && app.email && x.email.toLowerCase() === app.email.toLowerCase())
+      );
+      let meta: any = {};
+      try {
+        if (app.email) {
+          meta = JSON.parse(localStorage.getItem(`orange_app_meta_${app.email.toLowerCase()}`) || "{}");
+        }
+      } catch (e) {}
+
+      return {
+        ...app,
+        photo_url: app.photo_url || ext?.photo_url || meta?.photo_url || "",
+        driver_type: app.driver_type || ext?.driver_type || (app.owns_vehicle ? "partner" : "company"),
+        vehicle_model: app.vehicle_model || ext?.vehicle_model || meta?.vehicle_model || "",
+        vehicle_number: app.vehicle_number || ext?.vehicle_number || meta?.vehicle_number || "",
+        chassis_number: app.chassis_number || ext?.chassis_number || meta?.chassis_number || "",
+        vehicle_year: app.vehicle_year || ext?.vehicle_year || meta?.vehicle_year || "",
+      };
+    });
+
+    // Automatically resolve and backfill phone numbers & photos from profiles or applications if missing
     for (const dr of fetchedDrivers) {
       if (!dr.phone || dr.phone.trim() === "") {
         try {
@@ -96,7 +125,7 @@ function AdminPage() {
             }
           }
           if (!dr.phone || dr.phone.trim() === "") {
-            const matchingApp = appsList.find(app => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone);
+            const matchingApp = mergedApps.find(app => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone);
             if (matchingApp?.phone && matchingApp.phone.trim()) {
               dr.phone = matchingApp.phone.trim();
               await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
@@ -105,6 +134,30 @@ function AdminPage() {
         } catch (err) {
           console.warn("Could not backfill driver phone in admin:", err);
         }
+      }
+
+      // Backfill driver photo & driver_type
+      const matchingApp = mergedApps.find(
+        app => (dr.phone && app.phone === dr.phone) || (app.full_name && dr.full_name && app.full_name.toLowerCase() === dr.full_name.toLowerCase())
+      );
+      if (matchingApp) {
+        if (!dr.photo_url && matchingApp.photo_url) {
+          dr.photo_url = matchingApp.photo_url;
+          try {
+            localStorage.setItem(`orange_driver_photo_${dr.id}`, matchingApp.photo_url);
+            if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, matchingApp.photo_url);
+          } catch (e) {}
+        }
+        if (!dr.driver_type) {
+          dr.driver_type = matchingApp.driver_type || (matchingApp.owns_vehicle ? "partner" : "company");
+        }
+        if (!dr.chassis_number && matchingApp.chassis_number) {
+          dr.chassis_number = matchingApp.chassis_number;
+        }
+      }
+      if (!dr.photo_url) {
+        const storedPhoto = localStorage.getItem(`orange_driver_photo_${dr.id}`) || (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null);
+        if (storedPhoto) dr.photo_url = storedPhoto;
       }
     }
 
@@ -119,7 +172,7 @@ function AdminPage() {
     });
 
     setBookings(fetchedBookings);
-    setApplications(appsList);
+    setApplications(mergedApps);
     setEnquiries((e as Enquiry[]) ?? []);
     setDrivers(fetchedDrivers);
     setLoading(false);
@@ -136,7 +189,7 @@ function AdminPage() {
     newEnquiries: enquiries.filter(e => e.status === "new").length,
   };
 
-  async function updateApplicationStatus(id: string, status: string, email?: string) {
+  async function updateApplicationStatus(id: string, status: string, email?: string, appObj?: any) {
     const { error } = await supabase.from("driver_applications").update({ status }).eq("id", id);
     if (error) {
       console.error("Update error:", error);
@@ -149,6 +202,51 @@ function AdminPage() {
       const { data: result } = await supabase.rpc("admin_set_role" as any, { _email: email, _role: "driver", _grant: true });
       if (result !== "ok") toast.error(`Could not grant driver role: ${result}`);
       else toast.success("Driver role granted! Have them log in and go online.");
+
+      // If partner driver bringing their own vehicle, automatically register in Partner Fleet
+      const isPartner = Boolean(appObj?.owns_vehicle || appObj?.driver_type === "partner");
+      if (isPartner && appObj?.vehicle_number) {
+        await registerApprovedPartnerCar({
+          plate_number: appObj.vehicle_number,
+          chassis_number: appObj.chassis_number || "N/A",
+          model: appObj.vehicle_model || "Mahindra BE.6",
+          year: appObj.vehicle_year || "2024",
+          owner_name: appObj.full_name,
+          owner_phone: appObj.phone || "",
+          owner_email: email,
+        });
+        toast.success(`Partner EV ${appObj.vehicle_number} added to Partner Fleet!`);
+      }
+
+      // Sync driver table record if driver exists
+      if (appObj) {
+        try {
+          const { data: existingDr } = await supabase
+            .from("drivers")
+            .select("id")
+            .eq("full_name", appObj.full_name)
+            .maybeSingle();
+
+          if (existingDr) {
+            const updates: any = {
+              driver_type: isPartner ? "partner" : "company",
+            };
+            if (appObj.photo_url) updates.photo_url = appObj.photo_url;
+            if (isPartner && appObj.vehicle_number) updates.vehicle_number = appObj.vehicle_number;
+            if (isPartner && appObj.vehicle_model) updates.vehicle_model = appObj.vehicle_model;
+            if (appObj.phone) updates.phone = appObj.phone;
+
+            await supabase.from("drivers").update(updates).eq("id", existingDr.id);
+            if (appObj.photo_url) {
+              localStorage.setItem(`orange_driver_photo_${existingDr.id}`, appObj.photo_url);
+            }
+          }
+        } catch (e) {}
+
+        if (appObj.photo_url && email) {
+          localStorage.setItem(`orange_driver_photo_by_email_${email.toLowerCase()}`, appObj.photo_url);
+        }
+      }
     }
     toast.success(`Application ${status}`);
     loadAll();
@@ -227,8 +325,11 @@ function AdminPage() {
             <TabsTrigger value="cash" className="gap-1.5 font-semibold">
               <Banknote className="size-3.5 text-emerald-600" /> Cash Settlements
             </TabsTrigger>
+            <TabsTrigger value="commissions" className="gap-1.5 font-semibold">
+              <Percent className="size-3.5 text-blue-600" /> Commission Ledger
+            </TabsTrigger>
             <TabsTrigger value="gst" className="gap-1.5 font-semibold">
-              <FileSpreadsheet className="size-3.5 text-blue-600" /> GST & Invoicing
+              <FileSpreadsheet className="size-3.5 text-amber-600" /> GST & Invoicing
             </TabsTrigger>
             <TabsTrigger value="drivers">Drivers</TabsTrigger>
             <TabsTrigger value="applications">Applications <CountBadge n={stats.pendingApplications} color="amber" /></TabsTrigger>
@@ -322,39 +423,95 @@ function AdminPage() {
           <TabsContent value="applications">
             <div className="space-y-4">
               {applications.length === 0 && <EmptyState title="No applications yet" text="Driver applications from /drive will appear here." />}
-              {applications.map(app => (
-                <div key={app.id} className="rounded-xl border border-border bg-background p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-bold">{app.full_name}</h3>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[app.status] ?? "bg-muted text-muted-foreground"}`}>{app.status}</span>
+              {applications.map(app => {
+                const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
+
+                return (
+                  <div key={app.id} className="rounded-xl border border-border bg-background p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Driver Photo & Information */}
+                      <div className="flex items-start gap-4 flex-1">
+                        {/* Driver Mandatory Photo Preview */}
+                        <div className="relative shrink-0">
+                          {app.photo_url ? (
+                            <img
+                              src={app.photo_url}
+                              alt={app.full_name}
+                              className="size-16 rounded-xl object-cover border-2 border-primary/40 shadow-sm"
+                            />
+                          ) : (
+                            <div className="size-16 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl">
+                              {app.full_name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span
+                            className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold"
+                            title="Submitted Driver Photo"
+                          >
+                            ✓
+                          </span>
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="font-bold text-base">{app.full_name}</h3>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[app.status] ?? "bg-muted text-muted-foreground"}`}>
+                              {app.status}
+                            </span>
+                            {/* Operating Model Badge */}
+                            {isPartner ? (
+                              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <Handshake className="size-3" /> Partner Owner-Operator (15% Comm.)
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                <Building2 className="size-3" /> Company Fleet Driver (Fixed Salary)
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-muted-foreground lg:grid-cols-4">
+                            <span>📧 {app.email}</span>
+                            <span>📞 {app.phone}</span>
+                            <span>📍 {app.city}</span>
+                            <span>🪪 {app.licence_number}</span>
+                            <span>🚗 {app.experience_years} yrs experience</span>
+                            <span>{isPartner ? "⚡ Brings Own EV" : "🏢 Company EV"}</span>
+                            <span>📅 {new Date(app.created_at).toLocaleDateString()}</span>
+                          </div>
+
+                          {/* Vehicle Details for Partner */}
+                          {isPartner && (app.vehicle_number || app.vehicle_model || app.chassis_number) && (
+                            <div className="mt-3 rounded-lg bg-muted/40 border border-border p-3 text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                              <span className="text-muted-foreground font-semibold flex items-center gap-1">
+                                <Car className="size-3.5 text-primary" /> Partner EV:
+                              </span>
+                              <span>Model: <strong className="text-foreground">{app.vehicle_model || "Mahindra BE.6"}</strong></span>
+                              {app.vehicle_year && <span>Year: <strong className="text-foreground">{app.vehicle_year}</strong></span>}
+                              {app.vehicle_number && <span>Reg Plate: <strong className="font-mono text-primary uppercase">{app.vehicle_number}</strong></span>}
+                              {app.chassis_number && <span>Chassis (VIN): <strong className="font-mono text-foreground uppercase">{app.chassis_number}</strong></span>}
+                            </div>
+                          )}
+
+                          {app.message && <p className="mt-3 rounded-lg bg-muted p-3 text-xs leading-5">{app.message}</p>}
+                        </div>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground lg:grid-cols-4">
-                        <span>📧 {app.email}</span>
-                        <span>📞 {app.phone}</span>
-                        <span>📍 {app.city}</span>
-                        <span>🪪 {app.licence_number}</span>
-                        <span>🚗 {app.experience_years} yrs experience</span>
-                        <span>{app.owns_vehicle ? "✅ Owns EV" : "❌ No vehicle"}</span>
-                        <span>📅 {new Date(app.created_at).toLocaleDateString()}</span>
-                      </div>
-                      {app.message && <p className="mt-3 rounded-lg bg-muted p-3 text-xs leading-5">{app.message}</p>}
+
+                      {app.status === "new" && (
+                        <div className="flex shrink-0 gap-2">
+                          <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10"
+                            onClick={() => updateApplicationStatus(app.id, "rejected")}>
+                            <X className="size-4" /> Reject
+                          </Button>
+                          <Button size="sm" onClick={() => updateApplicationStatus(app.id, "approved", app.email, app)}>
+                            <CheckCircle className="size-4" /> Approve
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {app.status === "new" && (
-                      <div className="flex shrink-0 gap-2">
-                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10"
-                          onClick={() => updateApplicationStatus(app.id, "rejected")}>
-                          <X className="size-4" /> Reject
-                        </Button>
-                        <Button size="sm" onClick={() => updateApplicationStatus(app.id, "approved", app.email)}>
-                          <CheckCircle className="size-4" /> Approve
-                        </Button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -412,6 +569,13 @@ function AdminPage() {
           {/* CASH SETTLEMENTS */}
           <TabsContent value="cash">
             <CashSettlementManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+          </TabsContent>
+
+          {/* COMMISSION LEDGER */}
+          <TabsContent value="commissions">
+            <TabErrorBoundary tabName="Commission Ledger" onRetry={loadAll}>
+              <CommissionLedgerManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+            </TabErrorBoundary>
           </TabsContent>
 
           {/* GST & INVOICING */}
@@ -609,14 +773,29 @@ function DriverAnalyticsPanel({ drivers, bookings, onRefresh }: { drivers: Drive
             {/* Driver header */}
             <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-4">
-                <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {d.full_name.charAt(0).toUpperCase()}
-                </div>
+                {d.photo_url ? (
+                  <img
+                    src={d.photo_url}
+                    alt={d.full_name}
+                    className="size-10 shrink-0 rounded-full object-cover border border-primary/40 shadow-xs"
+                  />
+                ) : (
+                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                    {d.full_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold">{d.full_name}</p>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${d.is_online ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
                       {d.is_online ? "● Online" : "Offline"}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      d.driver_type === "partner"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
+                    }`}>
+                      {d.driver_type === "partner" ? "⚡ Partner Owner" : "🏢 Company Fleet"}
                     </span>
                   </div>
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
