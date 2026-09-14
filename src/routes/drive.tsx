@@ -428,8 +428,8 @@ function DriverApplicationForm() {
       <div className="flex flex-col items-center rounded-xl border border-border bg-warm p-9 text-center">
         <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><CheckCircle className="size-7" /></span>
         <h3 className="display-serif mt-6 text-3xl">Application received.</h3>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">
-          Thank you for applying to drive with Orange. Your photo, driving licence, and vehicle details will be reviewed by our fleet operations desk.
+        <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
+          Thank you for applying to drive with Orange. Your photo, driving licence, and vehicle details will be reviewed by our fleet operations desk. For queries or onboarding assistance, email us at <a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline font-medium">drive@orange-taxi.com</a>.
         </p>
         <Button asChild size="lg" variant="charcoal" className="mt-8"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
       </div>
@@ -441,7 +441,7 @@ function DriverApplicationForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border border-border bg-warm p-7 md:p-9 shadow-sm">
         <ClipboardCheck className="size-7 text-primary" />
         <h3 className="display-serif mt-5 text-3xl">Apply to drive.</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">Join as a Salaried Fleet Driver or Partner Owner-Operator.</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Join as a Salaried Fleet Driver or Partner Owner-Operator. Questions? Email <a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline font-medium">drive@orange-taxi.com</a></p>
 
         <div className="mt-7 space-y-5">
           {/* MANDATORY DRIVER PHOTO UPLOAD */}

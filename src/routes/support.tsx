@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Headphones, Phone, Mail, Clock, AlertTriangle, ShieldCheck, HelpCircle, MapPin, Send } from "lucide-react";
+import { ArrowLeft, Headphones, Phone, Mail, Clock, AlertTriangle, ShieldCheck, HelpCircle, MapPin, Send, Receipt } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,11 +60,11 @@ function SupportPage() {
         </div>
 
         {/* Contact Channels Grid */}
-        <div className="my-8 grid gap-4 sm:grid-cols-3">
+        <div className="my-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-6">
             <Phone className="size-5 text-primary" />
             <h3 className="mt-3 text-base font-bold">24x7 Call Centre</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Bilingual phone assistance (English & Hindi) for live trips, safety, and bookings.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Bilingual phone assistance (English & Hindi) for live trips and urgent assistance.</p>
             <p className="mt-4 font-mono text-sm font-bold text-primary">
               <a href="tel:+911140007000" className="hover:underline">+91 11 4000 7000</a>
             </p>
@@ -73,12 +73,27 @@ function SupportPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Mail className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Customer Care Email</h3>
-            <p className="mt-1 text-xs text-muted-foreground">For receipts, invoicing, lost property, and booking inquiries.</p>
+            <h3 className="mt-3 text-base font-bold">Customer Care</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Trip queries, rider support, and bookings assistance.</p>
+            <div className="mt-4 space-y-1 text-xs">
+              <p className="font-mono font-bold text-primary">
+                <a href="mailto:support@orange-taxi.com" className="hover:underline">support@orange-taxi.com</a>
+              </p>
+              <p className="font-mono text-muted-foreground">
+                <a href="mailto:bookings@orange-taxi.com" className="hover:underline">bookings@orange-taxi.com</a>
+              </p>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">Average response under 2 hours</p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-6">
+            <Receipt className="size-5 text-primary" />
+            <h3 className="mt-3 text-base font-bold">Billing & Invoices</h3>
+            <p className="mt-1 text-xs text-muted-foreground">GST tax invoices, ride receipts, fare clarifications, and refunds.</p>
             <p className="mt-4 font-mono text-sm font-bold text-primary">
-              <a href="mailto:support@orange-taxi.com" className="hover:underline">support@orange-taxi.com</a>
+              <a href="mailto:billing@orange-taxi.com" className="hover:underline">billing@orange-taxi.com</a>
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Average response under 2 hours</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Official GST receipts on demand</p>
           </div>
 
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-6">

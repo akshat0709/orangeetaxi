@@ -161,7 +161,7 @@ function TermsPage() {
           <section className="rounded-xl border border-border bg-card p-6">
             <h3 className="font-bold text-foreground">Need Assistance or Legal Clarifications?</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              For corporate or legal queries, write to our Legal Secretariat at <a href="mailto:support@orange-taxi.com" className="text-primary underline">support@orange-taxi.com</a> or visit our corporate office at S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017.
+              For corporate or legal queries, write to our Legal Secretariat at <a href="mailto:admin@orange-taxi.com" className="text-primary underline">admin@orange-taxi.com</a>, customer care at <a href="mailto:support@orange-taxi.com" className="text-primary underline">support@orange-taxi.com</a>, or visit our corporate office at S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017.
             </p>
           </section>
         </div>

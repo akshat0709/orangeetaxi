@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Building2, MapPin, Phone, Mail, Clock, Shield, Briefcase, Car } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, Phone, Mail, Clock, Shield, Briefcase, Car, Receipt } from "lucide-react";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -64,7 +64,18 @@ function ContactPage() {
             <p className="mt-1 text-xs text-muted-foreground">For ride bookings, passenger queries, and live trip assistance.</p>
             <div className="mt-4 text-xs space-y-1">
               <p className="font-mono text-primary font-semibold"><a href="tel:+911140007000">+91 11 4000 7000</a></p>
-              <p><a href="mailto:support@orange-taxi.com" className="text-muted-foreground hover:underline">support@orange-taxi.com</a></p>
+              <p><span className="text-muted-foreground">Bookings:</span> <a href="mailto:bookings@orange-taxi.com" className="text-primary font-medium hover:underline">bookings@orange-taxi.com</a></p>
+              <p><span className="text-muted-foreground">Support:</span> <a href="mailto:support@orange-taxi.com" className="text-muted-foreground hover:underline">support@orange-taxi.com</a></p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-6">
+            <Receipt className="size-5 text-primary" />
+            <h3 className="mt-3 text-base font-bold">Billing & Invoicing</h3>
+            <p className="mt-1 text-xs text-muted-foreground">GST tax invoices, ride receipts, fare disputes, and refunds.</p>
+            <div className="mt-4 text-xs space-y-1">
+              <p><a href="mailto:billing@orange-taxi.com" className="text-primary font-medium hover:underline">billing@orange-taxi.com</a></p>
+              <p className="text-muted-foreground">Official GST Tax Invoices & Statements</p>
             </div>
           </div>
 
@@ -73,18 +84,8 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">Driver Partner Desk</h3>
             <p className="mt-1 text-xs text-muted-foreground">Driver onboarding, document verification, and training center.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline">drive@orange-taxi.com</a></p>
+              <p><a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline font-medium">drive@orange-taxi.com</a></p>
               <p className="text-muted-foreground">South Delhi Driver Hub</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-6">
-            <Shield className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Grievance Redressal</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Nodal officer for regulatory, consumer, and intermediary grievances.</p>
-            <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:grievance@orange-taxi.com" className="text-primary hover:underline">grievance@orange-taxi.com</a></p>
-              <p className="text-muted-foreground">Statutory 24h Acknowledgement</p>
             </div>
           </div>
 
@@ -93,8 +94,28 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">Corporate Accounts</h3>
             <p className="mt-1 text-xs text-muted-foreground">Electric mobility packages for businesses and luxury hotel transit.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p><a href="mailto:business@orange-taxi.com" className="text-primary hover:underline">business@orange-taxi.com</a></p>
+              <p><a href="mailto:business@orange-taxi.com" className="text-primary hover:underline font-medium">business@orange-taxi.com</a></p>
               <p className="text-muted-foreground">GST Invoiced B2B Billing</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-6">
+            <Shield className="size-5 text-primary" />
+            <h3 className="mt-3 text-base font-bold">Grievance Redressal</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Nodal officer for regulatory, consumer, and intermediary grievances.</p>
+            <div className="mt-4 text-xs space-y-1">
+              <p><a href="mailto:grievance@orange-taxi.com" className="text-primary hover:underline font-medium">grievance@orange-taxi.com</a></p>
+              <p className="text-muted-foreground">Statutory 24h Acknowledgement</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-6">
+            <Building2 className="size-5 text-primary" />
+            <h3 className="mt-3 text-base font-bold">Legal & Secretariat</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Statutory corporate filings, compliance notices, and official administration.</p>
+            <div className="mt-4 text-xs space-y-1">
+              <p><a href="mailto:admin@orange-taxi.com" className="text-primary hover:underline font-medium">admin@orange-taxi.com</a></p>
+              <p className="text-muted-foreground">CIN: U49224DL2026PLC461350</p>
             </div>
           </div>
 
@@ -108,11 +129,11 @@ function ContactPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-6">
+          <div className="rounded-xl border border-border bg-card p-6 sm:col-span-2">
             <MapPin className="size-5 text-primary" />
             <h3 className="mt-3 text-base font-bold">Hub Locations</h3>
             <p className="mt-1 text-xs text-muted-foreground">Delhi NCR Electric Charging & Hub Network.</p>
-            <div className="mt-4 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-muted-foreground grid sm:grid-cols-3 gap-2">
               <p>• IGI Airport T3 Bay</p>
               <p>• Panchshila Park Central Bay</p>
               <p>• Aerocity EV Terminal</p>
