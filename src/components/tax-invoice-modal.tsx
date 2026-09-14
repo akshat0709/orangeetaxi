@@ -88,7 +88,7 @@ export function TaxInvoiceModal({
   async function handleSendEmail() {
     let targetEmail = customer?.email || booking.customer_email;
     if (!targetEmail || !targetEmail.includes("@")) {
-      const promptEmail = window.prompt("Enter recipient email address for GST invoice:", "orangeetaxi@gmail.com");
+      const promptEmail = window.prompt("Enter recipient email address for GST invoice:");
       if (!promptEmail) return;
       targetEmail = promptEmail.trim();
     }

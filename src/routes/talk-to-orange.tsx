@@ -186,10 +186,17 @@ function TalkToOrangePage() {
           <h2 className="display-serif mt-4 text-5xl leading-none">Get in touch.</h2>
           <p className="mt-5 max-w-md leading-7 text-muted-foreground">Fill in the form and we'll get back to you within one business day. All enquiries are reviewed by our team.</p>
           <div className="mt-10 space-y-5 border-t border-border pt-8">
-            {[["📧", "orangeetaxi@gmail.com", "Email"], ["🚕", "Delhi NCR", "Operating area"], ["⚡", "100% electric fleet", "Fleet type"]].map(([icon, val, label]) => (
+            {[["📧", "business@orange-taxi.com", "Email"], ["🚕", "Delhi NCR", "Operating area"], ["⚡", "100% electric fleet", "Fleet type"]].map(([icon, val, label]) => (
               <div key={label} className="flex items-center gap-4">
                 <span className="text-2xl">{icon}</span>
-                <div><p className="text-sm font-semibold">{val}</p><p className="text-xs text-muted-foreground">{label}</p></div>
+                <div>
+                  {label === "Email" ? (
+                    <a href={`mailto:${val}`} className="text-sm font-semibold hover:text-primary transition-colors">{val}</a>
+                  ) : (
+                    <p className="text-sm font-semibold">{val}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                </div>
               </div>
             ))}
           </div>
