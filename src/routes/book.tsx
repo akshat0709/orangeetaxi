@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
+import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Clock, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -447,23 +447,29 @@ function PassengerPage() {
   }
 
   return <>
-    <section className="relative overflow-hidden bg-night text-white">
-      <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
-      <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
-        <div className="max-w-2xl animate-gentle-rise min-w-0">
-          <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For passengers</p>
-          <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-white">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
-          <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-white/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
-          <Button asChild size="lg" className="mt-5 md:mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
+    {step !== 4 && (
+      <section className="relative overflow-hidden bg-night text-white">
+        <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
+        <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
+          <div className="max-w-2xl animate-gentle-rise min-w-0">
+            <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For passengers</p>
+            <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-white">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
+            <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-white/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
+            <Button asChild size="lg" className="mt-5 md:mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    )}
 
-    <section id="booking" className="bg-night py-8 md:py-24 text-white min-w-0 max-w-full overflow-hidden">
+    <section id="booking" className={`bg-night text-white min-w-0 max-w-full overflow-hidden ${step === 4 ? "py-4 sm:py-8" : "py-8 md:py-24"}`}>
       <div className="section-shell min-w-0 max-w-full">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Book your Orange</p>
-        <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-white">{step === 4 ? "You're all set." : "Plan your journey."}</h2>
+        {step !== 4 && (
+          <>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Book your Orange</p>
+            <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-white">Plan your journey.</h2>
+          </>
+        )}
 
         {step !== 4 && (
           <div className="mt-6 md:mt-8 min-w-0 max-w-full">
@@ -1033,6 +1039,9 @@ function Step4Confirmed({
     }
     loadInitial();
 
+    // Polling fallback every 3 seconds to guarantee instant status & waiting window detection
+    const pollInterval = setInterval(loadInitial, 3000);
+
     // 2. Subscribe to booking status updates
     const bookingChannel = supabase.channel(`booking-${bookingData.id}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` }, async (payload) => {
@@ -1059,6 +1068,7 @@ function Step4Confirmed({
       }).subscribe();
       
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(bookingChannel);
       if (driverChannel) supabase.removeChannel(driverChannel);
     };
@@ -1114,12 +1124,34 @@ function Step4Confirmed({
       <p className="mt-2 text-xs text-white/60">Show this code to your driver to start the ride</p>
     </div>
 
-    {/* Live Waiting Fee Countdown Bar */}
-    {status === "arrived" && (
+    {/* Waiting Time Window & Fee Countdown Bar */}
+    {status === "arrived" ? (
       <div className="mt-4">
-        <WaitingFeeTimer arrivedAt={arrivedAt} />
+        <WaitingFeeTimer arrivedAt={arrivedAt || new Date().toISOString()} />
       </div>
-    )}
+    ) : status === "accepted" ? (
+      <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <Clock className="size-4 shrink-0 text-amber-400" />
+          <span className="font-semibold text-white/90">
+            Complimentary Waiting Window: <span className="text-amber-400 font-bold">3 minutes free</span> once driver arrives
+          </span>
+        </div>
+        <span className="text-[11px] text-white/60 shrink-0 font-mono">₹2/min thereafter</span>
+      </div>
+    ) : status === "searching" ? (
+      <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3.5 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <Clock className="size-4 shrink-0 text-primary animate-pulse" />
+          <span className="font-semibold text-white/90">
+            Estimated dispatch wait: <span className="text-primary font-bold">1–3 mins</span>
+          </span>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" /> Fleet nearby
+        </span>
+      </div>
+    ) : null}
 
     {/* Driver Info Card */}
     {driverInfo ? (
