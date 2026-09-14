@@ -20,7 +20,8 @@ import {
   Calendar,
   DollarSign,
   Building2,
-  Handshake
+  Handshake,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -190,6 +191,19 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
     const driver = companyDrivers.find(d => d.id === selectedDriverId) || drivers.find(d => d.id === selectedDriverId);
     if (!driver) return;
 
+    const stats = getDriverCashStats(driver.id);
+    const maxHolding = Math.round(stats.cashHolding);
+
+    if (maxHolding <= 0) {
+      toast.error(`${driver.full_name} has no cash holding to collect (₹0 to be paid).`);
+      return;
+    }
+
+    if (amt > maxHolding) {
+      toast.error(`The maximum amount that can be collected cannot exceed ₹${maxHolding.toLocaleString("en-IN")} (amount to be paid from ${driver.full_name}).`);
+      return;
+    }
+
     setSubmitting(true);
     const newRecord: CashSettlement = {
       id: "settle-" + Date.now(),
@@ -238,8 +252,12 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
   // Open quick collection modal preselected for a driver
   function openQuickCollectionForDriver(driverId: string) {
     const stats = getDriverCashStats(driverId);
+    if (stats.cashHolding <= 0) {
+      toast.info("This driver has fully settled all cash holdings (₹0 to be paid).");
+      return;
+    }
     setSelectedDriverId(driverId);
-    setCollectionAmount(stats.cashHolding > 0 ? Math.round(stats.cashHolding) : "");
+    setCollectionAmount(Math.round(stats.cashHolding));
     setCollectionNotes(`Handover of cash collected from rides`);
     setIsCollecting(true);
   }
@@ -369,147 +387,176 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
       </div>
 
       {/* Collect Cash Drawer / Form */}
-      {isCollecting && (
-        <form
-          onSubmit={handleCollectCash}
-          className="rounded-xl border border-emerald-400/50 bg-emerald-50/40 p-5 shadow-md animate-in fade-in slide-in-from-top-3 duration-200 dark:border-emerald-900 dark:bg-emerald-950/30"
-        >
-          <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-900 pb-3">
-            <div className="flex items-center gap-2">
-              <Banknote className="size-5 text-emerald-600" />
-              <p className="text-sm font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                Record Cash Received from Driver
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsCollecting(false)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
+      {isCollecting && (() => {
+        const selectedStats = selectedDriverId ? getDriverCashStats(selectedDriverId) : null;
+        const maxHolding = selectedStats ? Math.round(selectedStats.cashHolding) : 0;
+        const isExceeding = Boolean(selectedDriverId && collectionAmount !== "" && Number(collectionAmount) > maxHolding);
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
-            {/* Driver Selector */}
-            <div className="sm:col-span-4">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Driver Paying Cash *
-              </label>
-              <select
-                value={selectedDriverId}
-                onChange={e => {
-                  const dId = e.target.value;
-                  setSelectedDriverId(dId);
-                  if (dId) {
-                    const stats = getDriverCashStats(dId);
-                    setCollectionAmount(stats.cashHolding > 0 ? Math.round(stats.cashHolding) : "");
-                  }
-                }}
-                required
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+        return (
+          <form
+            onSubmit={handleCollectCash}
+            className="rounded-xl border border-emerald-400/50 bg-emerald-50/40 p-5 shadow-md animate-in fade-in slide-in-from-top-3 duration-200 dark:border-emerald-900 dark:bg-emerald-950/30"
+          >
+            <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-900 pb-3">
+              <div className="flex items-center gap-2">
+                <Banknote className="size-5 text-emerald-600" />
+                <p className="text-sm font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Record Cash Received from Driver
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCollecting(false)}
+                className="text-muted-foreground hover:text-foreground"
               >
-                <option value="">-- Choose Driver --</option>
-                {companyDrivers.map(d => {
-                  const stats = getDriverCashStats(d.id);
-                  return (
-                    <option key={d.id} value={d.id}>
-                      {d.full_name} — Holding: ₹{Math.round(stats.cashHolding)} cash
-                    </option>
-                  );
-                })}
-              </select>
+                <X className="size-4" />
+              </button>
             </div>
 
-            {/* Amount to collect */}
-            <div className="sm:col-span-3">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Amount to Collect (₹) *
-              </label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">₹</span>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={collectionAmount}
-                  onKeyDown={e => {
-                    if (e.key === "." || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
-                      e.preventDefault();
-                    }
-                  }}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+              {/* Driver Selector */}
+              <div className="sm:col-span-4">
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Driver Paying Cash *
+                </label>
+                <select
+                  value={selectedDriverId}
                   onChange={e => {
-                    const val = e.target.value;
-                    if (val === "") {
-                      setCollectionAmount("");
+                    const dId = e.target.value;
+                    setSelectedDriverId(dId);
+                    if (dId) {
+                      const stats = getDriverCashStats(dId);
+                      setCollectionAmount(stats.cashHolding > 0 ? Math.round(stats.cashHolding) : "");
                     } else {
-                      const num = Math.round(Number(val));
-                      setCollectionAmount(isNaN(num) ? "" : num);
+                      setCollectionAmount("");
                     }
                   }}
-                  placeholder="e.g. 1200"
                   required
-                  className="w-full rounded-lg border border-border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="">-- Choose Driver --</option>
+                  {companyDrivers.map(d => {
+                    const stats = getDriverCashStats(d.id);
+                    return (
+                      <option key={d.id} value={d.id}>
+                        {d.full_name} — Holding: ₹{Math.round(stats.cashHolding)} cash
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Amount to collect */}
+              <div className="sm:col-span-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Amount to Collect (₹) *
+                  </label>
+                  {selectedDriverId && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Max: <strong className={maxHolding > 0 ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-muted-foreground"}>₹{maxHolding}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxHolding > 0 ? maxHolding : undefined}
+                    step="1"
+                    value={collectionAmount}
+                    onKeyDown={e => {
+                      if (e.key === "." || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === "") {
+                        setCollectionAmount("");
+                      } else {
+                        const num = Math.round(Number(val));
+                        setCollectionAmount(isNaN(num) ? "" : num);
+                      }
+                    }}
+                    placeholder={maxHolding > 0 ? `Max ₹${maxHolding}` : "e.g. 1200"}
+                    required
+                    className={`w-full rounded-lg border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none transition-colors ${
+                      isExceeding
+                        ? "border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive text-destructive"
+                        : "border-border focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    }`}
+                  />
+                </div>
+                {isExceeding && (
+                  <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" />
+                    Cannot exceed ₹{maxHolding} (driver's cash holding)
+                  </p>
+                )}
+                {selectedDriverId && maxHolding <= 0 && (
+                  <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="size-3 shrink-0" />
+                    Driver has cleared all cash holdings (₹0 to be paid)
+                  </p>
+                )}
+              </div>
+
+              {/* Notes / Reason */}
+              <div className="sm:col-span-3">
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Handover Notes / Reason
+                </label>
+                <input
+                  type="text"
+                  value={collectionNotes}
+                  onChange={e => setCollectionNotes(e.target.value)}
+                  placeholder="e.g. End of shift deposit"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
-            </div>
 
-            {/* Notes / Reason */}
-            <div className="sm:col-span-3">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Handover Notes / Reason
-              </label>
-              <input
-                type="text"
-                value={collectionNotes}
-                onChange={e => setCollectionNotes(e.target.value)}
-                placeholder="e.g. End of shift deposit"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              />
-            </div>
-
-            {/* Submit */}
-            <div className="sm:col-span-2 flex gap-2">
-              <Button
-                type="submit"
-                disabled={submitting || !collectionAmount || !selectedDriverId}
-                className="w-full h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                {submitting ? "Saving..." : <><Check className="size-3.5 mr-1" /> Record Cash</>}
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick presets for the selected driver */}
-          {selectedDriverId && (() => {
-            const stats = getDriverCashStats(selectedDriverId);
-            return (
-              <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
-                <span>Quick Preset:</span>
-                {stats.cashHolding > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setCollectionAmount(Math.round(stats.cashHolding))}
-                    className="rounded bg-emerald-600/10 text-emerald-700 px-2 py-0.5 font-semibold hover:bg-emerald-600/20 dark:text-emerald-300"
-                  >
-                    Full Balance (₹{Math.round(stats.cashHolding)})
-                  </button>
-                )}
-                {[500, 1000, 2000].map(val => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setCollectionAmount(val)}
-                    className="rounded border border-border bg-background px-2 py-0.5 text-muted-foreground hover:bg-muted font-mono"
-                  >
-                    ₹{val}
-                  </button>
-                ))}
+              {/* Submit */}
+              <div className="sm:col-span-2 flex gap-2">
+                <Button
+                  type="submit"
+                  disabled={submitting || !collectionAmount || !selectedDriverId || isExceeding || maxHolding <= 0}
+                  className="w-full h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+                >
+                  {submitting ? "Saving..." : <><Check className="size-3.5 mr-1" /> Record Cash</>}
+                </Button>
               </div>
-            );
-          })()}
-        </form>
-      )}
+            </div>
+
+            {/* Quick presets for the selected driver */}
+            {selectedDriverId && maxHolding > 0 && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
+                <span>Quick Preset (Max ₹{maxHolding}):</span>
+                <button
+                  type="button"
+                  onClick={() => setCollectionAmount(maxHolding)}
+                  className="rounded bg-emerald-600/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-bold hover:bg-emerald-600/20 border border-emerald-300 dark:border-emerald-800"
+                >
+                  Full Balance (₹{maxHolding})
+                </button>
+                {[500, 1000, 2000]
+                  .filter(val => val <= maxHolding && val !== maxHolding)
+                  .map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setCollectionAmount(val)}
+                      className="rounded border border-border bg-background px-2 py-0.5 text-muted-foreground hover:bg-muted font-mono"
+                    >
+                      ₹{val}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </form>
+        );
+      })()}
 
       {/* Driver Cash Holding Breakdown Table */}
       <div className="rounded-xl border border-border bg-background overflow-hidden shadow-sm">
@@ -624,10 +671,12 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                         <Button
                           size="sm"
                           variant={hasPending ? "default" : "outline"}
+                          disabled={!hasPending}
                           className={`h-7 text-xs font-semibold gap-1 ${
-                            hasPending ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                            hasPending ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "opacity-50 cursor-not-allowed"
                           }`}
                           onClick={() => openQuickCollectionForDriver(d.id)}
+                          title={hasPending ? `Collect up to ₹${Math.round(stats.cashHolding)}` : "Driver has cleared all cash holdings (₹0 to be collected)"}
                         >
                           <Banknote className="size-3" /> Collect
                         </Button>

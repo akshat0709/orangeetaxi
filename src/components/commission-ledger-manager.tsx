@@ -25,7 +25,8 @@ import {
   ArrowUpRight,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -255,6 +256,19 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
     const targetDriver = activePartnerDrivers.find(d => d.id === selectedDriverId);
     if (!targetDriver) return;
 
+    const stats = getPartnerCommissionStats(targetDriver.id, targetDriver.full_name);
+    const maxDue = stats.outstandingCommission;
+
+    if (maxDue <= 0) {
+      toast.error(`${targetDriver.full_name} has no outstanding commission due (₹0 to be paid).`);
+      return;
+    }
+
+    if (amt > maxDue) {
+      toast.error(`The maximum amount that can be collected cannot exceed ₹${maxDue.toLocaleString("en-IN")} (amount to be paid from ${targetDriver.full_name}).`);
+      return;
+    }
+
     setSubmitting(true);
     const newRecord: CommissionSettlement = {
       id: "comm-" + Date.now(),
@@ -401,142 +415,218 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
       </div>
 
       {/* Record Commission Payment Modal */}
-      {isRecording && (
-        <form
-          onSubmit={handleRecordSettlement}
-          className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
-        >
-          <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-            <div className="flex items-center gap-2">
-              <Plus className="size-4 text-primary" />
-              <p className="text-sm font-bold uppercase tracking-wider text-primary">
-                Record Partner Commission Deposit
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsRecording(false)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
+      {isRecording && (() => {
+        const targetDriver = activePartnerDrivers.find(d => d.id === selectedDriverId);
+        const selectedStats = targetDriver ? getPartnerCommissionStats(targetDriver.id, targetDriver.full_name) : null;
+        const maxDue = selectedStats ? selectedStats.outstandingCommission : 0;
+        const isExceeding = Boolean(selectedDriverId && settleAmount !== "" && Number(settleAmount) > maxDue);
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Driver Select */}
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Partner Driver *
-              </label>
-              <select
-                value={selectedDriverId}
-                onChange={e => {
-                  const dId = e.target.value;
-                  setSelectedDriverId(dId);
-                  if (dId) {
-                    const stats = getPartnerCommissionStats(dId);
-                    setSettleAmount(stats.outstandingCommission > 0 ? stats.outstandingCommission : "");
-                  }
-                }}
-                required
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+        return (
+          <form
+            onSubmit={handleRecordSettlement}
+            className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
+          >
+            <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+              <div className="flex items-center gap-2">
+                <Plus className="size-4 text-primary" />
+                <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                  Record Partner Commission Deposit
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecording(false)}
+                className="text-muted-foreground hover:text-foreground"
               >
-                <option value="">-- Choose Partner Driver --</option>
-                {activePartnerDrivers.map(d => {
-                  const stats = getPartnerCommissionStats(d.id, d.full_name);
-                  return (
-                    <option key={d.id} value={d.id}>
-                      {d.full_name} ({d.vehicle_number || "Partner EV"}) — Due: ₹{stats.outstandingCommission}
-                    </option>
-                  );
-                })}
-              </select>
+                <X className="size-4" />
+              </button>
             </div>
 
-            {/* Amount */}
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Amount Received (₹) *
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={settleAmount}
-                onChange={e => setSettleAmount(e.target.value ? Number(e.target.value) : "")}
-                placeholder="e.g. 1500"
-                required
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Driver Select */}
+              <div className="sm:col-span-2">
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Partner Driver *
+                </label>
+                <select
+                  value={selectedDriverId}
+                  onChange={e => {
+                    const dId = e.target.value;
+                    setSelectedDriverId(dId);
+                    if (dId) {
+                      const dObj = activePartnerDrivers.find(d => d.id === dId);
+                      const stats = getPartnerCommissionStats(dId, dObj?.full_name);
+                      setSettleAmount(stats.outstandingCommission > 0 ? stats.outstandingCommission : "");
+                    } else {
+                      setSettleAmount("");
+                    }
+                  }}
+                  required
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="">-- Choose Partner Driver --</option>
+                  {activePartnerDrivers.map(d => {
+                    const stats = getPartnerCommissionStats(d.id, d.full_name);
+                    return (
+                      <option key={d.id} value={d.id}>
+                        {d.full_name} ({d.vehicle_number || "Partner EV"}) — Due: ₹{stats.outstandingCommission}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Amount Received (₹) *
+                  </label>
+                  {selectedDriverId && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Max: <strong className={maxDue > 0 ? "text-primary font-bold" : "text-muted-foreground"}>₹{maxDue}</strong>
+                    </span>
+                  )}
+                </div>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxDue > 0 ? maxDue : undefined}
+                    step="1"
+                    value={settleAmount}
+                    onKeyDown={e => {
+                      if (e.key === "." || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === "") {
+                        setSettleAmount("");
+                      } else {
+                        const num = Math.round(Number(val));
+                        setSettleAmount(isNaN(num) ? "" : num);
+                      }
+                    }}
+                    placeholder={maxDue > 0 ? `Max ₹${maxDue}` : "e.g. 1500"}
+                    required
+                    className={`w-full rounded-lg border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none transition-colors ${
+                      isExceeding
+                        ? "border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive text-destructive"
+                        : "border-border focus:border-primary focus:ring-1 focus:ring-primary"
+                    }`}
+                  />
+                </div>
+                {isExceeding && (
+                  <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" />
+                    Cannot exceed ₹{maxDue} (commission due from driver)
+                  </p>
+                )}
+                {selectedDriverId && maxDue <= 0 && (
+                  <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="size-3 shrink-0" />
+                    Driver has cleared all commission due (₹0 to be paid)
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Mode */}
+              <div>
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Payment Mode *
+                </label>
+                <select
+                  value={paymentMode}
+                  onChange={e => setPaymentMode(e.target.value as any)}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="upi">UPI Transfer</option>
+                  <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
+                  <option value="cash">Cash Deposit at Depot</option>
+                </select>
+              </div>
+
+              {/* Reference No */}
+              <div className="sm:col-span-2">
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Transaction Ref / UTR / Receipt No.
+                </label>
+                <input
+                  type="text"
+                  value={referenceNo}
+                  onChange={e => setReferenceNo(e.target.value)}
+                  placeholder="e.g. UPI/4019284092/HDFC or Cash Receipt #104"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Notes */}
+              <div className="sm:col-span-2">
+                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Admin Notes
+                </label>
+                <input
+                  type="text"
+                  value={settleNotes}
+                  onChange={e => setSettleNotes(e.target.value)}
+                  placeholder="e.g. Cleared commission for August rides"
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
             </div>
 
-            {/* Payment Mode */}
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Payment Mode *
-              </label>
-              <select
-                value={paymentMode}
-                onChange={e => setPaymentMode(e.target.value as any)}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+            {/* Quick Presets for Partner Driver */}
+            {selectedDriverId && maxDue > 0 && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-primary/20">
+                <span>Quick Preset (Max ₹{maxDue}):</span>
+                <button
+                  type="button"
+                  onClick={() => setSettleAmount(maxDue)}
+                  className="rounded bg-primary/10 text-primary px-2 py-0.5 font-bold hover:bg-primary/20 border border-primary/30"
+                >
+                  Full Outstanding Due (₹{maxDue})
+                </button>
+                {[500, 1000, 2000]
+                  .filter(val => val <= maxDue && val !== maxDue)
+                  .map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setSettleAmount(val)}
+                      className="rounded border border-border bg-background px-2 py-0.5 text-muted-foreground hover:bg-muted font-mono"
+                    >
+                      ₹{val}
+                    </button>
+                  ))}
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsRecording(false)}
+                className="text-xs"
               >
-                <option value="upi">UPI Transfer</option>
-                <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
-                <option value="cash">Cash Deposit at Depot</option>
-              </select>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submitting || !settleAmount || !selectedDriverId || isExceeding || maxDue <= 0}
+                className="text-xs font-semibold gap-1.5 disabled:opacity-50"
+              >
+                {submitting ? "Saving..." : <Check className="size-3.5" />}
+                Save Commission Settlement
+              </Button>
             </div>
-
-            {/* Reference No */}
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Transaction Ref / UTR / Receipt No.
-              </label>
-              <input
-                type="text"
-                value={referenceNo}
-                onChange={e => setReferenceNo(e.target.value)}
-                placeholder="e.g. UPI/4019284092/HDFC or Cash Receipt #104"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Admin Notes
-              </label>
-              <input
-                type="text"
-                value={settleNotes}
-                onChange={e => setSettleNotes(e.target.value)}
-                placeholder="e.g. Cleared commission for August rides"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsRecording(false)}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={submitting}
-              className="text-xs font-semibold gap-1.5"
-            >
-              {submitting ? "Saving..." : <Check className="size-3.5" />}
-              Save Commission Settlement
-            </Button>
-          </div>
-        </form>
-      )}
+          </form>
+        );
+      })()}
 
       {/* Search Bar */}
       <div className="flex items-center gap-3">
@@ -646,12 +736,16 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                   <div className="flex items-center gap-2 shrink-0">
                     <Button
                       size="sm"
+                      disabled={stats.outstandingCommission <= 0}
                       onClick={() => {
                         setSelectedDriverId(d.id);
                         setSettleAmount(stats.outstandingCommission > 0 ? stats.outstandingCommission : "");
                         setIsRecording(true);
                       }}
-                      className="h-8 text-xs font-semibold gap-1 bg-primary"
+                      className={`h-8 text-xs font-semibold gap-1 ${
+                        stats.outstandingCommission > 0 ? "bg-primary" : "opacity-50 cursor-not-allowed"
+                      }`}
+                      title={stats.outstandingCommission > 0 ? `Settle up to ₹${stats.outstandingCommission}` : "Driver has no outstanding commission (₹0 to be paid)"}
                     >
                       <Receipt className="size-3.5" /> Settle
                     </Button>
