@@ -21,7 +21,8 @@ import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
-import { getBookingVehiclePlate, resolveDriverDetails } from "@/lib/ride-vehicle";
+import { getBookingVehiclePlate, resolveDriverDetails, fetchAndHydrateDriverDetails } from "@/lib/ride-vehicle";
+import { encodePickupAddressWithPrefs, parseRidePreferences, parseCleanCoords, getCabinClimateBadge } from "@/lib/ride-preferences";
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -340,18 +341,20 @@ function PassengerPage() {
           if (dArea) setDropId(dArea.id);
 
           // Restore exact GPS coordinates if available
-          if (activeBooking.pickup_address && activeBooking.pickup_address.includes(",")) {
-            const [pLat, pLng] = activeBooking.pickup_address.split(",").map(Number);
-            if (!isNaN(pLat) && !isNaN(pLng)) {
-              setPickupGPS({ name: activeBooking.pickup_area, lat: pLat, lng: pLng });
-            }
+          const cleanPickup = parseCleanCoords(activeBooking.pickup_address);
+          if (cleanPickup) {
+            setPickupGPS({ name: activeBooking.pickup_area, lat: cleanPickup.lat, lng: cleanPickup.lng });
           }
-          if (activeBooking.drop_address && activeBooking.drop_address.includes(",")) {
-            const [dLat, dLng] = activeBooking.drop_address.split(",").map(Number);
-            if (!isNaN(dLat) && !isNaN(dLng)) {
-              setDropGPS({ name: activeBooking.drop_area, lat: dLat, lng: dLng });
-            }
+          const cleanDrop = parseCleanCoords(activeBooking.drop_address);
+          if (cleanDrop) {
+            setDropGPS({ name: activeBooking.drop_area, lat: cleanDrop.lat, lng: cleanDrop.lng });
           }
+
+          // Restore passenger comfort preferences (AC, Quiet Mode, Hub Pillar)
+          const restoredPrefs = parseRidePreferences(activeBooking.pickup_address, activeBooking.id);
+          if (restoredPrefs.cabinClimate) setCabinClimate(restoredPrefs.cabinClimate);
+          if (typeof restoredPrefs.quietRide === "boolean") setQuietRide(restoredPrefs.quietRide);
+          if (restoredPrefs.pickupPillar) setPickupPillar(restoredPrefs.pickupPillar);
 
           setBookingData({ id: activeBooking.id, reference: activeBooking.reference, otp: activeBooking.ride_otp });
           setStep(4);
@@ -418,10 +421,15 @@ function PassengerPage() {
       ? `${pickup.name} (${pickupPillar})`
       : pickup.name;
 
+    const encodedPickupAddress = encodePickupAddressWithPrefs(
+      { lat: pickup.lat, lng: pickup.lng },
+      { cabinClimate, quietRide, pickupPillar: pickupPillar || undefined }
+    );
+
     const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
       pickup_area: effectivePickup,
-      pickup_address: `${pickup.lat},${pickup.lng}`,
+      pickup_address: encodedPickupAddress,
       drop_area: drop.name,
       drop_address: `${drop.lat},${drop.lng}`,
       distance_km: Math.round(distKm * 10) / 10,
@@ -444,7 +452,7 @@ function PassengerPage() {
       return; 
     }
 
-    // Persist ride preferences for this booking (viewable by driver)
+    // Persist ride preferences for this booking (viewable by driver across devices)
     const ridePref = {
       cabinClimate,
       quietRide,
@@ -982,85 +990,7 @@ function Step4Confirmed({
 
   async function fetchDriverWithPhone(driverId: string) {
     try {
-      const { data: d } = await supabase.from("drivers").select("*").eq("id", driverId).single();
-      if (!d) return null;
-
-      let phone = d.phone;
-      // If driver table has empty phone, try resolving from profiles or driver_applications
-      if ((!phone || phone.trim() === "") && d.user_id) {
-        try {
-          const { data: prof } = await supabase.from("profiles").select("phone").eq("id", d.user_id).maybeSingle();
-          if (prof?.phone && prof.phone.trim()) {
-            phone = prof.phone.trim();
-            await supabase.from("drivers").update({ phone }).eq("id", d.id);
-          }
-        } catch (e) {}
-      }
-
-      // Check application for photo, plate, and driver type
-      let appData: any = null;
-      try {
-        const { data: app } = await supabase
-          .from("driver_applications")
-          .select("*")
-          .or(`full_name.eq.${d.full_name}${phone ? `,phone.eq.${phone}` : ""}`)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        appData = app;
-      } catch (e) {}
-
-      let parsedNotes: any = {};
-      try {
-        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
-          parsedNotes = JSON.parse(appData.admin_notes);
-        }
-      } catch (e) {}
-
-      // Decode existing vehicle_code if encoded with ORANGE_META
-      let metaEncoded: any = {};
-      if (d.vehicle_code && typeof d.vehicle_code === "string" && d.vehicle_code.startsWith("ORANGE_META:")) {
-        try {
-          metaEncoded = JSON.parse(d.vehicle_code.replace("ORANGE_META:", ""));
-        } catch (e) {}
-      }
-
-      let photoUrl = d.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";
-      if (!photoUrl) {
-        photoUrl = localStorage.getItem(`orange_driver_photo_${d.id}`) ||
-          (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null) ||
-          (phone ? localStorage.getItem(`orange_driver_photo_by_phone_${phone.replace(/\D/g, "")}`) : null) ||
-          (d.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${d.full_name.trim().toLowerCase()}`) : null) || "";
-      }
-
-      const isPartner = Boolean(
-        d.driver_type === "partner" ||
-        metaEncoded.type === "partner" ||
-        appData?.owns_vehicle ||
-        appData?.driver_type === "partner" ||
-        parsedNotes.driver_type === "partner"
-      );
-
-      let vehicleNumber = d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "";
-      if (!vehicleNumber) {
-        vehicleNumber = metaEncoded.plate && metaEncoded.plate !== "Unassigned" ? metaEncoded.plate : "";
-      }
-      if (!vehicleNumber) {
-        vehicleNumber = appData?.vehicle_number || parsedNotes.vehicle_number || "";
-      }
-
-      let vehicleModel = d.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "";
-
-      const rawDriver = {
-        ...d,
-        phone: phone || d.phone || "",
-        photo_url: photoUrl,
-        vehicle_number: vehicleNumber,
-        vehicle_model: vehicleModel,
-        driver_type: isPartner ? "partner" : "company",
-      };
-
-      const resolved = resolveDriverDetails(rawDriver, currentBooking || bookingData);
+      const resolved = await fetchAndHydrateDriverDetails(supabase, driverId, currentBooking || bookingData);
       return resolved;
     } catch (e) {
       console.warn("Could not fetch driver details:", e);

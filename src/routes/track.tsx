@@ -17,14 +17,17 @@ import {
   CheckCircle2,
   Search,
   ExternalLink,
-  LifeBuoy
+  LifeBuoy,
+  Snowflake,
+  VolumeX
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveRideMap } from "@/components/live-ride-map";
-import { getBookingVehiclePlate, resolveDriverDetails } from "@/lib/ride-vehicle";
+import { getBookingVehiclePlate, resolveDriverDetails, fetchAndHydrateDriverDetails } from "@/lib/ride-vehicle";
+import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/lib/ride-preferences";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -123,54 +126,8 @@ function TrackPage() {
 
         // Fetch driver details if assigned
         if (bData.driver_id) {
-          const { data: dData } = await supabase
-            .from("drivers")
-            .select("*")
-            .eq("id", bData.driver_id)
-            .maybeSingle();
-          if (dData) {
-            let appData: any = null;
-            try {
-              const { data: app } = await supabase
-                .from("driver_applications")
-                .select("*")
-                .or(`full_name.eq.${dData.full_name}${dData.phone ? `,phone.eq.${dData.phone}` : ""}`)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              appData = app;
-            } catch (e) {}
-
-            let parsedNotes: any = {};
-            try {
-              if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
-                parsedNotes = JSON.parse(appData.admin_notes);
-              }
-            } catch (e) {}
-
-            let metaEncoded: any = {};
-            if (dData.vehicle_code && typeof dData.vehicle_code === "string" && dData.vehicle_code.startsWith("ORANGE_META:")) {
-              try {
-                metaEncoded = JSON.parse(dData.vehicle_code.replace("ORANGE_META:", ""));
-              } catch (e) {}
-            }
-
-            let photoUrl = dData.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";
-            if (!photoUrl) {
-              photoUrl = localStorage.getItem(`orange_driver_photo_${dData.id}`) ||
-                (dData.user_id ? localStorage.getItem(`orange_driver_photo_${dData.user_id}`) : null) ||
-                (dData.phone ? localStorage.getItem(`orange_driver_photo_by_phone_${dData.phone.replace(/\D/g, "")}`) : null) ||
-                (dData.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${dData.full_name.trim().toLowerCase()}`) : null) || "";
-            }
-
-            const rawDriver = {
-              ...dData,
-              photo_url: photoUrl,
-              vehicle_number: (dData.vehicle_number && dData.vehicle_number !== "Unassigned" ? dData.vehicle_number : "") || metaEncoded.plate || appData?.vehicle_number || parsedNotes.vehicle_number || "",
-              vehicle_model: dData.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "",
-            };
-
-            const resolved = resolveDriverDetails(rawDriver, bData);
+          const resolved = await fetchAndHydrateDriverDetails(supabase, bData.driver_id, bData);
+          if (resolved) {
             setDriver(resolved);
           }
 
@@ -264,16 +221,14 @@ function TrackPage() {
 
   // Coordinates parsing
   const parseCoords = (addrStr?: string, defaultLat = 28.5562, defaultLng = 77.0856) => {
-    if (!addrStr) return { lat: defaultLat, lng: defaultLng };
-    const parts = addrStr.split(",").map((s) => parseFloat(s.trim()));
-    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-      return { lat: parts[0], lng: parts[1] };
-    }
+    const clean = parseCleanCoords(addrStr);
+    if (clean) return clean;
     return { lat: defaultLat, lng: defaultLng };
   };
 
   const pickupCoords = parseCoords(booking?.pickup_address, 12.9716, 77.5946);
   const dropCoords = parseCoords(booking?.drop_address, 13.1986, 77.7066);
+  const ridePrefs = parseRidePreferences(booking?.pickup_address, booking?.id || booking?.reference);
 
   const statusInfo = STATUS_LABELS[booking?.status || "searching"] || STATUS_LABELS.searching;
 
@@ -401,6 +356,33 @@ function TrackPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Passenger Comfort Preferences (AC & Quiet Mode) */}
+              {(ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pickupPillar) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
+                  {ridePrefs.cabinClimate && (() => {
+                    const b = getCabinClimateBadge(ridePrefs.cabinClimate);
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}>
+                        <Snowflake className="size-3" />
+                        <span>{b.label}</span>
+                      </span>
+                    );
+                  })()}
+                  {ridePrefs.quietRide && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                      <VolumeX className="size-3" />
+                      <span>Quiet Ride Requested</span>
+                    </span>
+                  )}
+                  {ridePrefs.pickupPillar && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                      <MapPin className="size-3" />
+                      <span>Gate/Pillar: {ridePrefs.pickupPillar}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Live Interactive Map */}

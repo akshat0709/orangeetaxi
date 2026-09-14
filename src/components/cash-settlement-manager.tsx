@@ -752,11 +752,20 @@ export function CashSettlementManager({ drivers, bookings, onRefresh }: CashSett
                       </td>
 
                       <td className="px-5 py-3 text-xs text-muted-foreground">
-                        {s.notes || "Shift cash deposit"}
+                        {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-bold border border-purple-500/20">
+                              ⚡ UPI Online Deposit
+                            </span>
+                            <span className="font-mono font-semibold text-foreground text-[11px]">{s.notes}</span>
+                          </div>
+                        ) : (
+                          s.notes || "Shift cash deposit"
+                        )}
                       </td>
 
                       <td className="px-5 py-3 text-xs">
-                        <span className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${s.collected_by?.includes("UPI") || s.collected_by?.includes("Driver") ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" : "bg-muted text-muted-foreground"}`}>
                           {s.collected_by || "Admin"}
                         </span>
                       </td>

@@ -304,3 +304,162 @@ export async function lockBookingVehicle(
     } catch (e) {}
   }
 }
+
+/**
+ * Robust async resolver that loads a driver by ID, finds their application photo & plate,
+ * updates remote metadata if missing, and returns a fully hydrated driver object.
+ */
+export async function fetchAndHydrateDriverDetails(
+  supabaseClient: any,
+  driverId: string,
+  booking?: any
+) {
+  if (!driverId) return null;
+  try {
+    const { data: d, error } = await supabaseClient
+      .from("drivers")
+      .select("*")
+      .eq("id", driverId)
+      .maybeSingle();
+
+    if (!d || error) return null;
+
+    let phone = d.phone;
+    if ((!phone || phone.trim() === "") && d.user_id) {
+      try {
+        const { data: prof } = await supabaseClient
+          .from("profiles")
+          .select("phone")
+          .eq("id", d.user_id)
+          .maybeSingle();
+        if (prof?.phone && prof.phone.trim()) {
+          phone = prof.phone.trim();
+        }
+      } catch (e) {}
+    }
+
+    // Decode existing vehicle_code if encoded with ORANGE_META
+    let metaEncoded: any = {};
+    if (d.vehicle_code && typeof d.vehicle_code === "string" && d.vehicle_code.startsWith("ORANGE_META:")) {
+      try {
+        metaEncoded = JSON.parse(d.vehicle_code.replace("ORANGE_META:", ""));
+      } catch (e) {}
+    }
+
+    // Resilient lookup in driver_applications without fragile .or() syntax
+    let appData: any = null;
+    try {
+      const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
+      if (phone && phone.trim()) {
+        const { data: byPhone } = await supabaseClient
+          .from("driver_applications")
+          .select("*")
+          .eq("phone", phone.trim())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        appData = byPhone;
+      }
+      if (!appData && cleanPhone && cleanPhone !== phone) {
+        const { data: byClean } = await supabaseClient
+          .from("driver_applications")
+          .select("*")
+          .ilike("phone", `%${cleanPhone.slice(-10)}%`)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        appData = byClean;
+      }
+      if (!appData && d.full_name && d.full_name.trim()) {
+        const { data: byName } = await supabaseClient
+          .from("driver_applications")
+          .select("*")
+          .ilike("full_name", d.full_name.trim())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        appData = byName;
+      }
+    } catch (e) {
+      console.warn("Could not query driver_applications:", e);
+    }
+
+    let parsedNotes: any = {};
+    try {
+      if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+        parsedNotes = JSON.parse(appData.admin_notes);
+      }
+    } catch (e) {}
+
+    let photoUrl =
+      d.photo_url ||
+      metaEncoded.photo ||
+      parsedNotes.photo_url ||
+      appData?.photo_url ||
+      "";
+
+    if (!photoUrl && typeof window !== "undefined") {
+      photoUrl =
+        localStorage.getItem(`orange_driver_photo_${d.id}`) ||
+        (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null) ||
+        (phone ? localStorage.getItem(`orange_driver_photo_by_phone_${phone.replace(/\D/g, "")}`) : null) ||
+        (d.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${d.full_name.trim().toLowerCase()}`) : null) ||
+        "";
+    }
+
+    const isPartner = Boolean(
+      d.driver_type === "partner" ||
+      metaEncoded.type === "partner" ||
+      appData?.owns_vehicle ||
+      appData?.driver_type === "partner" ||
+      parsedNotes.driver_type === "partner"
+    );
+
+    let vehicleNumber = d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "";
+    if (!vehicleNumber) {
+      vehicleNumber = metaEncoded.plate && metaEncoded.plate !== "Unassigned" ? metaEncoded.plate : "";
+    }
+    if (!vehicleNumber) {
+      vehicleNumber = appData?.vehicle_number || parsedNotes.vehicle_number || "";
+    }
+
+    let vehicleModel = d.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "";
+
+    const rawDriver = {
+      ...d,
+      phone: phone || d.phone || "",
+      photo_url: photoUrl,
+      vehicle_number: vehicleNumber,
+      vehicle_model: vehicleModel,
+      driver_type: isPartner ? "partner" : "company",
+    };
+
+    const resolved = resolveDriverDetails(rawDriver, booking);
+
+    // If remote vehicle_code is not synced with ORANGE_META or plate is missing in drivers table, update in background
+    if (resolved && (!d.vehicle_code || !d.vehicle_code.startsWith("ORANGE_META:") || !d.vehicle_number || d.vehicle_number === "Unassigned")) {
+      const metaObj = {
+        photo: resolved.photo_url || "",
+        plate: resolved.vehicle_number || "",
+        model: resolved.vehicle_model || "",
+        type: resolved.driver_type || (isPartner ? "partner" : "company"),
+      };
+      supabaseClient
+        .from("drivers")
+        .update({
+          vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+          vehicle_number: resolved.vehicle_number,
+          vehicle_model: resolved.vehicle_model,
+        })
+        .eq("id", d.id)
+        .then(() => {})
+        .catch(() => {});
+    }
+
+    return resolved;
+  } catch (err) {
+    console.warn("fetchAndHydrateDriverDetails error:", err);
+    return null;
+  }
+}
+

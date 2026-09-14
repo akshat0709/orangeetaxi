@@ -2,16 +2,20 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck } from "lucide-react";
+import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck, Smartphone, QrCode, AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate, resolveDriverDetails } from "@/lib/ride-vehicle";
+import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/lib/ride-preferences";
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
@@ -64,47 +68,50 @@ function playRideRequestChime() {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     const now = ctx.currentTime;
 
     // First tone (587.33 Hz - D5)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
-    osc1.type = "sine";
+    osc1.type = "triangle";
     osc1.frequency.setValueAtTime(587.33, now);
-    gain1.gain.setValueAtTime(0.35, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    gain1.gain.setValueAtTime(0.4, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
     osc1.connect(gain1);
     gain1.connect(ctx.destination);
     osc1.start(now);
-    osc1.stop(now + 0.3);
+    osc1.stop(now + 0.35);
 
     // Second tone (880 Hz - A5)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = "sine";
     osc2.frequency.setValueAtTime(880, now + 0.16);
-    gain2.gain.setValueAtTime(0.4, now + 0.16);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    gain2.gain.setValueAtTime(0.45, now + 0.16);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
     osc2.start(now + 0.16);
-    osc2.stop(now + 0.55);
+    osc2.stop(now + 0.6);
 
     // Third tone (1318.51 Hz - E6)
     const osc3 = ctx.createOscillator();
     const gain3 = ctx.createGain();
     osc3.type = "sine";
     osc3.frequency.setValueAtTime(1318.51, now + 0.32);
-    gain3.gain.setValueAtTime(0.28, now + 0.32);
-    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    gain3.gain.setValueAtTime(0.35, now + 0.32);
+    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
     osc3.connect(gain3);
     gain3.connect(ctx.destination);
     osc3.start(now + 0.32);
-    osc3.stop(now + 0.75);
+    osc3.stop(now + 0.85);
 
     // Mobile haptic vibration
     if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([200, 100, 200, 100, 300]);
+      navigator.vibrate([300, 150, 300, 150, 500]);
     }
   } catch (err) {
     console.warn("Audio chime error:", err);
@@ -137,6 +144,35 @@ function DriverConsolePage() {
     return true;
   });
   const prevRequestsCountRef = useRef(-1);
+
+  // Fixed Salary Driver UPI Remittance Modal State
+  const [upiDepositModalOpen, setUpiDepositModalOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<number | "">("");
+  const [depositUtr, setDepositUtr] = useState("");
+  const [submittingDeposit, setSubmittingDeposit] = useState(false);
+
+  // Commission Partner Driver UPI Payment Modal State
+  const [upiCommissionModalOpen, setUpiCommissionModalOpen] = useState(false);
+  const [commissionPayAmount, setCommissionPayAmount] = useState<number | "">("");
+  const [commissionUtr, setCommissionUtr] = useState("");
+  const [submittingCommission, setSubmittingCommission] = useState(false);
+
+  // Continuous looping alert: sound + vibration repeat every 2.5s while unaccepted requests exist
+  useEffect(() => {
+    if (!driver?.is_online || newRequests.length === 0 || !soundEnabled) {
+      return;
+    }
+
+    // Play chime once immediately
+    playRideRequestChime();
+
+    // Loop chime and vibration every 2.5 seconds
+    const chimeTimer = setInterval(() => {
+      playRideRequestChime();
+    }, 2500);
+
+    return () => clearInterval(chimeTimer);
+  }, [newRequests.length, driver?.is_online, soundEnabled]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -224,15 +260,45 @@ function DriverConsolePage() {
       } catch (e) {}
     }
 
+    async function fetchAppForUser(email?: string, phone?: string, fullName?: string) {
+      try {
+        if (phone && phone.trim()) {
+          const { data } = await supabase
+            .from("driver_applications")
+            .select("*")
+            .eq("phone", phone.trim())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) return data;
+        }
+        if (email && email.trim()) {
+          const { data } = await supabase
+            .from("driver_applications")
+            .select("*")
+            .eq("email", email.trim().toLowerCase())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) return data;
+        }
+        if (fullName && fullName.trim()) {
+          const { data } = await supabase
+            .from("driver_applications")
+            .select("*")
+            .ilike("full_name", fullName.trim())
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) return data;
+        }
+      } catch (e) {}
+      return null;
+    }
+
     // Auto-create driver profile if role is granted but profile is missing
     if (!driverData && (role === "driver" || role === "admin")) {
-      const { data: appData } = await supabase
-        .from("driver_applications")
-        .select("*")
-        .or(`email.eq.${user.email}${loginPhone ? `,phone.eq.${loginPhone}` : ""}`)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const appData = await fetchAppForUser(user.email, loginPhone, user.user_metadata?.full_name);
 
       let parsedNotes: any = {};
       try {
@@ -275,13 +341,7 @@ function DriverConsolePage() {
 
     // Resolve driver photo, operating model, and partner vehicle details from application
     try {
-      const { data: appData } = await supabase
-        .from("driver_applications")
-        .select("*")
-        .or(`email.eq.${user.email}${loginPhone ? `,phone.eq.${loginPhone}` : ""}`)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const appData = await fetchAppForUser(user.email, loginPhone, user.user_metadata?.full_name);
 
       let parsedNotes: any = {};
       try {
@@ -544,17 +604,10 @@ function DriverConsolePage() {
   }
 
   function getNavUrl(areaName: string, coordsOrAddress?: string | null) {
-    // 1. Direct coordinate check from pickup_address / drop_address: e.g. "12.9784,77.6408"
-    if (coordsOrAddress && coordsOrAddress.trim()) {
-      const trimmed = coordsOrAddress.trim();
-      const match = trimmed.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
-      if (match) {
-        const lat = parseFloat(match[1]);
-        const lng = parseFloat(match[2]);
-        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-        }
-      }
+    // 1. Direct coordinate check from pickup_address / drop_address using parseCleanCoords
+    const clean = parseCleanCoords(coordsOrAddress);
+    if (clean) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${clean.lat},${clean.lng}&travelmode=driving`;
     }
 
     // 2. Extract coordinates embedded in the area name, e.g. "Current Location (12.9784, 77.6408)" or "Indiranagar (12.978, 77.641)"
@@ -643,6 +696,134 @@ function DriverConsolePage() {
     .reduce((s, x) => s + Math.round(Number(x.amount || 0)), 0);
 
   const currentCashHolding = Math.max(0, totalCashCollected - totalCashSubmitted);
+
+  async function handleSubmitUpiDeposit() {
+    const amt = Number(depositAmount);
+    if (!amt || amt <= 0) {
+      toast.error("Please enter a valid deposit amount.");
+      return;
+    }
+    if (amt > currentCashHolding) {
+      toast.error(`Deposit amount cannot exceed holding cash of ₹${currentCashHolding}.`);
+      return;
+    }
+    if (!depositUtr || depositUtr.trim().length < 4) {
+      toast.error("Please enter a valid 12-digit UPI Transaction / UTR reference number.");
+      return;
+    }
+
+    setSubmittingDeposit(true);
+    const cleanUtr = depositUtr.trim().toUpperCase();
+    const newRecord = {
+      id: "settle-upi-" + Date.now(),
+      driver_id: driver.id,
+      amount: Math.round(amt),
+      collected_by: "UPI Auto-Remit",
+      notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data, error } = await supabase.from("driver_cash_settlements").insert({
+        driver_id: driver.id,
+        amount: Math.round(amt),
+        collected_by: "UPI Auto-Remit",
+        notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+      }).select().single();
+
+      if (data) {
+        newRecord.id = data.id;
+      }
+      if (error) {
+        console.warn("Could not insert to driver_cash_settlements in DB, saving locally:", error);
+      }
+    } catch (e) {
+      console.warn("driver_cash_settlements insert error:", e);
+    }
+
+    // Update local state and localStorage
+    const updated = [newRecord, ...settlements];
+    setSettlements(updated);
+    try {
+      const stored = localStorage.getItem("orange_cash_settlements");
+      const all = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("orange_cash_settlements", JSON.stringify([newRecord, ...all]));
+    } catch (e) {}
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("cash_settlements_updated"));
+    }
+
+    toast.success(`₹${amt} UPI deposit submitted! Handover receipt recorded.`);
+    setUpiDepositModalOpen(false);
+    setDepositAmount("");
+    setDepositUtr("");
+    setSubmittingDeposit(false);
+    await loadData();
+  }
+
+  async function handleSubmitUpiCommission() {
+    const amt = Number(commissionPayAmount);
+    if (!amt || amt <= 0) {
+      toast.error("Please enter a valid payment amount.");
+      return;
+    }
+    if (!commissionUtr || commissionUtr.trim().length < 4) {
+      toast.error("Please enter a valid 12-digit UPI Transaction / UTR reference number.");
+      return;
+    }
+
+    setSubmittingCommission(true);
+    const cleanUtr = commissionUtr.trim().toUpperCase();
+    const newRecord = {
+      id: "comm-" + Date.now(),
+      driver_id: driver.id,
+      driver_name: driver.full_name || "Partner Driver",
+      amount: Math.round(amt),
+      payment_mode: "upi" as const,
+      reference_no: `UTR: ${cleanUtr}`,
+      collected_by: "UPI Auto-Remit",
+      notes: `15% Platform Commission UPI Remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      await supabase.from("driver_commission_settlements").insert({
+        driver_id: driver.id,
+        driver_name: driver.full_name || "Partner Driver",
+        amount: Math.round(amt),
+        payment_mode: "upi",
+        reference_no: `UTR: ${cleanUtr}`,
+        collected_by: "UPI Auto-Remit",
+        notes: `15% Platform Commission UPI Remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+      });
+    } catch (e) {
+      console.warn("Could not insert to driver_commission_settlements in DB:", e);
+    }
+
+    // Update local state and localStorage
+    const stored = localStorage.getItem("orange_commission_settlements");
+    let current = stored ? JSON.parse(stored) : [];
+    current = [newRecord, ...current];
+    try {
+      localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
+    } catch (e) {}
+
+    setCommissionSettlements(prev => [newRecord, ...prev]);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("commission_settlements_updated"));
+    }
+
+    toast.success(`₹${amt} platform commission payment recorded!`);
+    setUpiCommissionModalOpen(false);
+    setCommissionPayAmount("");
+    setCommissionUtr("");
+    setSubmittingCommission(false);
+    await loadData();
+  }
 
   return (
     <section className="min-h-screen bg-warm py-10">
@@ -775,6 +956,95 @@ function DriverConsolePage() {
           </div>
         </div>
 
+        {/* Top Emergency Pulsating Alert Banner when new requests are available */}
+        {driver.is_online && newRequests.length > 0 && (
+          <div className="mt-6 rounded-2xl border-2 border-amber-500 bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/15 p-4 sm:p-5 shadow-lg shadow-amber-500/10 animate-pulse">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex size-3 rounded-full bg-amber-500 animate-ping" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <Bell className="size-4 text-amber-500 animate-bounce" />
+                    {newRequests.length} New Ride Request{newRequests.length > 1 ? "s" : ""} Available!
+                  </span>
+                  <span className="font-mono font-bold text-lg text-primary">
+                    ₹{Math.round(newRequests[0].estimated_fare)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({Math.round(newRequests[0].distance_km)} km • {newRequests[0].vehicle_name})
+                  </span>
+                </div>
+
+                <p className="text-sm font-bold text-foreground flex items-center gap-2 flex-wrap">
+                  <span>{newRequests[0].pickup_area}</span>
+                  <span className="text-primary font-bold">→</span>
+                  <span>{newRequests[0].drop_area}</span>
+                </p>
+
+                {/* Comfort preference preview on top banner */}
+                {(() => {
+                  const reqPref = parseRidePreferences(newRequests[0].pickup_address, newRequests[0].id || newRequests[0].reference);
+                  if (!reqPref.cabinClimate && !reqPref.quietRide && !reqPref.pickupPillar) return null;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {reqPref.cabinClimate && (() => {
+                        const b = getCabinClimateBadge(reqPref.cabinClimate);
+                        return (
+                          <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}>
+                            <span>{b.icon}</span>
+                            <span>{b.label}</span>
+                          </span>
+                        );
+                      })()}
+                      {reqPref.quietRide && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                          <VolumeX className="size-3" />
+                          <span>Quiet Ride Requested</span>
+                        </span>
+                      )}
+                      {reqPref.pickupPillar && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                          <MapPin className="size-3" />
+                          <span>Pillar: {reqPref.pickupPillar}</span>
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() => {
+                    const next = !soundEnabled;
+                    setSoundEnabled(next);
+                    localStorage.setItem("orange_driver_sound_enabled", String(next));
+                    if (!next) toast.info("Alert chime muted 🔕");
+                    else toast.success("Alert chime enabled 🔔");
+                  }}
+                  className="text-xs h-9 border-border bg-background"
+                >
+                  {soundEnabled ? <VolumeX className="mr-1.5 size-3.5 text-muted-foreground" /> : <Bell className="mr-1.5 size-3.5 text-primary" />}
+                  <span>{soundEnabled ? "Mute Sound" : "Unmute"}</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => acceptRide(newRequests[0].id)}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 px-4 shadow-md active:scale-95"
+                >
+                  <Check className="mr-1.5 size-4" />
+                  <span>Accept Ride (1-Tap)</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Tabs defaultValue="rides" className="mt-10">
           <TabsList className="mb-6">
             <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
@@ -830,39 +1100,46 @@ function DriverConsolePage() {
 
                       {/* Passenger Ride Preferences (Cabin Climate, Quiet Mode, Hub/Pillar) */}
                       {(() => {
-                        let ridePrefs: { pillar?: string; cabinClimate?: string; quietRide?: boolean } = {};
-                        try {
-                          const raw = localStorage.getItem(`orange_ride_pref_${ride.id}`) || localStorage.getItem(`orange_ride_pref_${ride.reference}`);
-                          if (raw) ridePrefs = JSON.parse(raw);
-                        } catch (e) {}
-
-                        const hasPrefs = ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pillar;
+                        const ridePrefs = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
+                        const hasPrefs = ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pickupPillar;
                         if (!hasPrefs) return null;
 
                         return (
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            {ridePrefs.cabinClimate && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-bold text-sky-600 dark:text-sky-400">
-                                <Snowflake className="size-3" />
-                                <span>
-                                  {ridePrefs.cabinClimate === "chilled" && "Pre-cool AC: Chilled (20°C)"}
-                                  {ridePrefs.cabinClimate === "pleasant" && "Pre-cool AC: Pleasant (23°C)"}
-                                  {ridePrefs.cabinClimate === "eco" && "AC: Eco / Fresh Air"}
+                          <div className="mt-3.5 rounded-xl border border-border bg-muted/30 p-3.5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                <Sparkles className="size-3 text-primary" />
+                                Passenger Comfort & Trip Preferences
+                              </span>
+                              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                Customer Request
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              {ridePrefs.cabinClimate && (() => {
+                                const b = getCabinClimateBadge(ridePrefs.cabinClimate);
+                                return (
+                                  <span className={`inline-flex items-center gap-1.5 rounded-lg border ${b.borderClass} ${b.bgClass} px-3 py-1.5 text-xs font-bold ${b.textClass}`}>
+                                    <Snowflake className="size-3.5" />
+                                    <span>{b.label}</span>
+                                    <span className="text-[10px] font-normal opacity-80">(Keep cabin pre-cooled)</span>
+                                  </span>
+                                );
+                              })()}
+                              {ridePrefs.quietRide && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
+                                  <VolumeX className="size-3.5" />
+                                  <span>Quiet Ride (Resting / Work Call — No Chitchat)</span>
                                 </span>
-                              </span>
-                            )}
-                            {ridePrefs.quietRide && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                                <VolumeX className="size-3" />
-                                <span>Quiet Ride (Resting / Work Call)</span>
-                              </span>
-                            )}
-                            {ridePrefs.pillar && (
-                              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                                <MapPin className="size-3" />
-                                <span>Terminal/Pillar: {ridePrefs.pillar}</span>
-                              </span>
-                            )}
+                              )}
+                              {ridePrefs.pickupPillar && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-400">
+                                  <MapPin className="size-3.5" />
+                                  <span>Designated Pillar: {ridePrefs.pickupPillar}</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })()}
@@ -1020,44 +1297,78 @@ function DriverConsolePage() {
             {!driver.is_online && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">You're offline. Go online to receive ride requests.</div>}
             {newRequests.length === 0 ? <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." /> :
               <div className="space-y-4">
-                {newRequests.map(ride => (
-                  <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
-                    <div className="flex justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 text-sm font-bold">
-                          <MapPin className="size-4 text-primary shrink-0" />
-                          <a 
-                            href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
-                            title="Preview pickup location on Google Maps"
-                          >
-                            {ride.pickup_area}
-                            <Map className="size-3 text-muted-foreground inline" />
-                          </a>
-                          <span className="text-muted-foreground">→</span> 
-                          <Navigation className="size-4 text-primary shrink-0" />
-                          <a 
-                            href={getNavUrl(ride.drop_area, ride.drop_address)} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
-                            title="Preview drop location on Google Maps"
-                          >
-                            {ride.drop_area}
-                            <Map className="size-3 text-muted-foreground inline" />
-                          </a>
+                {newRequests.map(ride => {
+                  const reqPref = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
+                  return (
+                    <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
+                      <div className="flex justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 text-sm font-bold">
+                            <MapPin className="size-4 text-primary shrink-0" />
+                            <a 
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
+                              title="Preview pickup location on Google Maps"
+                            >
+                              {ride.pickup_area}
+                              <Map className="size-3 text-muted-foreground inline" />
+                            </a>
+                            <span className="text-muted-foreground">→</span> 
+                            <Navigation className="size-4 text-primary shrink-0" />
+                            <a 
+                              href={getNavUrl(ride.drop_area, ride.drop_address)} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
+                              title="Preview drop location on Google Maps"
+                            >
+                              {ride.drop_area}
+                              <Map className="size-3 text-muted-foreground inline" />
+                            </a>
+                          </div>
+                          <div className="mt-2 text-xs text-muted-foreground space-x-4">
+                            <span className="font-bold text-primary font-mono text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                            <span>{Math.round(ride.distance_km)} km</span>
+                            <span>{ride.vehicle_name}</span>
+                          </div>
+
+                          {/* Customer Comfort Preferences on incoming request */}
+                          {(reqPref.cabinClimate || reqPref.quietRide || reqPref.pickupPillar) && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
+                              {reqPref.cabinClimate && (() => {
+                                const b = getCabinClimateBadge(reqPref.cabinClimate);
+                                return (
+                                  <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}>
+                                    <Snowflake className="size-3" />
+                                    <span>Pre-cool {b.label}</span>
+                                  </span>
+                                );
+                              })()}
+                              {reqPref.quietRide && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                                  <VolumeX className="size-3" />
+                                  <span>Quiet Ride Requested</span>
+                                </span>
+                              )}
+                              {reqPref.pickupPillar && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                                  <MapPin className="size-3" />
+                                  <span>Pillar: {reqPref.pickupPillar}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="mt-2 text-xs text-muted-foreground space-x-4"><span className="font-bold text-primary">₹{Math.round(ride.estimated_fare)}</span><span>{Math.round(ride.distance_km)} km</span><span>{ride.vehicle_name}</span></div>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setNewRequests(p => p.filter(r => r.id !== ride.id))}><X className="size-4" /></Button>
-                        <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept</Button>
+                        <div className="flex gap-2 shrink-0 items-start">
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setNewRequests(p => p.filter(r => r.id !== ride.id))}><X className="size-4" /></Button>
+                          <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept</Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             }
           </TabsContent>
@@ -1085,11 +1396,27 @@ function DriverConsolePage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Balance Due</p>
-                    <p className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                      ₹{partnerCommissionDue}
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="text-left sm:text-right">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Balance Due</p>
+                      <p className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                        ₹{partnerCommissionDue}
+                      </p>
+                    </div>
+                    {partnerCommissionDue > 0 && (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setCommissionPayAmount(Math.round(partnerCommissionDue));
+                          setCommissionUtr("");
+                          setUpiCommissionModalOpen(true);
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1.5 shadow-md active:scale-95"
+                      >
+                        <Smartphone className="size-4" />
+                        <span>Pay Commission via UPI ⚡</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1149,15 +1476,31 @@ function DriverConsolePage() {
                         Cash in Hand (To Be Handed Over to Admin)
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Physical cash collected from riders. Reduces automatically when Admin records collection.
+                        Physical cash collected from riders. Reduces automatically when remitted via UPI or deposited with Admin.
                       </p>
                     </div>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
-                    <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
-                      ₹{Math.round(currentCashHolding)}
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="text-left sm:text-right">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
+                      <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
+                        ₹{Math.round(currentCashHolding)}
+                      </p>
+                    </div>
+                    {currentCashHolding > 0 && (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setDepositAmount(Math.round(currentCashHolding));
+                          setDepositUtr("");
+                          setUpiDepositModalOpen(true);
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-md active:scale-95"
+                      >
+                        <Smartphone className="size-4" />
+                        <span>Deposit via UPI ⚡</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1185,8 +1528,13 @@ function DriverConsolePage() {
                         <div key={s.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
                           <div className="flex items-center gap-2">
                             <Check className="size-3.5 text-emerald-600" />
-                            <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(s.amount)}</span>
-                            <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
+                            {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
+                              <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 text-[10px] font-bold border border-purple-500/20">
+                                ⚡ UPI Remittance ({s.notes})
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
+                            )}
                           </div>
                           <span className="font-mono text-[10px] text-muted-foreground">
                             {s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
@@ -1489,6 +1837,327 @@ function DriverConsolePage() {
           />
         );
       })}
+
+      {/* Fixed Salary Driver UPI Holding Cash Remittance Dialog */}
+      <Dialog open={upiDepositModalOpen} onOpenChange={setUpiDepositModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Smartphone className="size-5 text-amber-600" />
+              Remit Holding Cash via UPI
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Transfer physical passenger cash collections directly to Orange Taxi official account using any UPI app (GPay, PhonePe, Paytm, BHIM).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Cash in Hand Info */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase text-amber-700 dark:text-amber-400">Total Cash in Hand</p>
+                <p className="text-2xl font-mono font-black text-amber-600 dark:text-amber-300">₹{Math.round(currentCashHolding)}</p>
+              </div>
+              <Badge className="bg-amber-600 text-white font-semibold text-xs">
+                Physical Cash
+              </Badge>
+            </div>
+
+            {/* Official Orange Taxi UPI ID */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Orange Taxi Official VPA:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText("orangeetaxi@upi");
+                    toast.success("UPI ID copied: orangeetaxi@upi");
+                  }}
+                  className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
+                >
+                  <Copy className="size-3" />
+                  <span>Copy</span>
+                </button>
+              </div>
+              <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
+                orangeetaxi@upi
+              </p>
+              <p className="text-[11px] text-muted-foreground">Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong></p>
+            </div>
+
+            {/* Remittance Amount */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Deposit Amount (₹)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={Math.round(currentCashHolding)}
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value ? Number(e.target.value) : "")}
+                placeholder="Enter deposit amount"
+                className="font-mono text-base font-bold"
+              />
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDepositAmount(Math.round(currentCashHolding))}
+                  className="text-xs h-7 font-medium"
+                >
+                  Full Cash (₹{Math.round(currentCashHolding)})
+                </Button>
+                {currentCashHolding >= 500 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDepositAmount(Math.min(Math.round(currentCashHolding), 500))}
+                    className="text-xs h-7 font-medium"
+                  >
+                    ₹500
+                  </Button>
+                )}
+                {currentCashHolding >= 1000 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDepositAmount(Math.min(Math.round(currentCashHolding), 1000))}
+                    className="text-xs h-7 font-medium"
+                  >
+                    ₹1,000
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
+            {Number(depositAmount) > 0 && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
+                <p className="text-xs font-bold text-foreground">Scan with any UPI App to Pay ₹{depositAmount}</p>
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${depositAmount}&cu=INR&tn=${encodeURIComponent(`Cash Deposit Driver ${driver?.full_name || ""}`)}`)}`}
+                      alt="UPI QR Code"
+                      className="size-36 object-contain"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <a
+                    href={`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${depositAmount}&cu=INR&tn=${encodeURIComponent(`Cash Deposit Driver ${driver?.full_name || ""}`)}`}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md hover:bg-primary/90 active:scale-95"
+                  >
+                    <Smartphone className="size-4" />
+                    <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* 12-Digit UTR Input */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold flex items-center justify-between">
+                <span>12-Digit UPI Reference / UTR No. *</span>
+                <span className="text-[10px] text-muted-foreground font-normal">Found in UPI app receipt</span>
+              </Label>
+              <Input
+                type="text"
+                maxLength={24}
+                value={depositUtr}
+                onChange={(e) => setDepositUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                placeholder="e.g. 429182390124"
+                className="font-mono uppercase font-semibold text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Enter the transaction ID / UTR shown after successful payment in your UPI app.
+              </p>
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setUpiDepositModalOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmitUpiDeposit}
+                disabled={submittingDeposit || !depositAmount || Number(depositAmount) <= 0 || !depositUtr || depositUtr.trim().length < 4}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5"
+              >
+                {submittingDeposit ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                <span>Confirm Deposit</span>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Commission Partner Driver UPI Payment Dialog */}
+      <Dialog open={upiCommissionModalOpen} onOpenChange={setUpiCommissionModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Smartphone className="size-5 text-primary" />
+              Pay 15% Platform Commission via UPI
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Settle your platform commission balance directly to Orange Taxi using any UPI app (GPay, PhonePe, Paytm, BHIM).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Commission Due Info */}
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3.5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase text-primary">Commission Balance Due</p>
+                <p className="text-2xl font-mono font-black text-primary">₹{partnerCommissionDue}</p>
+              </div>
+              <Badge className="bg-primary text-primary-foreground font-semibold text-xs">
+                15% Platform Fee
+              </Badge>
+            </div>
+
+            {/* Official Orange Taxi UPI ID */}
+            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Orange Taxi Official VPA:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText("orangeetaxi@upi");
+                    toast.success("UPI ID copied: orangeetaxi@upi");
+                  }}
+                  className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
+                >
+                  <Copy className="size-3" />
+                  <span>Copy</span>
+                </button>
+              </div>
+              <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
+                orangeetaxi@upi
+              </p>
+              <p className="text-[11px] text-muted-foreground">Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong></p>
+            </div>
+
+            {/* Commission Payment Amount */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Payment Amount (₹)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={commissionPayAmount}
+                onChange={(e) => setCommissionPayAmount(e.target.value ? Number(e.target.value) : "")}
+                placeholder="Enter amount to pay"
+                className="font-mono text-base font-bold"
+              />
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCommissionPayAmount(partnerCommissionDue)}
+                  className="text-xs h-7 font-medium"
+                >
+                  Full Due (₹{partnerCommissionDue})
+                </Button>
+                {partnerCommissionDue > 500 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommissionPayAmount(500)}
+                    className="text-xs h-7 font-medium"
+                  >
+                    ₹500
+                  </Button>
+                )}
+                {partnerCommissionDue > 1000 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCommissionPayAmount(1000)}
+                    className="text-xs h-7 font-medium"
+                  >
+                    ₹1,000
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
+            {Number(commissionPayAmount) > 0 && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
+                <p className="text-xs font-bold text-foreground">Scan with any UPI App to Pay ₹{commissionPayAmount}</p>
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${commissionPayAmount}&cu=INR&tn=${encodeURIComponent(`Platform Commission ${driver?.full_name || ""}`)}`)}`}
+                      alt="UPI QR Code"
+                      className="size-36 object-contain"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <a
+                    href={`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${commissionPayAmount}&cu=INR&tn=${encodeURIComponent(`Platform Commission ${driver?.full_name || ""}`)}`}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md hover:bg-primary/90 active:scale-95"
+                  >
+                    <Smartphone className="size-4" />
+                    <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* 12-Digit UTR Input */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold flex items-center justify-between">
+                <span>12-Digit UPI Reference / UTR No. *</span>
+                <span className="text-[10px] text-muted-foreground font-normal">Found in UPI app receipt</span>
+              </Label>
+              <Input
+                type="text"
+                maxLength={24}
+                value={commissionUtr}
+                onChange={(e) => setCommissionUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                placeholder="e.g. 429182390124"
+                className="font-mono uppercase font-semibold text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Enter the transaction ID / UTR shown after successful payment in your UPI app.
+              </p>
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setUpiCommissionModalOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSubmitUpiCommission}
+                disabled={submittingCommission || !commissionPayAmount || Number(commissionPayAmount) <= 0 || !commissionUtr || commissionUtr.trim().length < 4}
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
+              >
+                {submittingCommission ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                <span>Record Payment</span>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
