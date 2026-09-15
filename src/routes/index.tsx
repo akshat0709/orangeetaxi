@@ -9,13 +9,23 @@ import driverImage from "@/assets/orange-taxi-driver.jpg";
 import eveningImage from "@/assets/orange-taxi-evening.jpg";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [
-    { title: "Orange Taxi — Premium Electric Rides" },
-    { name: "description", content: "Mahindra BE.6 electric SUV rides with LED screens, premium audio and daily newspapers." },
-    { property: "og:title", content: "Orange Taxi — Premium Electric Rides" },
-    { property: "og:description", content: "Mahindra BE.6 · LED Entertainment · Premium Audio · Daily Newspapers." },
-    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
-  ]}), component: HomePage,
+  head: () => ({
+    meta: [
+      { title: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
+      { name: "description", content: "Book premium electric cab rides in Delhi, Gurugram, Noida & IGI Airport. Exclusive Mahindra BE.6 electric SUVs, zero cancellations, pre-cooled AC cabins, and professional chauffeurs." },
+      { name: "robots", content: "index, follow" },
+      { property: "og:title", content: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
+      { property: "og:description", content: "100% Electric Fleet · Mahindra BE.6 SUVs · Zero Cancellation Guarantee · IGI Airport Transfers · Pre-Cooled AC Cabins." },
+      { property: "og:url", content: "https://orange-taxi.com/" },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Orange Taxi — Premium Electric Rides" },
+      { name: "twitter:description", content: "100% Electric Fleet in Delhi NCR. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
+      { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
+    ],
+  }),
+  component: HomePage,
 });
 
 const features = [

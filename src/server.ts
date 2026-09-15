@@ -192,6 +192,17 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const url = new URL(request.url);
+
+      // Canonical host and HTTPS enforcement for search crawlers
+      if (
+        url.hostname === "www.orange-taxi.com" ||
+        (url.protocol === "http:" && url.hostname === "orange-taxi.com")
+      ) {
+        url.protocol = "https:";
+        url.hostname = "orange-taxi.com";
+        return Response.redirect(url.toString(), 301);
+      }
+
       if (url.pathname === "/sitemap.xml") {
         return new Response(SITEMAP_XML, {
           status: 200,

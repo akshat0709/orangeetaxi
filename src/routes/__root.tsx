@@ -96,17 +96,65 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 import { PWAInstallPrompt } from "../components/pwa-install-prompt";
 
+const SCHEMA_JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TaxiService",
+      "@id": "https://orange-taxi.com/#service",
+      "name": "Orange Taxi",
+      "serviceType": "Electric Taxi & Airport Transfer Service",
+      "provider": {
+        "@type": "Organization",
+        "@id": "https://orange-taxi.com/#organization",
+        "name": "Orange Taxi Limited",
+        "legalName": "Orange Taxi Limited",
+        "url": "https://orange-taxi.com",
+        "logo": "https://orange-taxi.com/pwa-512x512.png",
+        "email": "support@orange-taxi.com",
+        "telephone": "+91-11-4000-7000",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "S-210, 2nd Floor, Panchshila Park, South Malviya Nagar",
+          "addressLocality": "South Delhi",
+          "addressRegion": "Delhi",
+          "postalCode": "110017",
+          "addressCountry": "IN"
+        }
+      },
+      "areaServed": [
+        { "@type": "City", "name": "Delhi" },
+        { "@type": "City", "name": "Gurugram" },
+        { "@type": "City", "name": "Noida" },
+        { "@type": "City", "name": "Ghaziabad" },
+        { "@type": "City", "name": "Faridabad" }
+      ],
+      "description": "Orange Taxi is Delhi NCR's premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs."
+    }
+  ]
+});
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { httpEquiv: "Content-Security-Policy", content: "upgrade-insecure-requests" },
       { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
-      { title: "Orange Taxi" },
-      { name: "description", content: "Premium electric rides, made accessible." },
-      { name: "author", content: "Orange Taxi" },
+      { title: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
+      { name: "description", content: "Book premium 100% electric cab rides across Delhi, Gurugram, Noida, and IGI Airport in Mahindra BE.6 SUVs. Zero cancellations, guaranteed AC, clean cabins, and professional chauffeurs." },
+      { name: "keywords", content: "electric taxi delhi, orange taxi, cab booking gurugram, noida airport taxi, mahindra be6 cab, electric cab ncr, zero cancellation taxi" },
+      { name: "robots", content: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
+      { name: "author", content: "Orange Taxi Limited" },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Orange Taxi" },
+      { property: "og:title", content: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
+      { property: "og:description", content: "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs across Delhi NCR." },
+      { property: "og:url", content: "https://orange-taxi.com/" },
+      { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Orange Taxi — Premium Electric Rides" },
+      { name: "twitter:description", content: "100% Electric Fleet in Delhi NCR. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
+      { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "theme-color", content: "#f56b00" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -115,6 +163,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "application-name", content: "Orange Taxi" },
     ],
     links: [
+      { rel: "canonical", href: "https://orange-taxi.com/" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -141,6 +190,10 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: SCHEMA_JSON_LD }}
+        />
       </head>
       <body>
         {children}
