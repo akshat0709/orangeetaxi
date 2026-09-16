@@ -28,6 +28,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { LiveRideMap } from "@/components/live-ride-map";
 import { getBookingVehiclePlate, resolveDriverDetails, fetchAndHydrateDriverDetails } from "@/lib/ride-vehicle";
 import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/lib/ride-preferences";
+import { NotificationBanner } from "@/components/notification-banner";
+import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -86,6 +88,40 @@ function TrackPage() {
   const [booking, setBooking] = useState<any | null>(null);
   const [driver, setDriver] = useState<any | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const lastNotifiedStatusRef = useRef<string>("");
+  const isFirstLoadRef = useRef<boolean>(true);
+
+  const triggerRideNotification = (newStatus: string, currentBookingData: any, currentDriver: any) => {
+    if (!newStatus || lastNotifiedStatusRef.current === newStatus) return;
+    if (newStatus === "searching") return;
+    lastNotifiedStatusRef.current = newStatus;
+
+    const content = getStatusNotificationContent(
+      newStatus,
+      {
+        name: currentDriver?.name || "Your Chauffeur",
+        plate: currentDriver?.plate,
+        vehicle: currentDriver?.vehicle || currentBookingData?.vehicle_name,
+        otp: currentBookingData?.ride_otp,
+      },
+      currentBookingData?.reference,
+      currentBookingData?.drop_area
+    );
+
+    if (content) {
+      sendRideNotification({
+        title: content.title,
+        body: content.body,
+        url: `/track?ref=${encodeURIComponent(currentBookingData?.reference || "")}`,
+        tag: content.tag,
+        data: {
+          bookingId: currentBookingData?.id,
+          reference: currentBookingData?.reference,
+          status: newStatus,
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     if (initialRef) {
@@ -123,11 +159,13 @@ function TrackPage() {
         }
 
         setBooking(bData);
+        let resolvedDriver = driver;
 
         // Fetch driver details if assigned
         if (bData.driver_id) {
           const resolved = await fetchAndHydrateDriverDetails(supabase, bData.driver_id, bData);
           if (resolved) {
+            resolvedDriver = resolved;
             setDriver(resolved);
           }
 
@@ -152,6 +190,13 @@ function TrackPage() {
             .subscribe();
         }
 
+        if (isFirstLoadRef.current) {
+          isFirstLoadRef.current = false;
+          lastNotifiedStatusRef.current = bData.status;
+        } else if (bData.status) {
+          triggerRideNotification(bData.status, bData, resolvedDriver);
+        }
+
         // Subscribe to live booking updates
         bookingChannel = supabase
           .channel(`public-booking-${bData.id}`)
@@ -166,6 +211,7 @@ function TrackPage() {
             async (payload) => {
               const updated = payload.new;
               setBooking((prev: any) => ({ ...prev, ...updated }));
+              let latestDriver = driver;
               if (updated.driver_id && (!driver || driver.id !== updated.driver_id)) {
                 const { data: d } = await supabase
                   .from("drivers")
@@ -174,8 +220,12 @@ function TrackPage() {
                   .maybeSingle();
                 if (d) {
                   const resolved = resolveDriverDetails(d, updated);
+                  latestDriver = resolved;
                   setDriver(resolved);
                 }
+              }
+              if (updated.status) {
+                triggerRideNotification(updated.status, updated, latestDriver);
               }
             }
           )
@@ -261,6 +311,9 @@ function TrackPage() {
       </header>
 
       <main className="flex-1 section-shell py-6 max-w-4xl w-full">
+        {/* PWA Notification Permission Banner */}
+        <NotificationBanner context="rider" className="mb-6" />
+
         {/* Search Bar / Ref Switcher */}
         <form onSubmit={handleSearch} className="mb-6 flex gap-2">
           <div className="relative flex-1">

@@ -17,12 +17,11 @@ export function PWAInstallPrompt() {
       (window.navigator as any).standalone === true;
     if (isStandalone) {
       setIsInstalled(true);
-      return;
     }
 
-    // 2. Register Service Worker
+    // 2. Register Service Worker (always required for push notifications)
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
+      const registerSW = () => {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
@@ -31,7 +30,17 @@ export function PWAInstallPrompt() {
           .catch((err) => {
             console.warn("PWA SW registration note:", err);
           });
-      });
+      };
+
+      if (document.readyState === "complete") {
+        registerSW();
+      } else {
+        window.addEventListener("load", registerSW);
+      }
+    }
+
+    if (isStandalone) {
+      return;
     }
 
     // 3. Detect iOS Safari

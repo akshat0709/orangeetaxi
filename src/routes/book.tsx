@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Clock, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,6 +23,8 @@ import interiorImage from "@/assets/orange-taxi-interior.jpg";
 
 import { getBookingVehiclePlate, resolveDriverDetails, fetchAndHydrateDriverDetails } from "@/lib/ride-vehicle";
 import { encodePickupAddressWithPrefs, parseRidePreferences, parseCleanCoords, getCabinClimateBadge } from "@/lib/ride-preferences";
+import { NotificationBanner } from "@/components/notification-banner";
+import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -958,6 +960,41 @@ function Step4Confirmed({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("delay");
+  const lastNotifiedStatusRef = useRef<string>("");
+  const isFirstLoadRef = useRef<boolean>(true);
+
+  const triggerRideNotification = (newStatus: string, driverObj?: any) => {
+    if (!newStatus || lastNotifiedStatusRef.current === newStatus) return;
+    if (newStatus === "searching") return;
+    lastNotifiedStatusRef.current = newStatus;
+
+    const currentDriver = driverObj || driverInfo;
+    const content = getStatusNotificationContent(
+      newStatus,
+      {
+        name: currentDriver?.name || "Your Chauffeur",
+        plate: currentDriver?.plate,
+        vehicle: currentDriver?.vehicle || vehicle?.name,
+        otp: bookingData.otp,
+      },
+      bookingData.reference,
+      drop?.name
+    );
+
+    if (content) {
+      sendRideNotification({
+        title: content.title,
+        body: content.body,
+        url: "/book",
+        tag: content.tag,
+        data: {
+          bookingId: bookingData.id,
+          reference: bookingData.reference,
+          status: newStatus,
+        },
+      });
+    }
+  };
 
   async function handleCancelRide() {
     setCancelling(true);
@@ -968,6 +1005,7 @@ function Step4Confirmed({
     } else {
       setStatus("cancelled");
       onStatusUpdate?.("cancelled");
+      triggerRideNotification("cancelled");
       setCancelModalOpen(false);
       toast.success("Ride cancelled. ₹0 fee applied under statutory exemption.");
       setCancelling(false);
@@ -975,9 +1013,10 @@ function Step4Confirmed({
     }
   }
 
-  function handleStatusChange(newStatus: string) {
+  function handleStatusChange(newStatus: string, driverObj?: any) {
     setStatus(newStatus);
     onStatusUpdate?.(newStatus);
+    triggerRideNotification(newStatus, driverObj);
     if (newStatus === "completed") {
       setRatingModalOpen(true);
     }
@@ -986,6 +1025,9 @@ function Step4Confirmed({
   function handleDriverChange(d: any) {
     setDriverInfo(d);
     onDriverUpdate?.(d);
+    if (status === "accepted" || status === "arrived") {
+      triggerRideNotification(status, d);
+    }
   }
 
   async function fetchDriverWithPhone(driverId: string) {
@@ -1027,7 +1069,14 @@ function Step4Confirmed({
           setArrivedAt(b.arrived_at);
         }
         if (b.status) {
-          handleStatusChange(b.status);
+          if (isFirstLoadRef.current) {
+            isFirstLoadRef.current = false;
+            lastNotifiedStatusRef.current = b.status;
+            setStatus(b.status);
+            onStatusUpdate?.(b.status);
+          } else {
+            handleStatusChange(b.status);
+          }
           if (b.status === "completed" && !b.rating) {
             setRatingModalOpen(true);
           }
@@ -1068,6 +1117,9 @@ function Step4Confirmed({
           if (d) {
             handleDriverChange(d);
             subscribeToDriver(d.id);
+            if (newStatus === "accepted" || newStatus === "arrived") {
+              triggerRideNotification(newStatus, d);
+            }
           }
         }
       }).subscribe();
@@ -1114,6 +1166,7 @@ function Step4Confirmed({
   }, []);
 
   return <div className="flex flex-col py-2">
+    <NotificationBanner context="rider" className="mb-4" />
     <div className="flex items-center gap-4 border-b border-white/10 pb-6">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/20 text-primary"><CheckCircle className="size-6" /></span>
       <div>

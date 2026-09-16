@@ -19,6 +19,8 @@ import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
+import { NotificationBanner } from "@/components/notification-banner";
+import { sendRideNotification } from "@/lib/notifications";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -194,6 +196,12 @@ function DriverConsolePage() {
             playRideRequestChime();
           }
           toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+          sendRideNotification({
+            title: "New Ride Request Nearby! ⚡",
+            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+            url: "/driver-console",
+            tag: `driver-req-${payload.new?.id || Date.now()}`,
+          });
         }
         loadData();
       })
@@ -203,6 +211,12 @@ function DriverConsolePage() {
             playRideRequestChime();
           }
           toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+          sendRideNotification({
+            title: "New Ride Request Nearby! ⚡",
+            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+            url: "/driver-console",
+            tag: `driver-req-${payload.new?.id || Date.now()}`,
+          });
         }
         loadData();
       })
@@ -828,6 +842,7 @@ function DriverConsolePage() {
   return (
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
+        <NotificationBanner context="driver" className="mb-6" />
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             {driver.photo_url ? (
