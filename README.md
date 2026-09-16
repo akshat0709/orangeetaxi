@@ -1,470 +1,187 @@
-# Orange Taxi
+# 🟠 Orange Taxi
 
-## Premium Electric Mobility Platform
+**Delhi NCR's 100% Electric Cab Fleet** — Premium rides, without the premium price.
 
-Orange Taxi is a premium electric taxi and mobility platform launching in Delhi, India.
+> India's finest electric SUV fleet with professional chauffeurs, pre-cooled cabins, complimentary water, and real-time booking tracking.
 
-The core positioning is:
-
-> **Premium rides. Without the premium price.**
-
-Orange Taxi aims to provide a significantly better ride experience than a regular taxi while remaining accessible enough for everyday use.
-
-The platform will eventually support:
-
-- Passengers
-- Drivers
-- Fleet operations
-- Corporate customers
-- Admins
-- Bookings
-- Pricing
-- Payments
-- Driver onboarding
-- Customer support
+🌐 **Live:** [orange-taxi.com](https://orange-taxi.com) &nbsp;·&nbsp; 📞 **24x7 Helpline:** 011 4000 7000 &nbsp;·&nbsp; ✉️ bookings@orange-taxi.com
 
 ---
 
-# 1. BRAND
+## 📸 Screenshots
 
-## Brand Personality
-
-Orange Taxi should feel:
-
-- Premium
-- Elegant
-- Friendly
-- Warm
-- Trustworthy
-- Modern
-- Human
-- Effortless
-- Accessible
-- Sustainable
-
-It should NOT feel:
-
-- Cheap
-- Generic
-- Overly corporate
-- Overly futuristic
-- Aggressively tech-focused
-- Cluttered
-- Like a copy of Uber or Ola
-
-Orange Taxi is selling an **experience**, not simply transportation.
+### Homepage — Hero
+![Homepage Hero](docs/screenshots/homepage-hero.png)
 
 ---
 
-# 2. VISUAL DESIGN
-
-## Color Direction
-
-Use:
-
-- Warm ivory / off-white
-- Deep charcoal / near-black
-- Orange as the primary brand accent
-- Neutral grey
-- Optional muted green for EV/sustainability information
-
-Orange should primarily be used for:
-
-- Primary CTA buttons
-- Highlights
-- Important UI states
-- Small accents
-- Icons
-- Brand details
-
-Do not make the entire website orange.
-
-The premium feeling should come from:
-
-- Typography
-- Photography
-- Whitespace
-- Layout
-- Composition
-- Subtle animation
+### Homepage — Book Your Orange
+![Homepage CTA](docs/screenshots/homepage-cta.png)
 
 ---
 
-# 3. WEBSITE
-
-Build a production-quality responsive React website.
-
-## Main Navigation
-
-Navigation:
-
-- Home
-- Experience
-- Electric
-- For Business
-- Drive With Us
-- About
-- Contact
-
-Primary CTA:
-
-**Book a Ride**
+### Booking — Pickup Location & Map
+![Booking Map](docs/screenshots/booking-map.png)
 
 ---
 
-# 4. HOMEPAGE
-
-## Hero
-
-Headline:
-
-> Premium rides. Without the premium price.
-
-Supporting text:
-
-> Premium electric cars, professional drivers and thoughtful service — designed to make every journey feel a little better.
-
-Buttons:
-
-- Book a Ride
-- Explore the Orange Experience
-
-Use cinematic premium electric vehicle photography.
+### Booking — Confirm Your Ride
+![Booking Confirm](docs/screenshots/booking-confirm.png)
 
 ---
 
-# 5. VALUE PROPOSITION
+### Active Ride — Live Driver Tracking
+![Active Ride Tracking](docs/screenshots/booking-active-ride.png)
 
-Headline:
-
-> More than a ride.
-
-Show:
-
-### Complimentary Water
-A little refreshment waiting when you arrive.
-
-### Pre-Cooled Cabin
-Step into a comfortable car, not a hot one.
-
-### Professional Drivers
-Trained, courteous and committed to better service.
-
-### Premium Electric Vehicles
-Quiet, smooth and thoughtfully maintained.
+*Real-time GPS map, driver details, Ride OTP, Guardian SOS, and live ETA*
 
 ---
 
-# 6. ORANGE EXPERIENCE
-
-Show the passenger journey:
-
-1. Your car arrives clean and ready.
-2. Your driver greets you professionally.
-3. A bottle of water is waiting.
-4. The cabin is cool and comfortable.
-5. The journey is quiet and smooth.
-6. You arrive feeling taken care of.
-
-This section should feel closer to a premium hospitality brand than a traditional taxi company.
+### Ride Completed
+![Ride Completed](docs/screenshots/booking-completed.png)
 
 ---
 
-# 7. PRICE / VALUE
-
-Headline:
-
-> Premium shouldn't mean overpriced.
-
-Position Orange Taxi between:
-
-### Everyday Cab
-Basic transportation
-
-### Orange Taxi
-Premium EV + thoughtful service + professional driver
-
-### Luxury Chauffeur
-Premium experience + significantly higher price
-
-Do NOT invent exact competitor prices.
-
-Actual pricing must eventually come from the backend pricing system.
+### Corporate Enquiry
+![Corporate Enquiry](docs/screenshots/corporate-enquiry.png)
 
 ---
 
-# 8. ELECTRIC VEHICLES
-
-Headline:
-
-> Quiet rides. Cleaner cities.
-
-Show:
-
-- 100% Electric Fleet
-- Quiet & Smooth
-- Lower Running Costs
-- Designed for the Future
-
-EV should support the premium experience rather than dominate the brand.
+### Admin — GST Tax Invoice
+![Admin GST Invoice](docs/screenshots/admin-gst-invoice.png)
 
 ---
 
-# 9. VEHICLES
+## ✨ Features
 
-Create a premium vehicle showcase.
+### 🧑‍💼 Passenger
+- **Instant booking** with GPS map-picker for pickup and drop
+- **Real-time ride tracking** with live driver GPS on map
+- **Ride OTP** authentication to start the ride
+- **Guardian Shield & SOS** — safety contact notified on trip start
+- **Live chat** with assigned driver
+- **GST tax invoices** emailed after each ride
+- **Customer profile** with full ride history and stats
+- **PWA** — installable on Android & iOS with background push notifications
+- **Zero cancellation fee** under statutory exemption
 
-Initial vehicle category:
+### 🚗 Driver Console
+- Real-time incoming ride request alerts (audio chime + OS notification)
+- Accept, mark arrived, start ride, and complete with a single tap
+- Live GPS location broadcasting
+- OTP-verified ride start
+- Daily earnings dashboard (cash + UPI)
+- Commission settlement tracking
+- Driver chat with passenger
 
-### Orange Premium
+### 🛡️ Admin Dashboard
+- Full bookings management with GST invoice generation & email dispatch
+- Driver application review and onboarding approval
+- Service area and vehicle category configuration
+- Dynamic pricing settings
+- Commission and settlement ledger
+- User role management
 
-- Premium EV
-- Spacious cabin
-- Air conditioning
-- Complimentary water
-- Professional driver
-- Smooth electric ride
-
-Do not invent vehicle manufacturers or models unless they are provided later.
-
-Vehicle categories should eventually be loaded from the database.
-
----
-
-# 10. DRIVER EXPERIENCE
-
-Headline:
-
-> Great rides start with great people.
-
-Explain:
-
-- Professional training
-- Customer-first service
-- Safety-focused driving
-- Service standards
-- Driver onboarding
-
-CTA:
-
-**Drive With Orange**
-
-The driver application should eventually connect to the real backend.
+### 🔔 PWA Web Push Notifications
+- Background arrival alerts: *"Your Orange Chauffeur has arrived at your gate 📍"*
+- Works on Android (system tray) and iOS (home screen PWA)
+- Audio chime (Web Audio API) + haptic vibration on mobile
+- Service Worker handles offline caching and notification clicks
 
 ---
 
-# 11. BUSINESS / CORPORATE
+## 🏗️ Tech Stack
 
-Headline:
-
-> Better rides for your business.
-
-Features:
-
-- Corporate bookings
-- Employee transportation
-- Airport transfers
-- Client transportation
-- Centralized billing
-- Ride management
-
-CTA:
-
-**Talk to Orange**
-
-Corporate enquiries should eventually be stored in the backend.
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | React 18, TanStack Router, TanStack Start (SSR) |
+| **Styling** | Tailwind CSS v4, shadcn/ui, Radix UI |
+| **Backend / DB** | Supabase (PostgreSQL + Realtime + Auth + Storage) |
+| **Deployment** | Cloudflare Workers + Pages |
+| **Maps** | Google Maps JavaScript API |
+| **PWA** | Service Worker, Web Push, Web Audio API |
+| **Transactional Email** | Resend (AWS SES) |
+| **Payments** | Cash + UPI (manual settlement) |
+| **Language** | TypeScript |
 
 ---
 
-# 12. HOW IT WORKS
+## 🚀 Getting Started
 
-Simple 3-step section.
+```bash
+# Clone the repository
+git clone https://github.com/akshat0709/orangeetaxi.git
+cd orangeetaxi
 
-### 01 — Book
-Choose where you're going.
+# Install dependencies
+npm install
 
-### 02 — Ride
-Your Orange arrives.
+# Set up environment variables
+cp .env.example .env.local
+# Add: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_GOOGLE_MAPS_API_KEY
 
-### 03 — Enjoy
-Sit back and enjoy the experience.
-
----
-
-# 13. TESTIMONIALS
-
-Use placeholder testimonials only.
-
-Do NOT fabricate real customers, companies or reviews.
-
-Clearly mark demo/placeholder testimonials so they can be replaced later.
+# Start development server
+npm run dev
+```
 
 ---
 
-# 14. FAQ
+## 📁 Project Structure
 
-Include:
-
-- What is Orange Taxi?
-- Are Orange Taxi vehicles electric?
-- How is Orange Taxi different from regular cabs?
-- What makes Orange Taxi premium?
-- How much does an Orange ride cost?
-- Where is Orange Taxi available?
-- How can I become an Orange driver?
-- Do you offer corporate transportation?
-
-Use expandable accordion components.
-
----
-
-# 15. FOOTER
-
-Include:
-
-### Navigation
-
-- Home
-- Experience
-- Electric
-- Business
-- Drive With Us
-- About
-- Contact
-- Support
-
-### Legal
-
-- Privacy Policy
-- Terms & Conditions
-
-Social links can remain placeholders until official accounts are available.
+```
+orangeetaxi/
+├── public/
+│   ├── sw.js                 # Service Worker (PWA + Push Notifications)
+│   └── manifest.webmanifest
+├── src/
+│   ├── routes/
+│   │   ├── index.tsx          # Homepage
+│   │   ├── book.tsx           # Booking flow (4-step)
+│   │   ├── track.tsx          # Public ride tracker
+│   │   ├── profile.tsx        # Customer profile + ride history
+│   │   ├── driver-console.tsx # Driver app
+│   │   └── admin.tsx          # Admin dashboard
+│   ├── components/
+│   │   ├── notification-banner.tsx   # PWA permission banner
+│   │   ├── live-ride-map.tsx         # Real-time GPS map
+│   │   ├── guardian-safety-modal.tsx
+│   │   └── ride-chat-sheet.tsx
+│   └── lib/
+│       ├── notifications.ts   # Push notification engine
+│       ├── ride-vehicle.ts
+│       └── ride-preferences.ts
+├── plan/                      # Original product brief & vision
+└── docs/
+    └── screenshots/           # Website screenshots
+```
 
 ---
 
-# 16. BACKEND
+## 🌍 Service Areas
 
-The platform will use **Supabase** as the backend.
-
-The frontend should connect to the existing Supabase project rather than creating a separate fake backend.
-
-The backend will eventually handle:
-
-- Authentication
-- Customer profiles
-- Driver profiles
-- Driver applications
-- Bookings
-- Vehicle categories
-- Pricing
-- Service areas
-- Corporate enquiries
-- User roles
-- Payments
-- Booking status
-- Driver assignment
-- Admin operations
-
-Existing database areas include:
-
-- `profiles`
-- `bookings`
-- `drivers`
-- `driver_applications`
-- `pricing_settings`
-- `service_areas`
-- `vehicle_categories`
-- `corporate_enquiries`
-- `user_roles`
-
-Do not create duplicate tables if the required table already exists.
-
-Before modifying the database, inspect the existing schema.
+Currently operating in **Delhi NCR** covering:
+- Delhi (Central, South, North, East, West)
+- Gurugram (Cyber City, DLF, Golf Course Road)
+- Noida (Sectors 18, 62, 125, 135)
+- Faridabad, Ghaziabad
+- IGI Airport T1, T2, T3
 
 ---
 
-# 17. AUTHENTICATION
+## 📄 Legal
 
-Use Supabase Authentication.
-
-Support different account types:
-
-### Customer
-Can:
-
-- Create account
-- Log in
-- Manage profile
-- Book rides
-- View bookings
-- View ride history
-
-### Driver
-Can:
-
-- Apply to become a driver
-- Complete onboarding
-- Log in after approval
-- View assigned rides
-- Update ride status
-
-### Admin
-Can:
-
-- View customers
-- View drivers
-- Approve/reject driver applications
-- View bookings
-- Manage pricing
-- Manage service areas
-- Manage vehicle categories
-- View corporate enquiries
-- Manage platform operations
-
-Role-based access must be enforced using proper database security/RLS.
+- **Company:** Orange Taxi Limited — CIN: U49224DL2026PLC461350
+- **GSTIN:** 07AAFC00132P1ZD · **PAN:** AAFC00132P
+- **Registered Office:** S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017
 
 ---
 
-# 18. BOOKING SYSTEM
+## 📞 Contact
 
-The booking system should eventually support:
-
-- Pickup location
-- Drop location
-- Date
-- Time
-- Vehicle category
-- Fare estimate
-- Customer details
-- Booking confirmation
-- Booking status
-- Driver assignment
-- Ride status
-- Payment status
-
-Booking flow:
-
-```text
-Customer
-   ↓
-Select pickup
-   ↓
-Select destination
-   ↓
-Select date/time
-   ↓
-Select vehicle
-   ↓
-Calculate fare
-   ↓
-Confirm booking
-   ↓
-Payment
-   ↓
-Booking created
-   ↓
-Driver assigned
-   ↓
-Ride
-   ↓
-Completed
+| | |
+| :--- | :--- |
+| **Bookings** | bookings@orange-taxi.com |
+| **Corporate** | business@orange-taxi.com |
+| **Support** | support@orange-taxi.com |
+| **Helpline** | +91 11 4000 7000 |
+| **Grievances** | grievance@orange-taxi.com |
