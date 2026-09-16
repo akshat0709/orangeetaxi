@@ -129,7 +129,7 @@ const SCHEMA_JSON_LD = JSON.stringify({
         { "@type": "City", "name": "Ghaziabad" },
         { "@type": "City", "name": "Faridabad" }
       ],
-      "description": "Orange Taxi is Delhi NCR's premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs."
+      "description": "Orange Taxi is a premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs."
     }
   ]
 });
@@ -140,20 +140,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { httpEquiv: "Content-Security-Policy", content: "upgrade-insecure-requests" },
       { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
-      { title: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
-      { name: "description", content: "Book premium 100% electric cab rides across Delhi, Gurugram, Noida, and IGI Airport in Mahindra BE.6 SUVs. Zero cancellations, guaranteed AC, clean cabins, and professional chauffeurs." },
-      { name: "keywords", content: "electric taxi delhi, orange taxi, cab booking gurugram, noida airport taxi, mahindra be6 cab, electric cab ncr, zero cancellation taxi" },
+      { title: "Orange Taxi — Premium Electric Cab Service" },
+      { name: "description", content: "Book premium 100% electric cab rides with Orange Taxi in Mahindra BE.6 SUVs. Zero cancellations, guaranteed AC, clean cabins, and professional chauffeurs." },
+      { name: "keywords", content: "electric taxi, premium cab service, electric cab, orange taxi, airport taxi, mahindra be6 cab, zero cancellation taxi" },
       { name: "robots", content: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
       { name: "author", content: "Orange Taxi Limited" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Orange Taxi" },
-      { property: "og:title", content: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
-      { property: "og:description", content: "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs across Delhi NCR." },
+      { property: "og:title", content: "Orange Taxi — Premium Electric Cab Service" },
+      { property: "og:description", content: "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs." },
       { property: "og:url", content: "https://orange-taxi.com/" },
       { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Orange Taxi — Premium Electric Rides" },
-      { name: "twitter:description", content: "100% Electric Fleet in Delhi NCR. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
+      { name: "twitter:title", content: "Orange Taxi — Premium Electric Cab Service" },
+      { name: "twitter:description", content: "100% Electric Cab Service. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
       { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "theme-color", content: "#f56b00" },
       { name: "mobile-web-app-capable", content: "yes" },

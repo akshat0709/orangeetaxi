@@ -11,17 +11,17 @@ import eveningImage from "@/assets/orange-taxi-evening.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
-      { name: "description", content: "Book premium electric cab rides in Delhi, Gurugram, Noida & IGI Airport. Exclusive Mahindra BE.6 electric SUVs, zero cancellations, pre-cooled AC cabins, and professional chauffeurs." },
+      { title: "Orange Taxi — Premium Electric Cab Service" },
+      { name: "description", content: "Book premium 100% electric cab rides with Orange Taxi. Exclusive Mahindra BE.6 electric SUVs, zero cancellations, pre-cooled AC cabins, and professional chauffeurs." },
       { name: "robots", content: "index, follow" },
-      { property: "og:title", content: "Orange Taxi — Delhi NCR's 100% Electric Cab Fleet" },
-      { property: "og:description", content: "100% Electric Fleet · Mahindra BE.6 SUVs · Zero Cancellation Guarantee · IGI Airport Transfers · Pre-Cooled AC Cabins." },
+      { property: "og:title", content: "Orange Taxi — Premium Electric Cab Service" },
+      { property: "og:description", content: "100% Electric Fleet · Mahindra BE.6 SUVs · Zero Cancellation Guarantee · Airport Transfers · Pre-Cooled AC Cabins." },
       { property: "og:url", content: "https://orange-taxi.com/" },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Orange Taxi — Premium Electric Rides" },
-      { name: "twitter:description", content: "100% Electric Fleet in Delhi NCR. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
+      { name: "twitter:title", content: "Orange Taxi — Premium Electric Cab Service" },
+      { name: "twitter:description", content: "India's premier zero-emission electric taxi service with Mahindra BE.6 SUVs." },
       { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
     ],
   }),
