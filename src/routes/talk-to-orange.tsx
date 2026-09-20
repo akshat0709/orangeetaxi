@@ -149,7 +149,7 @@ function TalkToOrangePage() {
       let reply = await callGemini(newMessages);
       
       const bookingMatch = reply.match(/BOOKING_COMMAND:\s*({.*})/);
-      if (bookingMatch) {
+      if (bookingMatch && bookingMatch[1]) {
         sessionStorage.setItem("ai_booking", bookingMatch[1]);
         reply = reply.replace(/BOOKING_COMMAND:\s*({.*})/, "\n\nAwesome! I have your details. Redirecting you to confirm and book your ride now... 🚕");
         setTimeout(() => navigate({ to: "/book" }), 2500);

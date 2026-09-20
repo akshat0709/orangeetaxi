@@ -135,7 +135,7 @@ export async function sendRideNotification(payload: RideNotificationPayload): Pr
             timestamp: Date.now(),
             ...data,
           },
-        });
+        } as any);
         return true;
       }
     }

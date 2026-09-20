@@ -207,7 +207,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
 
     // Enforce HTTPS
     if (
@@ -216,7 +216,7 @@ function RootComponent() {
       !window.location.hostname.startsWith("127.0.0.1")
     ) {
       window.location.replace(window.location.href.replace(/^http:/, "https:"));
-      return;
+      return undefined;
     }
 
     const updateStandalone = () => {
@@ -239,6 +239,7 @@ function RootComponent() {
       mql.addEventListener("change", updateStandalone);
       return () => mql.removeEventListener("change", updateStandalone);
     }
+    return undefined;
   }, []);
 
   return (

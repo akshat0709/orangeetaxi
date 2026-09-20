@@ -64,6 +64,48 @@ const comforts = [
   { icon: CalendarClock, title: "On Your Schedule", text: "Reliable, punctual service for everyday journeys." },
 ];
 
+const DEFAULT_VEHICLES: VehicleCategory[] = [
+  {
+    id: "v-sedan",
+    code: "sedan",
+    name: "Orange Sedan",
+    tagline: "Signature Mahindra BE.6 Electric SUV",
+    seats: 4,
+    base_fare: 99,
+    per_km: 18,
+    minimum_fare: 149,
+  },
+  {
+    id: "v-xl",
+    code: "xl",
+    name: "Orange XL",
+    tagline: "Spacious Premium Electric SUV",
+    seats: 6,
+    base_fare: 149,
+    per_km: 24,
+    minimum_fare: 229,
+  },
+  {
+    id: "v-go",
+    code: "go",
+    name: "Orange Go",
+    tagline: "Compact Everyday Electric Cab",
+    seats: 4,
+    base_fare: 69,
+    per_km: 14,
+    minimum_fare: 99,
+  },
+];
+
+const DEFAULT_AREAS: ServiceArea[] = [
+  { id: "a-delhi", name: "Delhi NCR (All Zones)", lat: 28.6315, lng: 77.2167, is_airport: false },
+  { id: "a-igi", name: "IGI Airport (Terminal 1/2/3)", lat: 28.5562, lng: 77.1000, is_airport: true },
+  { id: "a-gurugram", name: "Gurugram CyberHub", lat: 28.4950, lng: 77.0895, is_airport: false },
+  { id: "a-noida", name: "Noida Sector 18", lat: 28.5708, lng: 77.3260, is_airport: false },
+  { id: "a-blr", name: "Indiranagar / Bengaluru", lat: 12.9784, lng: 77.6408, is_airport: false },
+  { id: "a-kia", name: "Kempegowda Int'l Airport (BLR)", lat: 13.1986, lng: 77.7066, is_airport: true },
+];
+
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -114,10 +156,29 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     } catch (e) {}
   }
 
-  // 3. Try OpenStreetMap Nominatim with landmark POI prioritization
+  // 3. Try high-speed Photon geocoding (<200ms response time)
+  try {
+    const photonCtrl = new AbortController();
+    const photonTimeout = setTimeout(() => photonCtrl.abort(), 1200);
+    const photonRes = await fetch(
+      `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`,
+      { signal: photonCtrl.signal }
+    );
+    clearTimeout(photonTimeout);
+    if (photonRes.ok) {
+      const pData = await photonRes.json();
+      const first = pData?.features?.[0]?.properties;
+      if (first) {
+        const parts = [first.name, first.district || first.locality, first.city].filter(Boolean);
+        if (parts.length > 0) return parts.join(", ");
+      }
+    }
+  } catch (e) {}
+
+  // 4. Try OpenStreetMap Nominatim with fast 1200ms timeout
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
       { headers: { "Accept-Language": "en" }, signal: controller.signal }
@@ -171,14 +232,44 @@ function PassengerPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [vehicles, setVehicles] = useState<VehicleCategory[]>([]);
-  const [areas, setAreas] = useState<ServiceArea[]>([]);
-  const [pricingSettings, setPricingSettings] = useState({ tax_percent: 0, platform_fee: 0 });
-  const [loading, setLoading] = useState(true);
+  const [vehicles, setVehicles] = useState<VehicleCategory[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const c = localStorage.getItem("orange_cached_vehicles");
+        if (c) {
+          const parsed = JSON.parse(c);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return DEFAULT_VEHICLES;
+  });
+  const [areas, setAreas] = useState<ServiceArea[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const c = localStorage.getItem("orange_cached_areas");
+        if (c) {
+          const parsed = JSON.parse(c);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return DEFAULT_AREAS;
+  });
+  const [pricingSettings, setPricingSettings] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const c = localStorage.getItem("orange_cached_pricing");
+        if (c) return JSON.parse(c);
+      } catch {}
+    }
+    return { tax_percent: 5, platform_fee: 0 };
+  });
+  const [loading, setLoading] = useState(false);
 
   // Booking state
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory | null>(() => DEFAULT_VEHICLES[0]);
   const [pickupId, setPickupId] = useState("");
   const [dropId, setDropId] = useState("");
 
@@ -303,12 +394,20 @@ function PassengerPage() {
       ]);
       const vData = (v as VehicleCategory[]) ?? [];
       const aData = (a as ServiceArea[]) ?? [];
-      setVehicles(vData);
-      setAreas(aData);
       if (vData.length > 0) {
+        setVehicles(vData);
+        try { localStorage.setItem("orange_cached_vehicles", JSON.stringify(vData)); } catch {}
         setSelectedVehicle((prev) => prev || vData[0]);
       }
-      if (p) setPricingSettings({ tax_percent: (p as any).tax_percent, platform_fee: (p as any).platform_fee });
+      if (aData.length > 0) {
+        setAreas(aData);
+        try { localStorage.setItem("orange_cached_areas", JSON.stringify(aData)); } catch {}
+      }
+      if (p) {
+        const nextPricing = { tax_percent: (p as any).tax_percent, platform_fee: (p as any).platform_fee };
+        setPricingSettings(nextPricing);
+        try { localStorage.setItem("orange_cached_pricing", JSON.stringify(nextPricing)); } catch {}
+      }
 
       // Fallback pickup initialization if still null
       setPickupGPS((curr) => {

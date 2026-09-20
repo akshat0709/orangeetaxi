@@ -130,12 +130,14 @@ export function RideChatSheet({
             return next;
           });
           const latest = fromOther[fromOther.length - 1];
-          toast.info(`💬 ${latest.senderName}: "${latest.text}"`, {
-            action: {
-              label: "Reply",
-              onClick: () => onOpenChangeRef.current?.(true),
-            },
-          });
+          if (latest) {
+            toast.info(`💬 ${latest.senderName}: "${latest.text}"`, {
+              action: {
+                label: "Reply",
+                onClick: () => onOpenChangeRef.current?.(true),
+              },
+            });
+          }
         }
       }
 
@@ -234,9 +236,10 @@ export function RideChatSheet({
     });
 
     channel
-      .on("broadcast", { event: "chat_message" }, (payload) => {
-        if (payload?.payload) {
-          mergeIncomingMessages([payload.payload]);
+      .on("broadcast", { event: "chat_message" }, (payload: any) => {
+        const p = payload?.payload;
+        if (p) {
+          mergeIncomingMessages([p]);
         }
       })
       .on("broadcast", { event: "request_chat_history" }, () => {
@@ -249,9 +252,10 @@ export function RideChatSheet({
           }).catch(() => {});
         }
       })
-      .on("broadcast", { event: "sync_chat_history" }, (payload) => {
-        if (payload?.payload?.messages) {
-          mergeIncomingMessages(payload.payload.messages);
+      .on("broadcast", { event: "sync_chat_history" }, (payload: any) => {
+        const msgs = payload?.payload?.messages;
+        if (msgs) {
+          mergeIncomingMessages(msgs);
         }
       })
       .subscribe();
