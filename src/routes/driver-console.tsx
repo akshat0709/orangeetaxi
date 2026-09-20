@@ -499,6 +499,26 @@ function DriverConsolePage() {
     }
     setRecentRides(recentList);
 
+    // Automatically synchronize total_rides and rating on driver record if discrepancy exists
+    const totalCompleted = recentList.length;
+    const ratedRides = recentList.filter(r => r.rating);
+    const calculatedAvgRating = ratedRides.length > 0
+      ? Number((ratedRides.reduce((s, r) => s + Number(r.rating || 0), 0) / ratedRides.length).toFixed(1))
+      : driverData.rating || 5.0;
+
+    if (totalCompleted > (driverData.total_rides || 0) || (ratedRides.length > 0 && Math.abs((driverData.rating || 0) - calculatedAvgRating) > 0.05)) {
+      try {
+        const nextRides = Math.max(driverData.total_rides || 0, totalCompleted);
+        await supabase.from("drivers").update({
+          total_rides: nextRides,
+          rating: calculatedAvgRating,
+        }).eq("id", driverData.id);
+        driverData.total_rides = nextRides;
+        driverData.rating = calculatedAvgRating;
+        setDriver(prev => prev ? { ...prev, total_rides: nextRides, rating: calculatedAvgRating } : prev);
+      } catch (e) {}
+    }
+
     try {
       const { data: settleData } = await supabase
         .from("driver_cash_settlements")
@@ -613,6 +633,19 @@ function DriverConsolePage() {
     }
     const { error } = await supabase.from("bookings").update(updates).eq("id", booking.id);
     if (error) { toast.error("Update failed"); return; }
+
+    if (flow.next === "completed") {
+      try {
+        const nextTotal = (driver.total_rides || 0) + 1;
+        await supabase.from("drivers").update({
+          total_rides: nextTotal,
+        }).eq("id", driver.id);
+        setDriver(prev => prev ? { ...prev, total_rides: nextTotal } : prev);
+      } catch (e) {
+        console.warn("Could not update driver total_rides:", e);
+      }
+    }
+
     toast.success(`Status updated to ${flow.next.replace("_", " ")}`);
     loadData();
   }

@@ -69,11 +69,17 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
     setSubmitting(true);
 
     try {
-      // 1. Update the booking with rating
+      // 1. Update the booking with rating and review
+      const fullReview = [
+        ...selectedCompliments,
+        comment.trim(),
+      ].filter(Boolean).join(" · ");
+
       const { error: bookingErr } = await supabase
         .from("bookings")
         .update({
           rating: rating,
+          review: fullReview || null,
         })
         .eq("id", booking.id);
 
@@ -81,21 +87,37 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
         console.warn("Could not save rating in bookings table:", bookingErr);
       }
 
-      // 2. Recalculate driver average rating
+      // 2. Recalculate driver average rating and total rides
       const driverId = driver?.id || booking.driver_id;
       if (driverId) {
         try {
-          const { data: ratedBookings } = await supabase
-            .from("bookings")
-            .select("rating")
-            .eq("driver_id", driverId)
-            .not("rating", "is", null);
+          const [{ data: ratedBookings }, { count: completedCount }] = await Promise.all([
+            supabase
+              .from("bookings")
+              .select("id, rating")
+              .eq("driver_id", driverId)
+              .not("rating", "is", null),
+            supabase
+              .from("bookings")
+              .select("id", { count: "exact", head: true })
+              .eq("driver_id", driverId)
+              .eq("status", "completed"),
+          ]);
 
-          const allRatings = (ratedBookings || []).map((b: any) => b.rating).filter(Boolean);
-          allRatings.push(rating);
-          const newAvg = Number((allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1));
+          const otherRatings = (ratedBookings || [])
+            .filter((b: any) => b.id !== booking.id && b.rating)
+            .map((b: any) => Number(b.rating));
+          otherRatings.push(rating);
 
-          await supabase.from("drivers").update({ rating: newAvg }).eq("id", driverId);
+          const newAvg = Number(
+            (otherRatings.reduce((a, b) => a + b, 0) / otherRatings.length).toFixed(1)
+          );
+          const totalRides = Math.max(completedCount || 0, otherRatings.length, 1);
+
+          await supabase.from("drivers").update({
+            rating: newAvg,
+            total_rides: totalRides,
+          }).eq("id", driverId);
         } catch (e) {
           console.warn("Driver rating aggregate notice:", e);
         }

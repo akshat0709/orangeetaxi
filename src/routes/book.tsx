@@ -1274,12 +1274,34 @@ function Step4Confirmed({
       </div>
     </div>
 
-    {/* OTP Display */}
-    <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-5 text-center">
-      <p className="text-xs font-bold uppercase tracking-wider text-primary">Ride OTP</p>
-      <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-white">{bookingData.otp}</p>
-      <p className="mt-2 text-xs text-white/60">Show this code to your driver to start the ride</p>
-    </div>
+    {/* OTP Display / Trip in Progress Banner */}
+    {status === "in_progress" ? (
+      <div className="mt-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-transparent p-4 flex items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="size-11 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <CheckCircle className="size-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">Ride In Progress · OTP Verified</p>
+            </div>
+            <p className="text-sm font-semibold text-white mt-0.5">Your chauffeur is en route to destination</p>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-mono font-bold text-emerald-300">
+            Trip Active ⚡
+          </span>
+        </div>
+      </div>
+    ) : status !== "completed" && bookingData.otp ? (
+      <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-5 text-center">
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">Ride OTP</p>
+        <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-white">{bookingData.otp}</p>
+        <p className="mt-2 text-xs text-white/60">Show this code to your driver to start the ride</p>
+      </div>
+    ) : null}
 
     {/* Waiting Time Window & Fee Countdown Bar */}
     {status === "arrived" ? (
@@ -1310,131 +1332,167 @@ function Step4Confirmed({
       </div>
     ) : null}
 
-    {/* Driver Info Card */}
-    {driverInfo ? (
-      <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur-xs">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-white/60">Your Driver & Assigned Vehicle</p>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
-            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" /> Assigned & Active
-          </span>
-        </div>
+    {/* Driver & Assigned Vehicle Details Card - Always Visible when assigned or in-progress */}
+    {driverInfo || status === "in_progress" || status === "accepted" || status === "arrived" ? (() => {
+      const displayModel = driverInfo?.vehicle_model || currentBooking?.vehicle_name || vehicle.name;
+      const displayPlate = driverInfo?.vehicle_number && driverInfo.vehicle_number !== "Unassigned"
+        ? driverInfo.vehicle_number
+        : getBookingVehiclePlate(currentBooking || bookingData, driverInfo) || "DL 01 EV 1001";
+      const driverName = driverInfo?.full_name || "Assigned Chauffeur";
 
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3.5">
-              {/* High-Resolution Driver Photo / Verified Avatar (Clause 14.9) */}
-              <div className="relative size-12 shrink-0">
-                {driverInfo.photo_url ? (
-                  <img
-                    src={driverInfo.photo_url}
-                    alt={driverInfo.full_name}
-                    className="size-12 rounded-full object-cover border-2 border-primary shadow-sm"
-                  />
-                ) : (
-                  <div className="size-12 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
-                    <span>{driverInfo.full_name?.charAt(0) || "D"}</span>
-                  </div>
-                )}
-                <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-neutral-900 flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
-                  ✓
-                </span>
+      return (
+        <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur-xs shadow-xl">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <Car className="size-4 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-wider text-white/80">
+                {status === "in_progress" ? "Your Ride Vehicle & Chauffeur" : "Assigned Vehicle & Driver"}
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" /> {status === "in_progress" ? "On Journey" : "Assigned & Active"}
+            </span>
+          </div>
+
+          {/* Prominent Vehicle Highlight Bar */}
+          <div className="mt-4 p-3.5 rounded-xl border border-primary/30 bg-primary/10 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center text-primary">
+                <Car className="size-5" />
               </div>
-              <div className="space-y-1">
-                <p className="text-lg font-bold text-white flex items-center gap-2">
-                  {driverInfo.full_name}
-                  <span className="rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-semibold text-emerald-400 px-1.5 py-0.5">
-                    Verified Driver
+              <div>
+                <p className="text-xs uppercase tracking-wider font-semibold text-primary/80">Vehicle Model</p>
+                <p className="text-base font-bold text-white flex items-center gap-2">
+                  {displayModel}
+                  <span className="text-[11px] font-medium text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    100% Electric EV
                   </span>
-                  {driverInfo.driver_type === "partner" && (
-                    <span className="rounded bg-primary/20 border border-primary/40 text-[10px] font-semibold text-primary px-1.5 py-0.5">
-                      Partner EV
-                    </span>
-                  )}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
-                  <span className="flex items-center gap-1 text-white/80"><Car className="size-3 text-primary" /> {driverInfo.vehicle_model || vehicle.name}</span>
-                  <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 font-mono font-bold text-primary">
-                    {driverInfo.vehicle_number && driverInfo.vehicle_number !== "Unassigned" ? driverInfo.vehicle_number : getBookingVehiclePlate(currentBooking || bookingData, driverInfo)}
+              </div>
+            </div>
+            <div className="text-left sm:text-right">
+              <p className="text-[10px] uppercase tracking-wider font-bold text-white/60">Registration Plate</p>
+              <span className="mt-0.5 inline-block font-mono text-base font-extrabold tracking-widest text-primary bg-black/40 border border-primary/40 px-3 py-1 rounded-lg">
+                {displayPlate}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3.5">
+                {/* High-Resolution Driver Photo / Verified Avatar (Clause 14.9) */}
+                <div className="relative size-12 shrink-0">
+                  {driverInfo?.photo_url ? (
+                    <img
+                      src={driverInfo.photo_url}
+                      alt={driverName}
+                      className="size-12 rounded-full object-cover border-2 border-primary shadow-sm"
+                    />
+                  ) : (
+                    <div className="size-12 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center text-primary font-bold text-lg shadow-sm">
+                      <span>{driverName.charAt(0) || "D"}</span>
+                    </div>
+                  )}
+                  <span className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-emerald-500 border-2 border-neutral-900 flex items-center justify-center text-[9px] text-white font-bold" title="Police Verified & Onboarded Driver">
+                    ✓
                   </span>
                 </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-white flex items-center gap-2">
+                    {driverName}
+                    <span className="rounded bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-semibold text-emerald-400 px-1.5 py-0.5">
+                      Verified Chauffeur
+                    </span>
+                    {driverInfo?.driver_type === "partner" && (
+                      <span className="rounded bg-primary/20 border border-primary/40 text-[10px] font-semibold text-primary px-1.5 py-0.5">
+                        Partner EV
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
+                    <span className="text-amber-400 font-bold">⭐ {driverInfo?.rating ? Number(driverInfo.rating).toFixed(1) : "4.9"}</span>
+                    <span>·</span>
+                    <span className="text-white/70">{driverInfo?.total_rides || 1} rides completed</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prominently Display Driver Phone Number with Copy Button */}
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <div className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-mono font-bold text-primary">
+                  <Phone className="size-3 text-primary" />
+                  <span>{activeDriverPhone}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activeDriverPhone);
+                    toast.success(`Copied driver phone: ${activeDriverPhone}`);
+                  }}
+                  className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/20"
+                  title="Copy phone number to clipboard"
+                >
+                  <Copy className="size-3" /> Copy
+                </button>
               </div>
             </div>
 
-            {/* Prominently Display Driver Phone Number with Copy Button */}
-            <div className="flex items-center gap-2 pt-1 flex-wrap">
-              <div className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-mono font-bold text-primary">
-                <Phone className="size-3 text-primary" />
-                <span>{activeDriverPhone}</span>
-              </div>
+            {/* Action Buttons: Call Driver, WhatsApp & In-Ride Chat */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <a
+                href={`tel:${cleanDialPhone}`}
+                onClick={() => {
+                  navigator.clipboard?.writeText(activeDriverPhone);
+                  toast.success(`Calling ${driverName}: ${activeDriverPhone}`);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-95"
+              >
+                <PhoneCall className="size-4" />
+                <span>Call Driver</span>
+              </a>
+
+              {driverInfo?.phone && driverInfo.phone.trim() !== "" && (
+                <a
+                  href={`https://wa.me/${cleanDialPhone.startsWith("91") ? cleanDialPhone : `91${cleanDialPhone}`}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
+                  title="Chat with driver on WhatsApp"
+                >
+                  <MessageSquare className="size-3.5" />
+                  <span>WhatsApp</span>
+                </a>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(activeDriverPhone);
-                  toast.success(`Copied driver phone: ${activeDriverPhone}`);
+                  setIsChatOpen(true);
+                  setUnreadChatCount(0);
                 }}
-                className="flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors border border-white/20"
-                title="Copy phone number to clipboard"
+                className="relative flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/20 px-3.5 py-2.5 text-xs font-bold text-primary hover:bg-primary/30 transition-all active:scale-95"
+                title="Open Live Chat with Driver"
               >
-                <Copy className="size-3" /> Copy
+                <MessageSquare className="size-3.5" />
+                <span>In-Ride Chat</span>
+                {unreadChatCount > 0 && (
+                  <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
+                    {unreadChatCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
-          {/* Action Buttons: Call Driver, WhatsApp & In-Ride Chat */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <a
-              href={`tel:${cleanDialPhone}`}
-              onClick={() => {
-                navigator.clipboard?.writeText(activeDriverPhone);
-                toast.success(`Calling ${driverInfo.full_name}: ${activeDriverPhone}`);
-              }}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90 active:scale-95"
-            >
-              <PhoneCall className="size-4" />
-              <span>Call Driver</span>
-            </a>
-
-            {driverInfo.phone && driverInfo.phone.trim() !== "" && (
-              <a
-                href={`https://wa.me/${cleanDialPhone.startsWith("91") ? cleanDialPhone : `91${cleanDialPhone}`}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all active:scale-95"
-                title="Chat with driver on WhatsApp"
-              >
-                <MessageSquare className="size-3.5" />
-                <span>WhatsApp</span>
-              </a>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsChatOpen(true);
-                setUnreadChatCount(0);
-              }}
-              className="relative flex items-center gap-1.5 rounded-xl border border-primary/40 bg-primary/20 px-3.5 py-2.5 text-xs font-bold text-primary hover:bg-primary/30 transition-all active:scale-95"
-              title="Open Live Chat with Driver"
-            >
-              <MessageSquare className="size-3.5" />
-              <span>In-Ride Chat</span>
-              {unreadChatCount > 0 && (
-                <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
-                  {unreadChatCount}
-                </span>
-              )}
-            </button>
-          </div>
+          {(!driverInfo?.phone || driverInfo.phone.trim() === "") && (
+            <p className="mt-3 text-[11px] text-white/50 italic">
+              * Direct line being connected. Calling connects to the 24/7 Orange Fleet Helpline.
+            </p>
+          )}
         </div>
-
-        {(!driverInfo.phone || driverInfo.phone.trim() === "") && (
-          <p className="mt-3 text-[11px] text-white/50 italic">
-            * Direct line being connected. Calling connects to the 24/7 Orange Fleet Helpline.
-          </p>
-        )}
-      </div>
-    ) : (
+      );
+    })() : (
       <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-white/15 py-10">
         <Loader2 className="size-6 animate-spin text-primary" />
         <p className="mt-3 text-sm text-white/60">Matching you with the nearest {vehicle.name}...</p>
