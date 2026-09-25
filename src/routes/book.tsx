@@ -128,17 +128,38 @@ function generateOTP() {
 }
 
 async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
-  // 1. Instant check against curated presets (within 3km of an airport or major hub)
+  // 1. Instant check against curated presets (only if within 600m of an airport terminal or specific transit hub)
   if (PAN_INDIA_PRESETS && PAN_INDIA_PRESETS.length > 0) {
     for (const p of PAN_INDIA_PRESETS) {
       const d = haversine(lat, lng, p.lat, p.lng);
-      if (d < 3) {
+      if (d < 0.6) {
         return p.name;
       }
     }
   }
 
-  // 2. Try Google Geocoder if loaded
+  // 2. High-speed client reverse geocoding via BigDataCloud (<180ms, free, works everywhere without API key)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      const locality = data.locality || data.principalSubdivision || "";
+      const city = data.city || data.localityInfo?.administrative?.[2]?.name || data.localityInfo?.administrative?.[1]?.name || "";
+      if (locality && city && locality.toLowerCase() !== city.toLowerCase()) {
+        return `${locality}, ${city}`;
+      } else if (locality || city) {
+        return locality || city;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Try Google Geocoder if loaded
   if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
     try {
       const geocoder = new window.google.maps.Geocoder();
@@ -156,29 +177,10 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     } catch (e) {}
   }
 
-  // 3. Try high-speed Photon geocoding (<200ms response time)
-  try {
-    const photonCtrl = new AbortController();
-    const photonTimeout = setTimeout(() => photonCtrl.abort(), 1200);
-    const photonRes = await fetch(
-      `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`,
-      { signal: photonCtrl.signal }
-    );
-    clearTimeout(photonTimeout);
-    if (photonRes.ok) {
-      const pData = await photonRes.json();
-      const first = pData?.features?.[0]?.properties;
-      if (first) {
-        const parts = [first.name, first.district || first.locality, first.city].filter(Boolean);
-        if (parts.length > 0) return parts.join(", ");
-      }
-    }
-  } catch (e) {}
-
-  // 4. Try OpenStreetMap Nominatim with fast 1200ms timeout
+  // 4. Try OpenStreetMap Nominatim with fast 1500ms timeout
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1200);
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
       { headers: { "Accept-Language": "en" }, signal: controller.signal }
@@ -203,27 +205,6 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
       }
     }
   } catch (e) {}
-
-  // 4. Intelligent proximity check against known Indian presets
-  if (PAN_INDIA_PRESETS && PAN_INDIA_PRESETS.length > 0) {
-    let closest = null;
-    let minDist = Infinity;
-    for (const p of PAN_INDIA_PRESETS) {
-      const d = haversine(lat, lng, p.lat, p.lng);
-      if (d < minDist) {
-        minDist = d;
-        closest = p;
-      }
-    }
-    if (closest && minDist < 15) {
-      return `Near ${closest.name}`;
-    }
-  }
-
-  // 5. City bounding check (e.g. Bengaluru)
-  if (lat >= 12.75 && lat <= 13.25 && lng >= 77.4 && lng <= 77.8) {
-    return `Indiranagar / Bengaluru (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
-  }
 
   return `Current Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 }
@@ -359,20 +340,18 @@ function PassengerPage() {
             updateLocation(pos.coords.latitude, pos.coords.longitude, "Current Location");
           },
           (err) => {
-            console.warn("GPS acquire error:", err);
+            console.warn("GPS acquire notice:", err);
             if (!isMounted) return;
             setLocatingGPS(false);
-            // Default fallback if GPS is blocked or times out so user NEVER has to manually click "Set Pickup"
-            setPickupGPS((curr) => {
-              if (curr) return curr;
-              const defaultHub = {
-                name: "Indiranagar 100ft Road, Bengaluru",
-                lat: 12.9784,
-                lng: 77.6408,
-              };
-              try { localStorage.setItem("orange_user_pickup_gps", JSON.stringify(defaultHub)); } catch {}
-              return defaultHub;
-            });
+            // Attempt fast IP geolocation fallback if browser GPS is blocked
+            fetch("https://ipwho.is/")
+              .then((r) => r.json())
+              .then((ip) => {
+                if (isMounted && ip?.success && ip.latitude && ip.longitude) {
+                  updateLocation(ip.latitude, ip.longitude, `${ip.city || "Current Area"}, ${ip.region || "India"}`);
+                }
+              })
+              .catch(() => {});
           },
           { enableHighAccuracy: true, timeout: 8000 }
         );
@@ -409,17 +388,7 @@ function PassengerPage() {
         try { localStorage.setItem("orange_cached_pricing", JSON.stringify(nextPricing)); } catch {}
       }
 
-      // Fallback pickup initialization if still null
-      setPickupGPS((curr) => {
-        if (curr) return curr;
-        if (aData.length > 0) {
-          const blr = aData.find((a: any) => a.name.toLowerCase().includes("bengaluru") || a.name.toLowerCase().includes("indiranagar")) || aData[0];
-          const loc = { name: blr.name, lat: blr.lat, lng: blr.lng };
-          try { localStorage.setItem("orange_user_pickup_gps", JSON.stringify(loc)); } catch {}
-          return loc;
-        }
-        return { name: "Indiranagar 100ft Road, Bengaluru", lat: 12.9784, lng: 77.6408 };
-      });
+      // Allow live GPS or user selection to populate pickupGPS without hardcoded city fallback
 
       // ✅ BOOKING PERSISTENCE FIX: Check for existing active booking
       if (user) {
@@ -822,11 +791,11 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Pickup</p>
               <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-300">
-                {locatingGPS ? "Syncing..." : "Live GPS Locked"}
+                {locatingGPS ? "Syncing..." : pickupGPS ? "Live GPS Locked" : "GPS Pending"}
               </span>
             </div>
             <p className="truncate font-medium text-white text-xs">
-              {pickupGPS?.name || "Indiranagar 100ft Road, Bengaluru"}
+              {pickupGPS?.name || (locatingGPS ? "Acquiring live pickup location..." : "Tap Change to set pickup location")}
             </p>
           </div>
         </div>

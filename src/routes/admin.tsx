@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, Search, Users, Wallet, X, Zap, Building2, Handshake, Percent, Sparkles, ShieldCheck, BadgeIndianRupee } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, PhoneCall, MessageSquare, Search, Users, Wallet, X, Zap, Building2, Handshake, Percent, Sparkles, ShieldCheck, BadgeIndianRupee } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -237,6 +237,70 @@ function AdminPage() {
       }
     });
 
+    // Ensure approved driver applicants & partner operators exist in drivers panel
+    for (const app of mergedApps) {
+      if (app.status === "approved") {
+        const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
+        const alreadyExists = fetchedDrivers.some(
+          dr => (dr.phone && app.phone && dr.phone.replace(/\D/g, "") === app.phone.replace(/\D/g, "")) ||
+                (dr.full_name && app.full_name && dr.full_name.trim().toLowerCase() === app.full_name.trim().toLowerCase())
+        );
+
+        if (!alreadyExists) {
+          const plate = app.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+          const model = app.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+          const photo = app.photo_url || "";
+          const metaObj = {
+            photo,
+            plate,
+            model,
+            type: isPartner ? "partner" : "company",
+          };
+          const newDrRecord: any = {
+            full_name: app.full_name,
+            phone: app.phone || "",
+            city: app.city || "Bengaluru",
+            status: "active",
+            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+            vehicle_number: plate,
+            vehicle_model: model,
+            rating: 5,
+            total_rides: 0,
+            is_online: false,
+          };
+
+          try {
+            const { data: createdDr } = await supabase.from("drivers").insert(newDrRecord).select().maybeSingle();
+            if (createdDr) {
+              const fullCreatedDr: Driver = {
+                ...createdDr,
+                driver_type: isPartner ? "partner" : "company",
+                photo_url: photo,
+              };
+              fetchedDrivers.push(fullCreatedDr);
+              if (photo) {
+                localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
+              }
+            } else {
+              fetchedDrivers.push({
+                id: "app-dr-" + app.id,
+                ...newDrRecord,
+                driver_type: isPartner ? "partner" : "company",
+                photo_url: photo,
+              });
+            }
+          } catch (e) {
+            fetchedDrivers.push({
+              id: "app-dr-" + app.id,
+              ...newDrRecord,
+              driver_type: isPartner ? "partner" : "company",
+              photo_url: photo,
+            });
+          }
+        }
+      }
+    }
+
     setBookings(fetchedBookings);
     setApplications(mergedApps);
     setEnquiries((e as Enquiry[]) ?? []);
@@ -323,6 +387,24 @@ function AdminPage() {
             await supabase.from("drivers").update(updates).eq("id", existingDr.id);
             if (photo) {
               localStorage.setItem(`orange_driver_photo_${existingDr.id}`, photo);
+            }
+          } else {
+            // Auto-create driver record so they immediately appear in Drivers Panel
+            const { data: createdDr } = await supabase.from("drivers").insert({
+              full_name: appObj.full_name,
+              phone: appObj.phone || "",
+              city: appObj.city || "Bengaluru",
+              status: "active",
+              vehicle_code: updates.vehicle_code,
+              vehicle_number: plate,
+              vehicle_model: model,
+              rating: 5,
+              total_rides: 0,
+              is_online: false,
+            }).select().maybeSingle();
+
+            if (createdDr && photo) {
+              localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
             }
           }
 
@@ -586,17 +668,54 @@ function AdminPage() {
                         </div>
                       </div>
 
-                      {app.status === "new" && (
-                        <div className="flex shrink-0 gap-2">
-                          <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10"
-                            onClick={() => updateApplicationStatus(app.id, "rejected")}>
-                            <X className="size-4" /> Reject
-                          </Button>
-                          <Button size="sm" onClick={() => updateApplicationStatus(app.id, "approved", app.email, app)}>
-                            <CheckCircle className="size-4" /> Approve
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex shrink-0 items-center gap-2 flex-wrap">
+                        {app.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={`tel:${app.phone.replace(/\s+/g, '')}`}
+                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-xs"
+                              title={`Call ${app.full_name} (${app.phone})`}
+                            >
+                              <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>Call</span>
+                            </a>
+                            <a
+                              href={`https://api.whatsapp.com/send?phone=${app.phone.replace(/\D/g, '')}&text=${encodeURIComponent(
+                                `Hello ${app.full_name}, this is Orange Taxi Fleet Operations regarding your driver application.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold transition-colors shadow-xs"
+                              title={`Chat with ${app.full_name} on WhatsApp`}
+                            >
+                              <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                              <span>WhatsApp</span>
+                            </a>
+                          </div>
+                        )}
+
+                        {app.status === "approved" && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("drivers")}
+                            className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
+                          >
+                            <span>✓ In Fleet (View in Drivers →)</span>
+                          </button>
+                        )}
+
+                        {app.status === "new" && (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10"
+                              onClick={() => updateApplicationStatus(app.id, "rejected")}>
+                              <X className="size-4" /> Reject
+                            </Button>
+                            <Button size="sm" onClick={() => updateApplicationStatus(app.id, "approved", app.email, app)}>
+                              <CheckCircle className="size-4" /> Approve
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -693,6 +812,7 @@ function AdminPage() {
 function isCommissionDriver(d: Driver): boolean {
   if (d.driver_type === "partner") return true;
   if (d.driver_type === "company") return false;
+  if ((d as any).owns_vehicle) return true;
   if (d.vehicle_code && typeof d.vehicle_code === "string") {
     if (d.vehicle_code.includes('"type":"partner"')) return true;
     if (d.vehicle_code.includes('"type":"company"')) return false;
@@ -704,6 +824,17 @@ function isCommissionDriver(d: Driver): boolean {
         (d.id && pv.driver_id === d.id) ||
         (d.phone && pv.owner_phone && pv.owner_phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
         (d.full_name && pv.owner_name && pv.owner_name.toLowerCase() === d.full_name.toLowerCase())
+      )) {
+        return true;
+      }
+    } catch (e) {}
+
+    try {
+      const extApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
+      if (extApps.some((ea: any) =>
+        (ea.owns_vehicle || ea.driver_type === "partner") &&
+        ((d.phone && ea.phone && ea.phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
+         (d.full_name && ea.full_name && ea.full_name.toLowerCase() === d.full_name.toLowerCase()))
       )) {
         return true;
       }
@@ -1081,6 +1212,53 @@ function DriverAnalyticsPanel({
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Direct Connect Options: Call & WhatsApp */}
+            {d.phone && d.phone.trim() ? (
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={`tel:${d.phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/40 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 text-xs font-bold transition-colors shadow-xs"
+                  title={`Call ${d.full_name} (${d.phone})`}
+                >
+                  <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Call</span>
+                </a>
+                <a
+                  href={`https://api.whatsapp.com/send?phone=${d.phone.replace(/\D/g, '')}&text=${encodeURIComponent(
+                    `Hello ${d.full_name}, this is Orange Taxi Fleet Operations regarding your driver account.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300 text-xs font-bold transition-colors shadow-xs"
+                  title={`Chat with ${d.full_name} on WhatsApp`}
+                >
+                  <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const newPhone = prompt(`Enter phone number for ${d.full_name} to connect:`);
+                  if (newPhone !== null && newPhone.trim() !== "") {
+                    supabase.from("drivers").update({ phone: newPhone.trim() }).eq("id", d.id).then(({ error }) => {
+                      if (error) toast.error("Could not update phone: " + error.message);
+                      else {
+                        toast.success("Phone saved! You can now call or WhatsApp this driver.");
+                        onRefresh();
+                      }
+                    });
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-medium text-muted-foreground transition-colors"
+                title="Add phone number to enable direct Call & WhatsApp"
+              >
+                <Phone className="size-3.5" />
+                <span>Connect (Add Phone)</span>
+              </button>
+            )}
+
             {isPartner ? (
               <>
                 <Button
