@@ -124,7 +124,7 @@ function calcFare(vehicle: VehicleCategory, distKm: number, settings: { tax_perc
 }
 
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {

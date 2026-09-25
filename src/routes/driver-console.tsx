@@ -1314,16 +1314,35 @@ function DriverConsolePage() {
                               </a>
                             </Button>
                           </div>
-                          <p className="text-sm font-semibold mb-3">Ask customer for the 6-digit OTP</p>
+                          <p className="text-sm font-semibold mb-3">
+                            Ask customer for the {ride.ride_otp?.length === 6 ? "6" : "4"}-digit OTP
+                          </p>
                           <div className="flex flex-col items-center gap-4">
-                            <InputOTP maxLength={6} value={otpInputs[ride.id] || ""} onChange={(val) => setOtpInputs(p => ({ ...p, [ride.id]: val }))}>
-                              <InputOTPGroup>
-                                {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} className="size-10 text-lg" />)}
-                              </InputOTPGroup>
-                            </InputOTP>
-                            <Button onClick={() => advanceStatus(ride)} disabled={otpInputs[ride.id]?.length !== 6} className="w-full sm:w-auto">
-                              Verify & Start Ride <ArrowRight className="ml-2 size-4" />
-                            </Button>
+                            {(() => {
+                              const expectedLen = ride.ride_otp?.length === 6 ? 6 : 4;
+                              return (
+                                <>
+                                  <InputOTP
+                                    maxLength={expectedLen}
+                                    value={otpInputs[ride.id] || ""}
+                                    onChange={(val) => setOtpInputs(p => ({ ...p, [ride.id]: val }))}
+                                  >
+                                    <InputOTPGroup>
+                                      {Array.from({ length: expectedLen }, (_, i) => (
+                                        <InputOTPSlot key={i} index={i} className="size-10 text-lg" />
+                                      ))}
+                                    </InputOTPGroup>
+                                  </InputOTP>
+                                  <Button
+                                    onClick={() => advanceStatus(ride)}
+                                    disabled={otpInputs[ride.id]?.length !== expectedLen}
+                                    className="w-full sm:w-auto"
+                                  >
+                                    Verify & Start Ride <ArrowRight className="ml-2 size-4" />
+                                  </Button>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       )}
