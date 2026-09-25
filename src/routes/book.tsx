@@ -727,13 +727,13 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
   useEffect(() => {
     if (!pickupGPS && !locatingGPS) {
       if (areas && areas.length > 0) {
-        const blrAirport = areas.find(a => a.name.toLowerCase().includes("airport") || a.is_airport) || areas[0];
-        onPickupGPS({ name: blrAirport.name, lat: blrAirport.lat, lng: blrAirport.lng });
+        const centralArea = areas.find(a => !a.is_airport && !a.name.toLowerCase().includes("airport")) || areas[0];
+        onPickupGPS({ name: centralArea.name, lat: centralArea.lat, lng: centralArea.lng });
       } else {
         onPickupGPS({
-          name: "Kempegowda Int'l Airport (BLR) - Terminal 1 & 2",
-          lat: 13.1986,
-          lng: 77.7066,
+          name: "Indiranagar, Bengaluru",
+          lat: 12.9784,
+          lng: 77.6408,
         });
       }
     }
