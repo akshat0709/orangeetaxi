@@ -5,7 +5,7 @@ export function useTheme() {
     if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("orange-theme");
     if (stored) return stored === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return false; // Default to Complete Light Theme!
   });
 
   useEffect(() => {

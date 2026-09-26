@@ -72,16 +72,16 @@ function HomePage() {
     </section>
 
     {/* In-Cab Amenities Showcase */}
-    <section className="bg-night py-24 text-white md:py-32">
+    <section className="bg-background py-24 text-foreground border-y border-border dark:bg-night dark:text-white dark:border-white/10 md:py-32">
       <div className="section-shell">
-        <SectionIntro eyebrow="What's inside every Orange" title="The experience starts the moment you sit down." copy="Every Mahindra BE.6 in our fleet is fitted with the finest amenities to make your journey as enjoyable as your destination." light />
+        <SectionIntro eyebrow="What's inside every Orange" title="The experience starts the moment you sit down." copy="Every Mahindra BE.6 in our fleet is fitted with the finest amenities to make your journey as enjoyable as your destination." />
         <div className="mt-14 grid gap-4 md:grid-cols-3">
           {amenities.map(({ icon: Icon, title, text, bg, accent }) => (
-            <article key={title} className={`rounded-2xl ${bg} p-8 flex flex-col gap-6 min-h-64`}>
-              <span className={`grid size-12 place-items-center rounded-full bg-white/10 ${accent}`}><Icon className="size-6" /></span>
+            <article key={title} className={`rounded-2xl border border-border bg-card p-8 flex flex-col gap-6 min-h-64 shadow-sm dark:${bg} dark:border-white/10`}>
+              <span className={`grid size-12 place-items-center rounded-full bg-primary/10 text-primary dark:bg-white/10 ${accent}`}><Icon className="size-6" /></span>
               <div>
-                <h3 className={`text-xl font-bold ${accent}`}>{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-white/70">{text}</p>
+                <h3 className={`text-xl font-bold text-card-foreground dark:${accent}`}>{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground dark:text-white/70">{text}</p>
               </div>
             </article>
           ))}
@@ -97,11 +97,26 @@ function HomePage() {
 
     <section className="bg-sage py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center"><figure className="relative overflow-hidden rounded-[var(--radius-xl)]"><img src={heroImage} alt="Mahindra BE.6 orange electric SUV on a premium city road" width={1920} height={1280} loading="lazy" className="aspect-[5/4] size-full object-cover object-[65%_center]"/><figcaption className="absolute bottom-5 left-5 rounded-full bg-background/90 px-4 py-2 text-xs font-bold text-sage-foreground backdrop-blur">100% electric · Mahindra BE.6</figcaption></figure><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-sage-foreground">Electric by nature</p><h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">Quiet rides.<br/>Cleaner cities.</h2><p className="mt-6 max-w-lg leading-7 text-sage-foreground">Every Orange ride is powered by the Mahindra BE.6 — giving you a quieter, smoother, emission-free journey.</p><div className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-sage-foreground/15">{[[BatteryCharging,"100% Electric Fleet"],[Sparkles,"Quiet & Smooth"],[Leaf,"Lower Emissions"],[ArrowRight,"Mahindra BE.6 Exclusive"]].map(([I,t])=>{const Icon=I as typeof Leaf; return <div key={t as string} className="bg-sage p-5"><Icon className="size-5"/><p className="mt-5 text-sm font-bold">{t as string}</p></div>})}</div></div></div></section>
 
-    <section className="bg-night py-24 text-white md:py-32"><div className="section-shell"><SectionIntro eyebrow="Our fleet" title="Meet your Orange." copy="The Mahindra BE.6 — India's finest electric SUV, in signature orange, exclusively for you." light/><div className="mt-14 grid overflow-hidden rounded-xl border border-white/15 lg:grid-cols-[1.35fr_0.65fr]"><img src={heroImage} alt="Mahindra BE.6 orange electric SUV at night" width={1920} height={1200} loading="lazy" className="h-full min-h-[26rem] w-full object-cover"/><div className="flex flex-col p-7 md:p-10"><p className="text-xs uppercase tracking-[0.16em] text-primary">Mahindra BE.6</p><h3 className="display-serif mt-3 text-4xl text-white">Signature Orange EV SUV</h3><ul className="mt-8 space-y-4 text-sm text-white/75">{["LED Entertainment Screen","Premium Music System","Daily Newspapers","Complimentary Water","Pre-cooled Cabin","Professional Driver","Zero Emissions · 100% Electric"].map(x=><li key={x} className="flex items-center gap-3"><Check className="size-4 text-primary"/>{x}</li>)}</ul><Button asChild className="mt-10 lg:mt-auto"><Link to="/book">Book Your Orange <ArrowRight/></Link></Button></div></div></div></section>
+    <section className="bg-card py-24 text-card-foreground border-b border-border dark:bg-night dark:text-white dark:border-white/10 md:py-32">
+      <div className="section-shell">
+        <SectionIntro eyebrow="Our fleet" title="Meet your Orange." copy="The Mahindra BE.6 — India's finest electric SUV, in signature orange, exclusively for you." />
+        <div className="mt-14 grid overflow-hidden rounded-xl border border-border bg-background dark:border-white/15 dark:bg-card lg:grid-cols-[1.35fr_0.65fr]">
+          <img src={heroImage} alt="Mahindra BE.6 orange electric SUV at night" width={1920} height={1200} loading="lazy" className="h-full min-h-[26rem] w-full object-cover"/>
+          <div className="flex flex-col p-7 md:p-10">
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Mahindra BE.6</p>
+            <h3 className="display-serif mt-3 text-4xl text-foreground dark:text-white">Signature Orange EV SUV</h3>
+            <ul className="mt-8 space-y-4 text-sm text-muted-foreground dark:text-white/75">
+              {["LED Entertainment Screen","Premium Music System","Daily Newspapers","Complimentary Water","Pre-cooled Cabin","Professional Driver","Zero Emissions · 100% Electric"].map(x=><li key={x} className="flex items-center gap-3"><Check className="size-4 text-primary"/>{x}</li>)}
+            </ul>
+            <Button asChild className="mt-10 lg:mt-auto"><Link to="/book">Book Your Orange <ArrowRight/></Link></Button>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center"><div><SectionIntro eyebrow="The people behind every ride" title="Great rides start with great people." copy="We work with professionally trained drivers and focus on the kind of consistent service that earns your trust, journey after journey."/><div className="mt-8 flex flex-wrap gap-2">{["Professional training","Customer-first service","Safety-focused driving","Service standards","Fair performance model"].map(x=><span key={x} className="rounded-full border border-border px-4 py-2 text-xs font-semibold">{x}</span>)}</div><Button asChild variant="charcoal" size="lg" className="mt-9"><Link to="/drive">Drive With Orange <ArrowRight/></Link></Button></div><figure className="overflow-hidden rounded-[var(--radius-xl)]"><img src={driverImage} alt="Professional Orange Taxi driver beside a Mahindra BE.6 orange electric car" width={1408} height={1600} loading="lazy" className="aspect-[4/5] size-full object-cover"/></figure></div></section>
 
-    <section className="bg-primary py-20 text-primary-foreground md:py-24"><div className="section-shell grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-end"><div><BriefcaseBusiness className="size-8"/><h2 className="display-serif mt-7 text-5xl leading-none md:text-6xl">Better rides for your business.</h2><p className="mt-5 max-w-lg leading-7 text-primary-foreground/80">Give your employees, clients and guests the luxury of a Mahindra BE.6 Orange ride — with LED entertainment and premium audio.</p><Button asChild variant="charcoal" size="lg" className="mt-8"><Link to="/business">Talk to Orange <ArrowRight/></Link></Button></div><div className="grid grid-cols-2 gap-px border border-primary-foreground/25 sm:grid-cols-3">{["Corporate bookings","Employee transportation","Airport transfers","Client transportation","Centralized billing","Ride management"].map((x,i)=><div key={x} className="min-h-28 p-5"><span className="text-xs text-primary-foreground/50">0{i+1}</span><p className="mt-4 text-sm font-bold">{x}</p></div>)}</div></div></section>
+    <section className="bg-primary py-20 text-primary-foreground md:py-24"><div className="section-shell grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-end"><div><BriefcaseBusiness className="size-8"/><h2 className="display-serif mt-7 text-5xl leading-none md:text-6xl">Better rides for your business.</h2><p className="mt-5 max-w-lg leading-7 text-primary-foreground/80">Give your employees, clients and guests the luxury of a Mahindra BE.6 Orange ride — with LED entertainment and premium audio.</p><Button asChild variant="charcoal" size="lg" className="mt-8"><Link to="/talk-to-orange">Talk to Orange <ArrowRight/></Link></Button></div><div className="grid grid-cols-2 gap-px border border-primary-foreground/25 sm:grid-cols-3">{["Corporate bookings","Employee transportation","Airport transfers","Client transportation","Centralized billing","Ride management"].map((x,i)=><div key={x} className="min-h-28 p-5"><span className="text-xs text-primary-foreground/50">0{i+1}</span><p className="mt-4 text-sm font-bold">{x}</p></div>)}</div></div></section>
 
     <section className="py-24 md:py-28"><div className="section-shell"><SectionIntro eyebrow="Simple from the start" title="How it works."/><div className="mt-12 grid border-y border-border md:grid-cols-3">{[["01","Book","Choose where you're going."],["02","Ride","Your Mahindra BE.6 arrives."],["03","Enjoy","Sink back. Screen on. Music playing."]].map(([n,t,d])=><div key={n} className="border-b border-border py-8 md:border-b-0 md:border-r md:px-8 md:first:pl-0 md:last:border-r-0"><span className="display-serif text-5xl text-primary">{n}</span><h3 className="mt-8 text-xl font-bold">{t}</h3><p className="mt-2 text-sm text-muted-foreground">{d}</p></div>)}</div></div></section>
 
@@ -109,7 +124,20 @@ function HomePage() {
 
     <section className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]"><SectionIntro eyebrow="Good to know" title="Questions, answered."/><Accordion type="single" collapsible className="border-t border-border">{faqs.map(([q,a],i)=><AccordionItem key={q} value={`faq-${i}`}><AccordionTrigger className="py-6 text-left text-base hover:no-underline">{q}</AccordionTrigger><AccordionContent className="max-w-2xl pb-6 leading-7 text-muted-foreground">{a}</AccordionContent></AccordionItem>)}</Accordion></div></section>
 
-    <section className="relative overflow-hidden bg-night py-28 text-white md:py-40"><img src={heroImage} alt="Mahindra BE.6 orange electric SUV ready for an evening journey" width={1920} height={1200} loading="lazy" className="absolute inset-0 size-full object-cover"/><div className="absolute inset-0 bg-night/70"/><div className="section-shell relative"><div className="max-w-2xl"><h2 className="display-serif text-5xl leading-none text-white md:text-7xl">Your next ride deserves a little more.</h2><p className="mt-6 text-white/80">Mahindra BE.6 · LED Entertainment · Premium Audio · Daily Newspapers.</p><div className="mt-8 flex flex-col gap-3 sm:flex-row"><Button asChild size="lg"><Link to="/book">Book Your Orange <ArrowRight/></Link></Button><Button asChild size="lg" className="bg-white text-neutral-900 hover:bg-white/90 shadow-sm"><Link to="/drive">Drive With Orange</Link></Button></div></div></div></section>
+    <section className="relative overflow-hidden bg-background py-28 text-foreground border-t border-border dark:bg-night dark:text-white md:py-40">
+      <img src={heroImage} alt="Mahindra BE.6 orange electric SUV ready for an evening journey" width={1920} height={1200} loading="lazy" className="absolute inset-0 size-full object-cover"/>
+      <div className="absolute inset-0 bg-background/85 dark:bg-night/70"/>
+      <div className="section-shell relative">
+        <div className="max-w-2xl">
+          <h2 className="display-serif text-5xl leading-none text-foreground dark:text-white md:text-7xl">Your next ride deserves a little more.</h2>
+          <p className="mt-6 text-muted-foreground dark:text-white/80">Mahindra BE.6 · LED Entertainment · Premium Audio · Daily Newspapers.</p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg"><Link to="/book">Book Your Orange <ArrowRight/></Link></Button>
+            <Button asChild size="lg" variant="outline"><Link to="/drive">Drive With Orange</Link></Button>
+          </div>
+        </div>
+      </div>
+    </section>
   </>;
 }
 

@@ -555,12 +555,12 @@ function PassengerPage() {
       </section>
     )}
 
-    <section id="booking" className={`bg-night text-white min-w-0 max-w-full overflow-hidden ${step === 4 ? "py-4 sm:py-8" : "py-8 md:py-24"}`}>
+    <section id="booking" className={`bg-background text-foreground dark:bg-night dark:text-white min-w-0 max-w-full overflow-hidden ${step === 4 ? "py-4 sm:py-8" : "py-8 md:py-24"}`}>
       <div className="section-shell min-w-0 max-w-full">
         {step !== 4 && (
           <>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Book your Orange</p>
-            <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-white">Plan your journey.</h2>
+            <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-foreground dark:text-white">Plan your journey.</h2>
           </>
         )}
 
@@ -570,32 +570,32 @@ function PassengerPage() {
             <div className="hidden sm:flex items-center gap-3">
               {([1, 2, 3] as const).map((s, i) => (
                 <div key={s} className="flex items-center gap-3">
-                  <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-white/30 text-white/40"}`}>
+                  <div className={`grid size-7 place-items-center rounded-full text-xs font-bold transition-colors ${step >= s ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground dark:border-white/30 dark:text-white/40"}`}>
                     {step > s ? <Check className="size-3.5" /> : s}
                   </div>
-                  <span className={`text-xs font-semibold ${step === s ? "text-white" : "text-white/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
-                  {i < 2 && <ChevronRight className="size-4 text-white/30" />}
+                  <span className={`text-xs font-semibold ${step === s ? "text-foreground dark:text-white" : "text-muted-foreground dark:text-white/40"}`}>{["Choose vehicle", "Journey details", "Confirm"][i]}</span>
+                  {i < 2 && <ChevronRight className="size-4 text-muted-foreground/50 dark:text-white/30" />}
                 </div>
               ))}
             </div>
 
             {/* Mobile compact stepper */}
-            <div className="sm:hidden flex items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-2.5">
+            <div className="sm:hidden flex items-center justify-between rounded-xl border border-border bg-card dark:border-white/15 dark:bg-white/5 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="flex size-6 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
                   {step}
                 </span>
-                <span className="text-xs font-semibold text-white">
+                <span className="text-xs font-semibold text-foreground dark:text-white">
                   {step === 1 ? "Choose Vehicle" : step === 2 ? "Select Route & Destination" : "Confirm Ride"}
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-white/60">Step {step} of 3</span>
+              <span className="text-[11px] font-medium text-muted-foreground dark:text-white/60">Step {step} of 3</span>
             </div>
           </div>
         )}
 
         <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start min-w-0 max-w-full">
-          <div className="min-w-0 max-w-full rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-7 shadow-lg">
+          <div className="min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 sm:p-7 shadow-lg dark:border-white/15 dark:bg-white/5">
             {loading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="size-8 animate-spin text-primary" />
@@ -695,20 +695,20 @@ function PassengerPage() {
 /* ---------- STEP 1 to 3 components omitted for brevity, keeping same logic ---------- */
 function Step1Vehicles({ vehicles, selected, onSelect, onNext }: any) {
   return <div className="space-y-4 min-w-0 max-w-full">
-    <p className="text-sm font-semibold text-white">Choose your ride</p>
+    <p className="text-sm font-semibold text-foreground dark:text-white">Choose your ride</p>
     <div className="space-y-3 min-w-0 max-w-full">
       {vehicles.map((v: any) => (
-        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-xl border p-3.5 sm:p-5 text-left transition-all min-w-0 max-w-full ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-white/15 hover:border-white/30"}`}>
+        <button key={v.id} onClick={() => onSelect(v)} className={`w-full rounded-xl border p-3.5 sm:p-5 text-left transition-all min-w-0 max-w-full bg-card dark:bg-transparent ${selected?.id === v.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50 dark:border-white/15 dark:hover:border-white/30"}`}>
           <div className="flex items-start justify-between gap-3 min-w-0">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary shrink-0" /><span className="text-sm font-bold text-white truncate">{v.name}</span></div>
-              <p className="mt-1 text-xs text-white/60 truncate">{v.tagline}</p>
-              <p className="mt-1.5 text-xs text-white/50">{v.seats} seats</p>
+              <div className="flex items-center gap-2"><BatteryCharging className="size-4 text-primary shrink-0" /><span className="text-sm font-bold text-foreground dark:text-white truncate">{v.name}</span></div>
+              <p className="mt-1 text-xs text-muted-foreground dark:text-white/60 truncate">{v.tagline}</p>
+              <p className="mt-1.5 text-xs text-muted-foreground/80 dark:text-white/50">{v.seats} seats</p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-lg font-bold text-primary">₹{v.base_fare}</p>
-              <p className="text-[11px] text-white/50">base + ₹{v.per_km}/km</p>
-              <p className="text-[10px] text-white/40">min ₹{v.minimum_fare}</p>
+              <p className="text-[11px] text-muted-foreground dark:text-white/50">base + ₹{v.per_km}/km</p>
+              <p className="text-[10px] text-muted-foreground/70 dark:text-white/40">min ₹{v.minimum_fare}</p>
             </div>
           </div>
           {selected?.id === v.id && <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary"><Check className="size-3" />Selected</div>}

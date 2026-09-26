@@ -12,7 +12,7 @@ import { triggerPWAInstall } from "@/components/pwa-install-prompt";
 
 const nav = [
   ["Experience", "/experience"], ["Electric", "/electric"], ["For Business", "/business"],
-  ["Drive With Us", "/drive"], ["About", "/about"],
+  ["Drive With Us", "/drive"], ["Talk to Orange", "/talk-to-orange"], ["About", "/about"],
 ] as const;
 
 export function Brand() {
@@ -75,6 +75,9 @@ export function SiteHeader() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/book">Book a Ride</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/talk-to-orange">Talk to Orange</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={triggerPWAInstall}>
                 <Download className="mr-2 size-4" /> Install App

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Bot, BriefcaseBusiness, Check, Loader2, MessageCircle, Send, X } from "lucide-react";
+import { ArrowRight, Bot, BriefcaseBusiness, Check, Loader2, MessageCircle, Phone, Send, Sparkles, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -81,6 +81,36 @@ async function callGemini(messages: Message[]): Promise<string> {
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I couldn't generate a response.";
 }
 
+function getLocalConciergeReply(userQuery: string): string {
+  const query = userQuery.toLowerCase().trim();
+
+  if (query.includes("fare") || query.includes("price") || query.includes("cost") || query.includes("rate") || query.includes("charge")) {
+    return "🏷️ Transparent Orange Taxi Pricing:\n\n• Orange Go: ₹49 Base + ₹12/km (Min ₹99, 4 seats)\n• Orange Sedan: ₹59 Base + ₹15/km (Min ₹129, 4 seats)\n• Orange XL: ₹79 Base + ₹20/km (Min ₹179, 6–7 seats)\n\n✅ Zero surge pricing on advance scheduled rides.\n✅ 5% GST included with full Input Tax Credit (ITC).\n✅ No cancellation penalties.";
+  }
+
+  if (query.includes("airport") || query.includes("igi") || query.includes("flight") || query.includes("terminal")) {
+    return "✈️ Orange Airport Concierge:\n\n• Dedicated pickup bays at Delhi IGI (T1, T2, T3) and BLR Kempegowda Airport.\n• Chauffeurs track live flight numbers to adjust for delays.\n• 45 minutes complimentary post-landing waiting time.\n• Chauffeur assists with luggage directly at the arrivals pillar.";
+  }
+
+  if (query.includes("ev") || query.includes("fleet") || query.includes("car") || query.includes("be.6") || query.includes("amenities") || query.includes("screen")) {
+    return "⚡ 100% Mahindra BE.6 Electric Fleet:\n\nEvery Orange ride features:\n• Rear passenger HD touchscreen for movies, music & live map.\n• Acoustically tuned studio sound system with Bluetooth pairing.\n• Pre-cooled dual-zone AC at 22°C before pickup.\n• Complimentary sealed mineral water & daily newspapers.\n• Fast Type-C & Lightning chargers in rear armrest.\n• Whisper-quiet acoustic cabin with Quiet Ride mode.";
+  }
+
+  if (query.includes("cancel") || query.includes("denial") || query.includes("refuse")) {
+    return "🛡️ Zero Driver Cancellations:\n\nOrange Taxi enforces a strict 0% driver cancellation policy. Chauffeurs cannot cancel accepted rides. In rare cases of vehicle maintenance, our Central Control Tower instantly reassigns an equal or superior vehicle.";
+  }
+
+  if (query.includes("corporate") || query.includes("business") || query.includes("invoice") || query.includes("company")) {
+    return "💼 Corporate & Enterprise Travel:\n\n• Centralized monthly billing with consolidated GST tax invoices.\n• Employee ride rosters, geo-fenced travel rules & cost centers.\n• Priority chauffeur allocation for executive airport & client transfers.\n\nUse our corporate enquiry form on this page or email business@orange-taxi.com!";
+  }
+
+  if (query.includes("book") || query.includes("ride") || query.includes("cab") || query.includes("taxi")) {
+    return 'BOOKING_COMMAND: {"pickup": "Delhi NCR", "drop": "IGI Airport Terminal 3", "vehicle": "orange_sedan", "time": "Now"}\n\nRedirecting you to our Booking Engine to finalize your ride now... 🚕';
+  }
+
+  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Go, Sedan, and XL\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 11 4000 7000!";
+}
+
 function TalkToOrangePage() {
   const [vehicles, setVehicles] = useState<VehicleCategory[]>([]);
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
@@ -137,27 +167,36 @@ function TalkToOrangePage() {
 
   const navigate = useNavigate();
 
-  async function sendChat() {
-    const text = chatInput.trim();
+  async function sendChat(customText?: string) {
+    const text = (customText || chatInput).trim();
     if (!text || chatLoading) return;
     const newMessages: Message[] = [...messages, { role: "user", content: text }];
     setMessages(newMessages);
-    setChatInput("");
+    if (!customText) setChatInput("");
     setChatLoading(true);
     try {
-      if (!GEMINI_KEY) throw new Error("no key");
-      let reply = await callGemini(newMessages);
+      let reply: string;
+      if (GEMINI_KEY) {
+        try {
+          reply = await callGemini(newMessages);
+        } catch {
+          reply = getLocalConciergeReply(text);
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 400));
+        reply = getLocalConciergeReply(text);
+      }
       
       const bookingMatch = reply.match(/BOOKING_COMMAND:\s*({.*})/);
       if (bookingMatch && bookingMatch[1]) {
         sessionStorage.setItem("ai_booking", bookingMatch[1]);
         reply = reply.replace(/BOOKING_COMMAND:\s*({.*})/, "\n\nAwesome! I have your details. Redirecting you to confirm and book your ride now... 🚕");
-        setTimeout(() => navigate({ to: "/book" }), 2500);
+        setTimeout(() => navigate({ to: "/book" }), 2200);
       }
 
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "I'm not available right now. Please call us or use the enquiry form above — we'd love to help! 🟠" }]);
+      setMessages(prev => [...prev, { role: "assistant", content: getLocalConciergeReply(text) }]);
     }
     setChatLoading(false);
   }
@@ -174,6 +213,21 @@ function TalkToOrangePage() {
           {["Corporate bookings", "Employee transportation", "Airport transfers", "Client transportation", "Centralized billing"].map(x => (
             <span key={x} className="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80"><Check className="size-3 text-primary" />{x}</span>
           ))}
+        </div>
+        <div className="mt-9 flex flex-wrap items-center gap-3">
+          <Button onClick={() => setChatOpen(true)} size="lg" className="gap-2">
+            <Bot className="size-4" /> Open Orange Assistant
+          </Button>
+          <Button asChild variant="outline" size="lg" className="gap-2 border-white/30 text-white hover:bg-white/10 hover:text-white">
+            <a href="tel:+911140007000">
+              <Phone className="size-4 text-primary" /> Call 24x7 Concierge
+            </a>
+          </Button>
+          <Button asChild variant="ghost" size="lg" className="gap-2 text-white/80 hover:bg-white/10 hover:text-white">
+            <a href="https://wa.me/911140007000?text=Hi%20Orange%20Concierge%2C%20I%20have%20an%20enquiry%20regarding%20Orange%20Taxi" target="_blank" rel="noreferrer">
+              <MessageCircle className="size-4 text-emerald-400" /> WhatsApp Desk
+            </a>
+          </Button>
         </div>
       </div>
     </section>
@@ -358,17 +412,30 @@ function TalkToOrangePage() {
             <div ref={chatEndRef} />
           </div>
 
+          {/* Quick suggestion chips */}
+          <div className="flex gap-1.5 overflow-x-auto border-t border-border px-3 py-2 text-xs bg-muted/30">
+            {["🏷️ Fares", "✈️ Airport", "⚡ BE.6 Fleet", "🛡️ Zero Cancel", "💼 Corporate", "📍 Book Cab"].map(chip => (
+              <button
+                key={chip}
+                onClick={() => sendChat(chip)}
+                className="whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+
           {/* Input */}
           <div className="border-t border-border p-3 flex gap-2">
             <input
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendChat())}
-              placeholder={GEMINI_KEY ? "Ask me anything..." : "AI assistant coming soon..."}
-              disabled={!GEMINI_KEY || chatLoading}
+              placeholder="Ask about fares, vehicles, airport..."
+              disabled={chatLoading}
               className="flex-1 rounded-lg border border-border bg-muted px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
-            <button onClick={sendChat} disabled={!GEMINI_KEY || chatLoading || !chatInput.trim()}
+            <button onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
               className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground transition-opacity disabled:opacity-40 hover:bg-primary/90">
               <Send className="size-4" />
             </button>
