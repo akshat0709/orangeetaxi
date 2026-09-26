@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck, Smartphone, QrCode, AlertTriangle } from "lucide-react";
+import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Calendar, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck, Smartphone, QrCode, AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,36 @@ interface Booking {
   distance_km: number; rating: number | null;
   customer_id?: string; driver_id?: string;
   notes?: string; ride_otp?: string;
+  scheduled_at?: string | null;
+}
+
+function formatScheduledDeparture(isoString?: string | null) {
+  if (!isoString) return { fullText: "Advance Booking", countdown: "Scheduled", isUrgent: false, isNearDispatch: false, diffMin: 999 };
+  const target = new Date(isoString);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  const diffMin = Math.round(diffMs / 60000);
+  const diffHrs = Math.round(diffMs / (60000 * 60));
+  const diffDays = Math.round(diffMs / (60000 * 60 * 24));
+
+  const timeStr = target.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  const dateStr = target.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+  let countdown = "";
+  if (diffMin <= 0) {
+    countdown = "Departure time reached";
+  } else if (diffMin < 60) {
+    countdown = `In ${diffMin} mins`;
+  } else if (diffHrs < 24) {
+    countdown = `In ${diffHrs} hr${diffHrs > 1 ? "s" : ""}`;
+  } else {
+    countdown = `In ${diffDays} day${diffDays > 1 ? "s" : ""}`;
+  }
+
+  const isUrgent = diffMin > -15 && diffMin <= 30; // 15-30 min priority dispatch window
+  const isNearDispatch = diffMin <= 45; // Driver can click Start Dispatch
+
+  return { fullText: `${dateStr} at ${timeStr}`, countdown, isUrgent, isNearDispatch, diffMin };
 }
 interface DriverProfile {
   id: string; user_id: string; full_name: string; is_online: boolean;
@@ -128,6 +158,7 @@ function DriverConsolePage() {
   const [areas, setAreas] = useState<Record<string, ServiceArea>>({});
   const [activeRides, setActiveRides] = useState<Booking[]>([]);
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
+  const [scheduledBookings, setScheduledBookings] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
   const [commissionSettlements, setCommissionSettlements] = useState<any[]>([]);
@@ -202,6 +233,17 @@ function DriverConsolePage() {
             url: "/driver-console",
             tag: `driver-req-${payload.new?.id || Date.now()}`,
           });
+        } else if (payload.new?.status === "scheduled" && !payload.new?.driver_id) {
+          if (soundEnabled) {
+            playRideRequestChime();
+          }
+          toast.info("📅 New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
+          sendRideNotification({
+            title: "New Scheduled Booking Available! 📅",
+            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+            url: "/driver-console",
+            tag: `driver-sched-${payload.new?.id || Date.now()}`,
+          });
         }
         loadData();
       })
@@ -217,6 +259,11 @@ function DriverConsolePage() {
             url: "/driver-console",
             tag: `driver-req-${payload.new?.id || Date.now()}`,
           });
+        } else if (payload.new?.status === "scheduled" && payload.old?.status !== "scheduled") {
+          if (soundEnabled) {
+            playRideRequestChime();
+          }
+          toast.info("📅 Advance Scheduled Booking Available in Fleet Pool!", { duration: 4000 });
         }
         loadData();
       })
@@ -458,10 +505,21 @@ function DriverConsolePage() {
     const reqList = (requests as Booking[]) ?? [];
     setNewRequests(reqList);
 
-    // Fetch customer profiles for active rides and incoming requests
+    const { data: schedData } = await supabase.from("bookings").select("*")
+      .eq("status", "scheduled")
+      .order("scheduled_at", { ascending: true })
+      .limit(30);
+    const rawSchedList = (schedData as Booking[]) ?? [];
+    const schedList = rawSchedList.filter(
+      b => !b.driver_id || b.driver_id === driverData.id
+    );
+    setScheduledBookings(schedList);
+
+    // Fetch customer profiles for active rides, incoming requests, and scheduled bookings
     const allCustIds = Array.from(new Set([
       ...activeList.map(b => b.customer_id),
-      ...reqList.map(b => b.customer_id)
+      ...reqList.map(b => b.customer_id),
+      ...schedList.map(b => b.customer_id),
     ].filter(Boolean)));
 
     if (allCustIds.length > 0) {
@@ -603,6 +661,70 @@ function DriverConsolePage() {
     await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, activeBooking?.reference);
 
     toast.success("Ride accepted!");
+    loadData();
+  }
+
+  async function preAcceptScheduledRide(bookingId: string) {
+    if (!driver) return;
+    const resolvedDr = resolveDriverDetails(driver);
+    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
+    const schedBooking = scheduledBookings.find(b => b.id === bookingId);
+    const updatedVehicleName = formatVehicleNameWithPlate(schedBooking?.vehicle_name || "Orange Go", resolvedPlate);
+
+    const { error } = await supabase.from("bookings").update({
+      driver_id: driver.id,
+      vehicle_name: updatedVehicleName,
+    }).eq("id", bookingId).eq("status", "scheduled").is("driver_id", null);
+
+    if (error) {
+      toast.error("Could not claim scheduled booking — it may have already been claimed by another chauffeur.");
+      return;
+    }
+
+    await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, schedBooking?.reference);
+
+    toast.success("Scheduled Pre-Booking Confirmed! 🎯", {
+      description: "You are the assigned chauffeur. Please be online and arrive at least 10 minutes before pickup.",
+    });
+    loadData();
+  }
+
+  async function startScheduledRideDispatch(booking: Booking) {
+    if (!driver) return;
+    if (activeRides.length > 0) {
+      toast.error("You already have an active ride in progress. Complete it before starting dispatch.");
+      return;
+    }
+    const resolvedDr = resolveDriverDetails(driver);
+    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
+    const updatedVehicleName = formatVehicleNameWithPlate(booking.vehicle_name || "Orange Go", resolvedPlate);
+
+    const { error } = await supabase.from("bookings").update({
+      status: "accepted",
+      accepted_at: new Date().toISOString(),
+      driver_id: driver.id,
+      vehicle_name: updatedVehicleName,
+    }).eq("id", booking.id);
+
+    if (error) {
+      toast.error("Could not activate dispatch for scheduled ride: " + error.message);
+      return;
+    }
+
+    toast.success("Chauffeur En Route! Heading to scheduled pickup location.");
+    loadData();
+  }
+
+  async function releaseScheduledRide(bookingId: string) {
+    const { error } = await supabase.from("bookings").update({
+      driver_id: null,
+    }).eq("id", bookingId).eq("status", "scheduled");
+
+    if (error) {
+      toast.error("Failed to release ride: " + error.message);
+      return;
+    }
+    toast.info("Scheduled ride returned to fleet pool.");
     loadData();
   }
 
@@ -1093,10 +1215,113 @@ function DriverConsolePage() {
           </div>
         )}
 
+        {/* Urgent Scheduled Ride Priority Dispatch Alert Banner */}
+        {(() => {
+          const urgentSched = scheduledBookings.filter(b => {
+            if (b.driver_id) return false;
+            if (!b.scheduled_at) return false;
+            const diffMs = new Date(b.scheduled_at).getTime() - Date.now();
+            return diffMs > -15 * 60 * 1000 && diffMs <= 30 * 60 * 1000;
+          });
+          if (!driver?.is_online || urgentSched.length === 0) return null;
+          const target = urgentSched[0];
+          const diffMin = Math.max(1, Math.round((new Date(target.scheduled_at!).getTime() - Date.now()) / 60000));
+          return (
+            <div className="mt-4 rounded-2xl border-2 border-purple-500 bg-gradient-to-r from-purple-500/15 via-primary/10 to-purple-500/15 p-4 sm:p-5 shadow-lg shadow-purple-500/10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="flex size-3 rounded-full bg-purple-500 animate-ping" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                      <Calendar className="size-4 text-purple-500" />
+                      ⚡ Urgent Advance Booking • Pickup in {diffMin} Mins!
+                    </span>
+                    <span className="font-mono font-bold text-lg text-primary">
+                      ₹{Math.round(target.estimated_fare)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({Math.round(target.distance_km)} km • {target.vehicle_name})
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-bold text-foreground flex items-center gap-2 flex-wrap">
+                    <span>{target.pickup_area}</span>
+                    <span className="text-primary font-bold">→</span>
+                    <span>{target.drop_area}</span>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={() => preAcceptScheduledRide(target.id)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-9 px-5 shadow-md active:scale-95"
+                  >
+                    <Check className="mr-1.5 size-4" />
+                    <span>Claim & Dispatch</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Available Scheduled Pre-Bookings Fleet Banner */}
+        {(() => {
+          const unclaimed = scheduledBookings.filter(b => !b.driver_id);
+          const urgentSched = scheduledBookings.filter(b => {
+            if (b.driver_id) return false;
+            if (!b.scheduled_at) return false;
+            const diffMs = new Date(b.scheduled_at).getTime() - Date.now();
+            return diffMs > -15 * 60 * 1000 && diffMs <= 30 * 60 * 1000;
+          });
+          if (!driver?.is_online || urgentSched.length > 0 || unclaimed.length === 0) return null;
+          const target = unclaimed[0];
+          const schedule = formatScheduledDeparture(target.scheduled_at);
+          return (
+            <div className="mt-4 rounded-xl border border-purple-400/60 bg-gradient-to-r from-purple-500/10 via-background to-purple-500/5 p-4 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-9 place-items-center rounded-lg bg-purple-600 text-white shrink-0">
+                    <Calendar className="size-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                        📅 {unclaimed.length} Advance Scheduled {unclaimed.length === 1 ? "Trip" : "Trips"} in Fleet Pool
+                      </span>
+                      <span className="text-xs text-muted-foreground">• Pickup {schedule.countdown}</span>
+                      <span className="font-mono font-bold text-sm text-primary">₹{Math.round(target.estimated_fare)}</span>
+                    </div>
+                    <p className="text-xs font-medium text-foreground mt-0.5">
+                      {target.pickup_area} → {target.drop_area} ({Math.round(target.distance_km)} km • {target.vehicle_name})
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    onClick={() => preAcceptScheduledRide(target.id)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-8 px-3.5 shadow active:scale-95"
+                  >
+                    <Check className="mr-1 size-3.5" />
+                    <span>Pre-Claim Ride (₹{Math.round(target.estimated_fare)})</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <Tabs defaultValue="rides" className="mt-10">
           <TabsList className="mb-6">
             <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
             <TabsTrigger value="requests">New Requests {newRequests.length > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{newRequests.length}</span>}</TabsTrigger>
+            <TabsTrigger value="scheduled">
+              Scheduled Pre-Bookings {scheduledBookings.length > 0 && <span className="ml-1.5 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{scheduledBookings.length}</span>}
+            </TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="praise">
               Customer Praise & Tips {driverReviews.length > 0 && <span className="ml-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{driverReviews.length}</span>}
@@ -1104,8 +1329,110 @@ function DriverConsolePage() {
           </TabsList>
 
           <TabsContent value="rides">
+            {/* Pre-assigned Scheduled Duties for this Chauffeur */}
+            {(() => {
+              const myScheduled = scheduledBookings.filter(b => b.driver_id === driver?.id);
+              if (myScheduled.length === 0) return null;
+              return (
+                <div className="mb-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Calendar className="size-4 text-purple-600" />
+                      <span>Upcoming Pre-Assigned Duties ({myScheduled.length})</span>
+                    </h3>
+                    <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold bg-purple-50 dark:bg-purple-950/40 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                      Guaranteed Advance Booking
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {myScheduled.map((ride) => {
+                      const schedule = formatScheduledDeparture(ride.scheduled_at);
+                      const customer = ride.customer_id ? customerProfiles[ride.customer_id] : null;
+
+                      return (
+                        <div
+                          key={ride.id}
+                          className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm"
+                        >
+                          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold">{ride.reference}</span>
+                                <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 text-[11px] font-bold px-2 py-0.5 border border-emerald-300">
+                                  ✓ Pre-Assigned to You
+                                </span>
+                                {schedule.isUrgent && (
+                                  <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold px-2 py-0.5 animate-pulse">
+                                    ⚡ Dispatch Window Active (&lt; 30m)
+                                  </span>
+                                )}
+                                <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-purple-600 bg-purple-100 dark:bg-purple-950 px-2.5 py-0.5 rounded-md">
+                                  <Clock className="size-3.5" />
+                                  <span>{schedule.countdown}</span>
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 px-3 py-1.5 rounded-lg">
+                                <Calendar className="size-3.5 text-purple-600 shrink-0" />
+                                <span>Departure: <strong>{schedule.fullText}</strong></span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-sm font-bold">
+                                <MapPin className="size-4 text-primary shrink-0" />
+                                <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                  {ride.pickup_area}
+                                </a>
+                                <span>→</span>
+                                <Navigation className="size-4 text-primary shrink-0" />
+                                <a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                  {ride.drop_area}
+                                </a>
+                              </div>
+
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                                <span>{Math.round(ride.distance_km)} km</span>
+                                <span>{ride.vehicle_name}</span>
+                                {customer && (
+                                  <span className="flex items-center gap-1 text-foreground font-medium">
+                                    <User className="size-3 text-muted-foreground" /> {customer.full_name} ({customer.phone || "No phone"})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex md:flex-col gap-2 shrink-0 justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => startScheduledRideDispatch(ride)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 shadow-sm active:scale-95"
+                              >
+                                <Navigation className="mr-1.5 size-3.5" />
+                                <span>Start Dispatch (En Route)</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => releaseScheduledRide(ride.id)}
+                                className="text-xs h-9 border-border text-muted-foreground hover:text-destructive"
+                              >
+                                Return to Pool
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {activeRides.length === 0 ? (
-              <EmptyState icon={Navigation} title="No active rides" text="Accept a ride request to get started." />
+              scheduledBookings.filter(b => b.driver_id === driver?.id).length === 0 && (
+                <EmptyState icon={Navigation} title="No active rides" text="Accept a ride request to get started." />
+              )
             ) : (
               <div className="space-y-4">
                 {activeRides.map(ride => {
@@ -1362,7 +1689,76 @@ function DriverConsolePage() {
 
           <TabsContent value="requests">
             {!driver.is_online && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">You're offline. Go online to receive ride requests.</div>}
-            {newRequests.length === 0 ? <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." /> :
+
+            {/* Open Advance Scheduled Pre-Bookings */}
+            {(() => {
+              const unclaimedSched = scheduledBookings.filter(b => !b.driver_id);
+              if (unclaimedSched.length === 0) return null;
+              return (
+                <div className="mb-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Calendar className="size-4 text-purple-600" />
+                      <span>Open Scheduled Pre-Bookings ({unclaimedSched.length})</span>
+                    </h3>
+                    <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                      Available for Pre-Claim
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {unclaimedSched.map((ride) => {
+                      const schedule = formatScheduledDeparture(ride.scheduled_at);
+                      return (
+                        <div key={ride.id} className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm">
+                          <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[11px] font-bold px-2 py-0.5 border border-purple-300">
+                                  📅 Scheduled Departure
+                                </span>
+                                <span className="text-xs font-bold text-foreground">{schedule.fullText}</span>
+                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">({schedule.countdown})</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm font-bold">
+                                <MapPin className="size-4 text-primary shrink-0" />
+                                <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                  {ride.pickup_area}
+                                </a>
+                                <span className="text-muted-foreground">→</span>
+                                <Navigation className="size-4 text-primary shrink-0" />
+                                <a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                  {ride.drop_area}
+                                </a>
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                                <span>{Math.round(ride.distance_km)} km</span>
+                                <span>{ride.vehicle_name}</span>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => preAcceptScheduledRide(ride.id)}
+                              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm active:scale-95"
+                            >
+                              <Check className="mr-1.5 size-4" />
+                              <span>Pre-Claim Ride</span>
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {newRequests.length === 0 ? (
+              scheduledBookings.filter(b => !b.driver_id).length === 0 && (
+                <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." />
+              )
+            ) : (
               <div className="space-y-4">
                 {newRequests.map(ride => {
                   const reqPref = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
@@ -1437,7 +1833,203 @@ function DriverConsolePage() {
                   );
                 })}
               </div>
-            }
+            )}
+          </TabsContent>
+
+          <TabsContent value="scheduled">
+            {/* Advance Scheduling Explainer Banner */}
+            <div className="mb-6 rounded-2xl border border-purple-200/80 bg-gradient-to-r from-purple-50/90 via-background to-indigo-50/70 p-5 shadow-sm dark:border-purple-900/60 dark:from-purple-950/30 dark:to-indigo-950/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="grid size-10 place-items-center rounded-xl bg-purple-600 text-white shrink-0 shadow-sm shadow-purple-600/20">
+                    <Calendar className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <span>Guaranteed Chauffeur Pre-Booking System</span>
+                      <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 border border-purple-200 dark:border-purple-800">
+                        100% Payout / 0 Cancel Fees
+                      </span>
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Scheduled rides are confirmed in advance. Pre-claim long-distance airport & city trips to plan your daily earnings.
+                      During the <strong>15–30 minute priority dispatch window</strong>, unclaimed rides broadcast urgent audio chimes. Chauffeurs must arrive <strong>5–10 mins prior</strong> with Dual-Zone AC pre-cooled to 22°C.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {scheduledBookings.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                title="No scheduled pre-bookings currently"
+                text="When passengers book advance rides for airport transfers or city meetings, they will appear here for you to claim."
+              />
+            ) : (
+              <div className="space-y-4">
+                {scheduledBookings.map((ride) => {
+                  const schedule = formatScheduledDeparture(ride.scheduled_at);
+                  const isAssignedToMe = ride.driver_id === driver?.id;
+                  const isUnassigned = !ride.driver_id;
+                  const reqPref = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
+                  const customer = ride.customer_id ? customerProfiles[ride.customer_id] : null;
+
+                  return (
+                    <div
+                      key={ride.id}
+                      className={`rounded-xl border p-6 transition-all ${
+                        isAssignedToMe
+                          ? "border-purple-500/50 bg-purple-500/[0.03] dark:bg-purple-950/10 shadow-sm"
+                          : schedule.isUrgent
+                          ? "border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-950/10"
+                          : "border-border bg-background"
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div className="flex-1 space-y-3">
+                          {/* Top Row: Ref, Status, Time Countdown */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold">{ride.reference}</span>
+
+                            {isAssignedToMe ? (
+                              <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-bold px-2.5 py-0.5">
+                                ✓ Assigned to You
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300 dark:border-purple-800 text-[11px] font-bold px-2.5 py-0.5">
+                                Available in Fleet Pool
+                              </span>
+                            )}
+
+                            {schedule.isUrgent && (
+                              <span className="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[11px] font-bold px-2.5 py-0.5 animate-pulse">
+                                ⚡ Dispatch Window Active (&lt; 30m)
+                              </span>
+                            )}
+
+                            <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 px-2.5 py-1 rounded-md">
+                              <Clock className="size-3.5" />
+                              <span>{schedule.countdown}</span>
+                            </span>
+                          </div>
+
+                          {/* Scheduled Time Banner */}
+                          <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/50 px-3 py-2 rounded-lg border border-border/60">
+                            <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span>Scheduled Pickup: <strong>{schedule.fullText}</strong></span>
+                          </div>
+
+                          {/* Pickup & Drop Addresses */}
+                          <div className="flex items-center gap-2 text-sm font-bold">
+                            <MapPin className="size-4 text-primary shrink-0" />
+                            <a
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:underline hover:text-primary transition-colors flex items-center gap-1 text-foreground"
+                              title="Preview pickup location on Google Maps"
+                            >
+                              {ride.pickup_area}
+                              <Map className="size-3 text-muted-foreground inline" />
+                            </a>
+                            <span className="text-muted-foreground">→</span>
+                            <Navigation className="size-4 text-primary shrink-0" />
+                            <a
+                              href={getNavUrl(ride.drop_area, ride.drop_address)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:underline hover:text-primary transition-colors flex items-center gap-1 text-foreground"
+                              title="Preview drop location on Google Maps"
+                            >
+                              {ride.drop_area}
+                              <Map className="size-3 text-muted-foreground inline" />
+                            </a>
+                          </div>
+
+                          {/* Fare and distance */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                            <span>{Math.round(ride.distance_km)} km</span>
+                            <span>{ride.vehicle_name}</span>
+                            {customer && (
+                              <span className="flex items-center gap-1 text-foreground font-medium">
+                                <User className="size-3 text-muted-foreground" />
+                                {customer.full_name}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Passenger Comfort Preferences */}
+                          {(reqPref.cabinClimate || reqPref.quietRide || reqPref.pickupPillar) && (
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+                              {reqPref.cabinClimate && (() => {
+                                const b = getCabinClimateBadge(reqPref.cabinClimate);
+                                return (
+                                  <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}>
+                                    <Snowflake className="size-3" />
+                                    <span>Pre-cool {b.label}</span>
+                                  </span>
+                                );
+                              })()}
+                              {reqPref.quietRide && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                                  <VolumeX className="size-3" />
+                                  <span>Quiet Mode</span>
+                                </span>
+                              )}
+                              {reqPref.pickupPillar && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                                  <MapPin className="size-3" />
+                                  <span>Pillar: {reqPref.pickupPillar}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex md:flex-col gap-2 shrink-0 justify-end">
+                          {isAssignedToMe ? (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => startScheduledRideDispatch(ride)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm active:scale-95 text-xs h-9 px-4"
+                              >
+                                <Navigation className="mr-1.5 size-3.5" />
+                                <span>Start Dispatch (En Route)</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => releaseScheduledRide(ride.id)}
+                                className="text-xs h-9 border-border text-muted-foreground hover:text-destructive"
+                              >
+                                Return to Pool
+                              </Button>
+                            </>
+                          ) : isUnassigned ? (
+                            <Button
+                              size="sm"
+                              onClick={() => preAcceptScheduledRide(ride.id)}
+                              className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md shadow-purple-500/20 active:scale-95 text-xs h-9 px-4"
+                            >
+                              <Check className="mr-1.5 size-4" />
+                              <span>Pre-Claim Ride (₹{Math.round(ride.estimated_fare)})</span>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground font-semibold px-2 py-1">
+                              Claimed by another chauffeur
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="earnings">

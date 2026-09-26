@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { ArrowRight, BatteryCharging, CalendarClock, Check, CheckCircle, ChevronRight, Clock, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
+import { ArrowRight, BatteryCharging, Calendar, CalendarClock, Check, CheckCircle, ChevronRight, Clock, Copy, Droplets, FileText, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Shield, ShieldAlert, ShieldCheck, Snowflake, Sparkles, UserRoundCheck, Wallet, Car, XCircle, Crosshair, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -274,6 +274,16 @@ function PassengerPage() {
   const [pickupPillar, setPickupPillar] = useState("");
   const [cabinClimate, setCabinClimate] = useState<"chilled" | "pleasant" | "eco">("pleasant");
   const [quietRide, setQuietRide] = useState(false);
+  const [isAdvanceBooking, setIsAdvanceBooking] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState<string>(() => {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState<{ id: string; reference: string; otp: string } | null>(null);
   const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
@@ -496,6 +506,8 @@ function PassengerPage() {
       { cabinClimate, quietRide, pickupPillar: pickupPillar || undefined }
     );
 
+    const scheduledIso = isAdvanceBooking && scheduledDateTime ? new Date(scheduledDateTime).toISOString() : null;
+
     const { data, error } = await supabase.from("bookings").insert({
       customer_id: user.id,
       pickup_area: effectivePickup,
@@ -511,7 +523,8 @@ function PassengerPage() {
       tax_amount: Math.round(fareBreakdown.tax),
       estimated_fare: Math.round(fareBreakdown.total),
       payment_method: paymentMethod,
-      status: "searching",
+      status: isAdvanceBooking ? "scheduled" : "searching",
+      scheduled_at: scheduledIso,
       ride_otp: otp,
     }).select("id, reference").single();
     
@@ -521,6 +534,16 @@ function PassengerPage() {
       setSubmitting(false); 
       return; 
     }
+
+    // Persist booking id in localStorage for instant tracking/profile access
+    try {
+      const stored = localStorage.getItem("@orange_booking_history_ids");
+      const idList = stored ? JSON.parse(stored) : [];
+      if (!idList.includes((data as any).id)) {
+        idList.unshift((data as any).id);
+        localStorage.setItem("@orange_booking_history_ids", JSON.stringify(idList.slice(0, 50)));
+      }
+    } catch (e) {}
 
     // Persist ride preferences for this booking (viewable by driver across devices)
     const ridePref = {
@@ -534,8 +557,13 @@ function PassengerPage() {
     } catch {}
     
     setBookingData({ id: (data as any).id, reference: (data as any).reference, otp });
+    setLiveRideStatus(isAdvanceBooking ? "scheduled" : "searching");
     setStep(4);
-    toast.success("Ride confirmed!");
+    if (isAdvanceBooking) {
+      toast.success("Advance Ride Scheduled! 🍊 Zero-surge fare locked.");
+    } else {
+      toast.success("Ride confirmed! Searching for nearest EV chauffeur.");
+    }
     setSubmitting(false);
   }
 
@@ -646,6 +674,10 @@ function PassengerPage() {
                 onCabinClimateChange={setCabinClimate}
                 quietRide={quietRide}
                 onQuietRideChange={setQuietRide}
+                isAdvanceBooking={isAdvanceBooking}
+                onAdvanceBookingChange={setIsAdvanceBooking}
+                scheduledDateTime={scheduledDateTime}
+                onScheduledDateTimeChange={setScheduledDateTime}
                 onBack={() => setStep(2)}
                 onConfirm={confirmBooking}
                 submitting={submitting}
@@ -855,6 +887,10 @@ function Step3Confirm({
   onCabinClimateChange,
   quietRide,
   onQuietRideChange,
+  isAdvanceBooking,
+  onAdvanceBookingChange,
+  scheduledDateTime,
+  onScheduledDateTimeChange,
   onBack,
   onConfirm,
   submitting,
@@ -959,6 +995,58 @@ function Step3Confirm({
             onChange={e => onQuietRideChange(e.target.checked)}
             className="size-4.5 accent-primary rounded cursor-pointer shrink-0"
           />
+        </div>
+
+        {/* Pickup Timing: Ride Now vs Schedule Advance */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/60">Pickup Timing</p>
+          <div className="mt-2.5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => onAdvanceBookingChange?.(false)}
+              className={`flex items-center justify-center gap-2 rounded-lg border p-3.5 text-xs font-bold transition-all ${
+                !isAdvanceBooking
+                  ? "border-primary bg-primary/20 text-white shadow-sm"
+                  : "border-white/15 bg-white/5 text-white/60 hover:text-white"
+              }`}
+            >
+              <Clock className="size-4 text-primary" />
+              <span>Ride Now (Instant)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onAdvanceBookingChange?.(true)}
+              className={`flex items-center justify-center gap-2 rounded-lg border p-3.5 text-xs font-bold transition-all ${
+                isAdvanceBooking
+                  ? "border-purple-400 bg-purple-500/25 text-white shadow-sm"
+                  : "border-white/15 bg-white/5 text-white/60 hover:text-white"
+              }`}
+            >
+              <Calendar className="size-4 text-purple-400" />
+              <span>Schedule for Later</span>
+            </button>
+          </div>
+
+          {isAdvanceBooking && (
+            <div className="mt-3 rounded-xl border border-purple-400/40 bg-purple-500/10 p-4 space-y-2">
+              <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                <Calendar className="size-3.5" />
+                <span>Select Departure Date & Time:</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={scheduledDateTime}
+                onChange={(e) => onScheduledDateTimeChange?.(e.target.value)}
+                min={new Date(Date.now() + 15 * 60 * 1000).toISOString().slice(0, 16)}
+                className="w-full rounded-lg border border-white/20 bg-black/60 px-3.5 py-2.5 text-sm font-semibold text-white focus:border-purple-400 focus:outline-none"
+              />
+              <p className="text-[11px] text-white/70 leading-relaxed">
+                • <strong>Zero-Surge Fare Locked</strong>: Your fare will never increase.<br />
+                • <strong>Chauffeur Assignment</strong>: Verified EV Chauffeur dispatched 15–30 mins prior.<br />
+                • <strong>Pre-Cooling SLA</strong>: Chauffeur arrives 5–10 mins prior with Dual-Zone AC at 22°C.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Payment Method */}
@@ -1238,10 +1326,71 @@ function Step4Confirmed({
     <div className="flex items-center gap-4 border-b border-white/10 pb-6">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary/20 text-primary"><CheckCircle className="size-6" /></span>
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{status === "searching" ? "Finding driver" : status.replace("_", " ")}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{status === "searching" ? "Finding driver" : status === "scheduled" ? "Advance Booking Guaranteed" : status.replace("_", " ")}</p>
         <p className="display-serif text-2xl text-white">Ref: {bookingData.reference}</p>
       </div>
     </div>
+
+    {/* Advance Scheduled Booking Details Banner */}
+    {status === "scheduled" && (
+      <div className="mt-6 rounded-2xl border-2 border-purple-500/60 bg-gradient-to-r from-purple-500/20 via-primary/10 to-purple-500/10 p-5 space-y-4 shadow-lg backdrop-blur-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="size-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <Calendar className="size-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-purple-400 animate-pulse" />
+              <p className="text-xs font-extrabold uppercase tracking-wider text-purple-300">Advance Chauffeur Reserved</p>
+            </div>
+            <p className="text-base font-bold text-white mt-0.5">
+              {currentBooking?.scheduled_at
+                ? new Date(currentBooking.scheduled_at).toLocaleDateString("en-IN", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                : "Scheduled Departure"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs border-t border-purple-400/30">
+          <div className="rounded-lg bg-black/40 p-2.5 border border-white/10">
+            <span className="text-[10px] uppercase text-white/60 font-semibold">Locked Fare</span>
+            <p className="font-mono text-base font-bold text-primary">₹{fare}</p>
+            <span className="text-[10px] text-white/50">Zero surge guaranteed</span>
+          </div>
+          <div className="rounded-lg bg-black/40 p-2.5 border border-white/10">
+            <span className="text-[10px] uppercase text-white/60 font-semibold">Chauffeur Dispatch</span>
+            <p className="font-semibold text-white">Broadcasts T-25m</p>
+            <span className="text-[10px] text-white/50">High-priority alert</span>
+          </div>
+          <div className="col-span-2 sm:col-span-1 rounded-lg bg-black/40 p-2.5 border border-white/10">
+            <span className="text-[10px] uppercase text-white/60 font-semibold">Arrival SLA</span>
+            <p className="font-semibold text-white">Pre-cooled 22°C</p>
+            <span className="text-[10px] text-white/50">5–10 mins prior</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <Button asChild className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold h-10 text-xs">
+            <Link to="/track" search={{ ref: bookingData.reference }}>
+              Open Dedicated Live Radar →
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="border-white/20 text-white hover:bg-white/10 h-10 text-xs">
+            <Link to="/profile">
+              View in My Profile
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )}
 
     {/* OTP Display / Trip in Progress Banner */}
     {status === "in_progress" ? (

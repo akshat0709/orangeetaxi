@@ -2,7 +2,7 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BadgeCheck, Banknote, BriefcaseBusiness, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, PhoneCall, MessageSquare, Search, Users, Wallet, X, Zap, Building2, Handshake, Percent, Sparkles, ShieldCheck, BadgeIndianRupee } from "lucide-react";
+import { BadgeCheck, Banknote, BriefcaseBusiness, Calendar, Clock, Car, Check, CheckCircle, ChevronDown, ChevronUp, FileSpreadsheet, Loader2, MoreHorizontal, ParkingSquare, Phone, PhoneCall, MessageSquare, Search, Users, Wallet, X, Zap, Building2, Handshake, Percent, Sparkles, ShieldCheck, BadgeIndianRupee } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,14 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; }
+interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; scheduled_at?: string | null; }
 interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; photo_url?: string; driver_type?: string; vehicle_model?: string; vehicle_number?: string; chassis_number?: string; vehicle_year?: string; }
 interface Enquiry { id: string; company_name: string; contact_name: string; email: string; phone: string; city: string; team_size: string; requirement: string; message: string; status: string; created_at: string; }
 interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; vehicle_code?: string; driver_type?: string; photo_url?: string; chassis_number?: string; user_id?: string; }
 
 const STATUS_BADGE: Record<string, string> = {
+  scheduled: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:border dark:border-purple-800/40",
+  searching: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40",
   accepted: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
   arrived: "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 dark:border dark:border-violet-800/40",
   in_progress: "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
@@ -54,6 +56,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState(() => search?.tab || "bookings");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
 
   useEffect(() => {
     if (search?.tab && search.tab !== activeTab) {
@@ -512,33 +515,76 @@ function AdminPage() {
           {/* BOOKINGS */}
           <TabsContent value="bookings">
             <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-6 py-4 flex items-center justify-between">
-                <h3 className="font-semibold">All Bookings</h3>
+              <div className="border-b border-border px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="font-semibold">All Bookings</h3>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { id: "all", label: "All", count: bookings.length },
+                      { id: "scheduled", label: "Scheduled Advance", count: bookings.filter(b => b.status === "scheduled").length, color: "text-purple-600 font-bold" },
+                      { id: "active", label: "Live / Searching", count: bookings.filter(b => ["searching", "accepted", "arrived", "in_progress"].includes(b.status)).length },
+                      { id: "completed", label: "Completed", count: bookings.filter(b => b.status === "completed").length },
+                      { id: "cancelled", label: "Cancelled", count: bookings.filter(b => b.status === "cancelled").length },
+                    ].map(f => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setBookingStatusFilter(f.id)}
+                        className={`px-2.5 py-1 rounded-md text-xs transition-colors flex items-center gap-1 ${
+                          bookingStatusFilter === f.id
+                            ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        }`}
+                      >
+                        <span>{f.label}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${bookingStatusFilter === f.id ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"}`}>{f.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <Button size="sm" variant="ghost" onClick={loadAll}>Refresh</Button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
-                      {["Ref", "Route", "Vehicle", "Fare", "Status", "Driver", "OTP", "Actions"].map(h => (
+                      {["Ref", "Route & Time", "Vehicle", "Fare", "Status", "Driver", "OTP", "Actions"].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {bookings.map(b => (
+                    {bookings
+                      .filter(b => {
+                        if (bookingStatusFilter === "scheduled") return b.status === "scheduled";
+                        if (bookingStatusFilter === "active") return ["searching", "accepted", "arrived", "in_progress"].includes(b.status);
+                        if (bookingStatusFilter === "completed") return b.status === "completed";
+                        if (bookingStatusFilter === "cancelled") return b.status === "cancelled";
+                        return true;
+                      })
+                      .map(b => (
                       <tr key={b.id} className="hover:bg-muted/30">
                         <td className="px-4 py-3 font-mono text-xs font-bold">{b.reference}</td>
-                        <td className="px-4 py-3 text-xs">{b.pickup_area} → {b.drop_area}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <div className="font-medium text-foreground">{b.pickup_area} → {b.drop_area}</div>
+                          {b.status === "scheduled" && (
+                            <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300">
+                              <Calendar className="size-3 text-purple-600" />
+                              <span>{b.scheduled_at ? new Date(b.scheduled_at).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) : "Advance Booking"}</span>
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{b.vehicle_name}</td>
                         <td className="px-4 py-3 font-semibold text-primary">₹{Math.round(b.estimated_fare)}</td>
                         <td className="px-4 py-3">
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}>{b.status.replace("_", " ")}</span>
                         </td>
                         <td className="px-4 py-3">
-                          {b.status === "searching" ? (
+                          {b.status === "searching" || (b.status === "scheduled" && !b.driver_id) ? (
                             <Select onValueChange={v => assignDriver(b.id, v)}>
-                              <SelectTrigger className="h-7 w-48 text-xs"><SelectValue placeholder="Assign driver" /></SelectTrigger>
+                              <SelectTrigger className="h-7 w-48 text-xs">
+                                <SelectValue placeholder={b.status === "scheduled" ? "Pre-assign Chauffeur" : "Assign driver"} />
+                              </SelectTrigger>
                               <SelectContent>
                                 {drivers.map(d => (
                                   <SelectItem key={d.id} value={d.id}>
@@ -573,7 +619,7 @@ function AdminPage() {
                           <span className="font-mono text-sm font-bold text-primary">{b.ride_otp || "—"}</span>
                         </td>
                         <td className="px-4 py-3">
-                          {["searching", "accepted", "arrived", "in_progress"].includes(b.status) && (
+                          {["searching", "scheduled", "accepted", "arrived", "in_progress"].includes(b.status) && (
                             <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:bg-destructive/10"
                               onClick={async () => { await supabase.from("bookings").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", b.id); toast.success("Booking cancelled"); loadAll(); }}>
                               Cancel

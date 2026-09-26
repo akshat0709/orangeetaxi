@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText } from "lucide-react";
+import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 const STATUS_STYLES = {
+  scheduled:   { label: "Scheduled",   className: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-800" },
   completed:   { label: "Completed",   className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" },
   cancelled:   { label: "Cancelled",   className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
   searching:   { label: "Searching",   className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" },
@@ -112,20 +113,62 @@ function ProfilePage() {
     fetchProfile();
   }, [user]);
 
-  useEffect(() => {
+  async function fetchBookings() {
     if (!user) return;
-    async function fetchBookings() {
-      setBookingsLoading(true);
+    setBookingsLoading(true);
+    try {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
+        .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
         .eq("customer_id", user.id)
         .order("created_at", { ascending: false });
-      if (!error && data) setBookings(data);
+
+      let list = (data || []);
+
+      // Also merge any bookings created in this browser stored in localStorage
+      try {
+        const stored = localStorage.getItem("@orange_booking_history_ids") || localStorage.getItem("orange_booking_history_ids");
+        const idList: string[] = stored ? JSON.parse(stored) : [];
+        const missingIds = idList.filter(id => !list.some(b => b.id === id));
+        if (missingIds.length > 0) {
+          const { data: extra } = await supabase
+            .from("bookings")
+            .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
+            .in("id", missingIds);
+          if (extra && extra.length > 0) {
+            list = [...list, ...extra];
+            list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          }
+        }
+      } catch (err) {}
+
+      setBookings(list);
+    } catch (e) {
+      console.warn("Error fetching bookings:", e);
+    } finally {
       setBookingsLoading(false);
     }
+  }
+
+  useEffect(() => {
     fetchBookings();
   }, [user]);
+
+  async function handleCancelScheduledRide(booking: any) {
+    if (!confirm(`Are you sure you want to cancel scheduled ride #${booking.reference}? (Zero cancellation fee)`)) {
+      return;
+    }
+    const { error } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("id", booking.id);
+    if (error) {
+      toast.error("Failed to cancel: " + error.message);
+    } else {
+      toast.success("Scheduled ride cancelled. Zero cancellation fee applied.");
+      fetchBookings();
+    }
+  }
 
   async function handleSave() {
     if (!user) return;
@@ -300,20 +343,69 @@ function ProfilePage() {
             {/* Ride History */}
             <TabsContent value="history" className="mt-6">
               <div className="flex gap-2 flex-wrap">
-                {["all", "completed", "cancelled"].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                      filter === f
-                        ? "bg-primary text-primary-foreground"
-                        : "border border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
-                    }`}
-                  >
-                    {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
+                {["all", "scheduled", "completed", "cancelled"].map((f) => {
+                  const count = f === "scheduled"
+                    ? bookings.filter((b) => b.status === "scheduled").length
+                    : f === "completed"
+                    ? bookings.filter((b) => b.status === "completed").length
+                    : f === "cancelled"
+                    ? bookings.filter((b) => b.status === "cancelled").length
+                    : bookings.length;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-colors flex items-center gap-1.5 ${
+                        filter === f
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
+                      }`}
+                    >
+                      <span>{f === "all" ? "All Trips" : f === "scheduled" ? "Scheduled & Upcoming" : f.charAt(0).toUpperCase() + f.slice(1)}</span>
+                      {count > 0 && (
+                        <span
+                          className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                            filter === f
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : f === "scheduled"
+                              ? "bg-purple-600 text-white"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Upcoming Scheduled Trips Alert Banner */}
+              {bookings.filter((b) => b.status === "scheduled").length > 0 && filter === "all" && (
+                <div className="mt-4 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/80 dark:bg-purple-950/30 p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="grid size-8 place-items-center rounded-lg bg-purple-600 text-white shrink-0">
+                      <Calendar className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                        {bookings.filter((b) => b.status === "scheduled").length} Upcoming Scheduled Ride{bookings.filter((b) => b.status === "scheduled").length > 1 ? "s" : ""}
+                      </p>
+                      <p className="text-[11px] text-purple-700 dark:text-purple-400">
+                        Zero surge locked fare • Dedicated EV Chauffeur dispatch
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFilter("scheduled")}
+                    className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:text-purple-300"
+                  >
+                    View Scheduled
+                  </Button>
+                </div>
+              )}
 
               <div className="mt-5 space-y-3">
                 {bookingsLoading ? (
@@ -333,10 +425,42 @@ function ProfilePage() {
                   </div>
                 ) : (
                   filteredBookings.map((booking) => {
+                    const isScheduled = booking.status === "scheduled";
+                    const schedDate = booking.scheduled_at ? new Date(booking.scheduled_at) : null;
+                    const schedText = schedDate
+                      ? schedDate.toLocaleDateString("en-IN", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "Advance Booking";
+
                     const style = STATUS_STYLES[booking.status] ?? { label: booking.status, className: "bg-muted text-muted-foreground" };
                     const displayFare = booking.final_fare ?? booking.estimated_fare;
                     return (
-                      <div key={booking.id} className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+                      <div
+                        key={booking.id}
+                        className={`rounded-xl border p-5 shadow-sm transition-all hover:shadow-md ${
+                          isScheduled
+                            ? "border-purple-300 bg-purple-500/[0.03] dark:border-purple-800 dark:bg-purple-950/20"
+                            : "border-border bg-card"
+                        }`}
+                      >
+                        {isScheduled && (
+                          <div className="mb-3 flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-950/60 px-3 py-2 text-xs font-semibold text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                              <span>Scheduled Departure: <strong>{schedText}</strong></span>
+                            </div>
+                            <span className="rounded-full bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5">
+                              Guaranteed
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -367,7 +491,28 @@ function ProfilePage() {
                           <div className="shrink-0 text-right flex flex-col items-end">
                             <p className="text-lg font-bold text-primary">₹{Math.round(displayFare ?? 0)}</p>
                             {booking.final_fare == null && <p className="text-[10px] text-muted-foreground">est.</p>}
-                            {booking.status === "completed" && (
+                            
+                            {isScheduled ? (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  className="h-7 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white"
+                                >
+                                  <Link to="/track" search={{ ref: booking.reference }}>
+                                    Track →
+                                  </Link>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleCancelScheduledRide(booking)}
+                                  className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : booking.status === "completed" ? (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -378,7 +523,7 @@ function ProfilePage() {
                                 <FileText className="size-3" />
                                 <span>Invoice</span>
                               </Button>
-                            )}
+                            ) : null}
                           </div>
                         </div>
 
@@ -426,8 +571,9 @@ function ProfilePage() {
                   <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick Summary</p>
                   <div className="mt-4 space-y-3">
                     <SummaryRow label="Completed Rides" value={completedRides.length.toString()} />
+                    <SummaryRow label="Scheduled Rides" value={bookings.filter((b) => b.status === "scheduled").length.toString()} />
                     <SummaryRow label="Cancelled Rides" value={bookings.filter((b) => b.status === "cancelled").length.toString()} />
-                    <SummaryRow label="Active Rides" value={bookings.filter((b) => ["searching","accepted","arrived","in_progress"].includes(b.status)).length.toString()} />
+                    <SummaryRow label="Active In-Progress Rides" value={bookings.filter((b) => ["searching","accepted","arrived","in_progress"].includes(b.status)).length.toString()} />
                   </div>
                 </div>
               )}

@@ -38,6 +38,9 @@ export function SiteHeader() {
       <Brand />
       <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
         {nav.map(([label, to]) => <Link key={to} to={to} className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>{label}</Link>)}
+        {!loading && user && (
+          <Link to="/profile" className="text-[0.8rem] font-semibold text-primary hover:underline" activeProps={{ className: "text-foreground font-bold" }}>My Rides & Schedule</Link>
+        )}
         {!loading && role === "driver" && (
           <Link to="/driver-console" className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>My Console</Link>
         )}
@@ -69,9 +72,9 @@ export function SiteHeader() {
                 {user.email?.split("@")[0]}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem asChild>
-                <Link to="/profile">My Profile</Link>
+                <Link to="/profile">📅 My Rides & Schedule</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/book">Book a Ride</Link>
@@ -145,6 +148,14 @@ export function SiteHeader() {
           </div>
           <nav className="mt-16 flex flex-col" aria-label="Mobile navigation">
             <SheetClose asChild><Link to="/" className="border-b border-border py-4 text-xl font-semibold">Home</Link></SheetClose>
+            {user && (
+              <SheetClose asChild>
+                <Link to="/profile" className="border-b border-border py-4 text-xl font-semibold text-primary flex items-center justify-between">
+                  <span>📅 My Rides & Schedule</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Upcoming</span>
+                </Link>
+              </SheetClose>
+            )}
             {nav.map(([label, to]) => <SheetClose key={to} asChild><Link to={to} className="border-b border-border py-4 text-xl font-semibold">{label}</Link></SheetClose>)}
             {role === "driver" && <SheetClose asChild><Link to="/driver-console" className="border-b border-border py-4 text-xl font-semibold">My Console</Link></SheetClose>}
             {role === "admin" && <SheetClose asChild><Link to="/admin" className="border-b border-border py-4 text-xl font-semibold">Admin</Link></SheetClose>}
@@ -218,6 +229,7 @@ export function SiteFooter() {
             title="Services"
             items={[
               ["Book a Ride", "/book"],
+              ["My Rides & Schedule", "/profile"],
               ["Drive With Us", "/drive"],
               ["Talk to Orange", "/talk-to-orange"],
               ["Support & Grievance", "/support"],

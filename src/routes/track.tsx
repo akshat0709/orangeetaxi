@@ -19,7 +19,9 @@ import {
   ExternalLink,
   LifeBuoy,
   Snowflake,
-  VolumeX
+  VolumeX,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,11 @@ export const Route = createFileRoute("/track")({
 });
 
 const STATUS_LABELS: Record<string, { label: string; color: string; desc: string }> = {
+  scheduled: {
+    label: "Advance Booking Confirmed",
+    color: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+    desc: "Your advance ride is guaranteed. Dedicated chauffeur dispatch activates 15–30 minutes before departure.",
+  },
   searching: {
     label: "Finding Driver",
     color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300",
@@ -437,6 +444,75 @@ function TrackPage() {
                 </div>
               )}
             </div>
+
+            {/* Dedicated Scheduled Ride Details Banner */}
+            {booking.status === "scheduled" && (
+              <div className="rounded-2xl border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/10 via-background to-indigo-500/10 p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-600/25 shrink-0">
+                      <Calendar className="size-6" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                        Scheduled Advance Departure
+                      </span>
+                      <h3 className="text-base font-bold text-foreground">
+                        {booking.scheduled_at
+                          ? new Date(booking.scheduled_at).toLocaleDateString("en-IN", {
+                              weekday: "long",
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })
+                          : "Scheduled Ride"}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        if (!confirm(`Are you sure you want to cancel this scheduled ride #${booking.reference}? (Zero cancellation fee)`)) return;
+                        const { error } = await supabase.from("bookings").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", booking.id);
+                        if (!error) {
+                          toast.success("Scheduled ride cancelled. Zero cancellation fee applied.");
+                          setBooking((b: any) => ({ ...b, status: "cancelled" }));
+                        } else {
+                          toast.error("Failed to cancel: " + error.message);
+                        }
+                      }}
+                      className="text-xs text-destructive hover:bg-destructive/10 border-destructive/20 h-9"
+                    >
+                      Cancel Advance Ride
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-purple-200/50 dark:border-purple-800/40">
+                  <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Locked Fare</span>
+                    <p className="font-mono text-base font-bold text-primary">₹{Math.round(booking.estimated_fare || 0)}</p>
+                    <span className="text-[10px] text-muted-foreground">Zero surge guarantee</span>
+                  </div>
+                  <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Chauffeur Dispatch</span>
+                    <p className="font-semibold text-foreground">Starts 15–30m prior</p>
+                    <span className="text-[10px] text-muted-foreground">Nearest verified EV</span>
+                  </div>
+                  <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Pre-Cooling SLA</span>
+                    <p className="font-semibold text-foreground">Dual-Zone 22°C</p>
+                    <span className="text-[10px] text-muted-foreground">Arrives 5–10 mins prior</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Live Interactive Map */}
             <div className="rounded-2xl border border-border overflow-hidden shadow-lg bg-card">
