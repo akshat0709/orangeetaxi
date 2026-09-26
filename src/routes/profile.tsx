@@ -2,15 +2,17 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText, Calendar, X } from "lucide-react";
+import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText, Calendar, X, Home, Briefcase, Map as MapIcon, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
+import { MapPicker, MapLocation } from "@/components/map-picker";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -58,6 +60,14 @@ function ProfilePage() {
   const [guardianSavedOnce, setGuardianSavedOnce] = useState(false);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<any>(null);
 
+  // Saved Places (Home & Work) with Map Picker
+  const [homeAddress, setHomeAddress] = useState("");
+  const [homeCoords, setHomeCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [workAddress, setWorkAddress] = useState("");
+  const [workCoords, setWorkCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapPickerTarget, setMapPickerTarget] = useState<"home" | "work" | null>(null);
+  const [areas, setAreas] = useState([]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -67,7 +77,25 @@ function ProfilePage() {
         if (p.name) setGuardianName(p.name);
         if (p.phone) setGuardianPhone(p.phone);
       }
+
+      const h = localStorage.getItem("@orange_user_home_address") || localStorage.getItem("orange_user_home_address");
+      if (h) setHomeAddress(h);
+      const hc = localStorage.getItem("@orange_user_home_coords") || localStorage.getItem("orange_user_home_coords");
+      if (hc) setHomeCoords(JSON.parse(hc));
+
+      const w = localStorage.getItem("@orange_user_work_address") || localStorage.getItem("orange_user_work_address");
+      if (w) setWorkAddress(w);
+      const wc = localStorage.getItem("@orange_user_work_coords") || localStorage.getItem("orange_user_work_coords");
+      if (wc) setWorkCoords(JSON.parse(wc));
     } catch (e) {}
+
+    async function loadAreas() {
+      try {
+        const { data } = await supabase.from("service_areas").select("*");
+        if (data) setAreas(data);
+      } catch (err) {}
+    }
+    loadAreas();
   }, []);
 
   function handleSaveGuardian() {
@@ -83,6 +111,46 @@ function ProfilePage() {
     toast.success("Guardian emergency contact saved!");
     setGuardianSavedOnce(true);
     setTimeout(() => setGuardianSavedOnce(false), 2000);
+  }
+
+  function handleSaveMapPlace(location: MapLocation) {
+    if (!mapPickerTarget) return;
+    const cleaned = location.name;
+    const coords = { lat: location.lat, lng: location.lng };
+    if (mapPickerTarget === "home") {
+      setHomeAddress(cleaned);
+      setHomeCoords(coords);
+      localStorage.setItem("@orange_user_home_address", cleaned);
+      localStorage.setItem("@orange_user_home_coords", JSON.stringify(coords));
+      toast.success("Home address saved on map! 🏠", {
+        description: cleaned,
+      });
+    } else {
+      setWorkAddress(cleaned);
+      setWorkCoords(coords);
+      localStorage.setItem("@orange_user_work_address", cleaned);
+      localStorage.setItem("@orange_user_work_coords", JSON.stringify(coords));
+      toast.success("Work address saved on map! 💼", {
+        description: cleaned,
+      });
+    }
+    setMapPickerTarget(null);
+  }
+
+  function handleClearPlace(target: "home" | "work") {
+    if (target === "home") {
+      setHomeAddress("");
+      setHomeCoords(null);
+      localStorage.removeItem("@orange_user_home_address");
+      localStorage.removeItem("@orange_user_home_coords");
+      toast.info("Home address removed");
+    } else {
+      setWorkAddress("");
+      setWorkCoords(null);
+      localStorage.removeItem("@orange_user_work_address");
+      localStorage.removeItem("@orange_user_work_coords");
+      toast.info("Work address removed");
+    }
   }
 
   const [bookings, setBookings] = useState([]);
@@ -329,6 +397,113 @@ function ProfilePage() {
                 >
                   {guardianSavedOnce ? <><Check className="size-3.5" /> Guardian Saved</> : "Save Guardian Contact"}
                 </Button>
+              </div>
+            </div>
+
+            {/* Saved Places Card (Home & Work with Interactive Map Picker) */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <MapPin className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-foreground">Saved Places</p>
+                    <p className="text-[11px] text-muted-foreground">Pin exact gate / curb on map for 1-click rides</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Home */}
+              <div className="rounded-xl border border-border/70 p-3.5 bg-background/50 hover:border-orange-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-7 rounded-lg bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                      <Home className="size-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-foreground">Home</span>
+                      {homeCoords && (
+                        <span className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 bg-emerald-500/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          GPS Pinned
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {homeAddress && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearPlace("home")}
+                      className="p-1 text-muted-foreground hover:text-red-500 transition-colors"
+                      title="Clear home address"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2 min-h-[1.5rem]">
+                  {homeAddress ? homeAddress : "No home address set yet. Tap Choose on Map to pinpoint your exact gate or flat."}
+                </p>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 border-orange-500/40 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 text-xs font-semibold h-8"
+                    onClick={() => setMapPickerTarget("home")}
+                  >
+                    <MapIcon className="size-3.5" />
+                    {homeAddress ? "Change on Map" : "Choose on Map"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Work */}
+              <div className="rounded-xl border border-border/70 p-3.5 bg-background/50 hover:border-blue-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                      <Briefcase className="size-3.5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-foreground">Work</span>
+                      {workCoords && (
+                        <span className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 bg-emerald-500/10 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          GPS Pinned
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {workAddress && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearPlace("work")}
+                      className="p-1 text-muted-foreground hover:text-red-500 transition-colors"
+                      title="Clear work address"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2 min-h-[1.5rem]">
+                  {workAddress ? workAddress : "No work address set yet. Tap Choose on Map to pinpoint your office or building."}
+                </p>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs font-semibold h-8"
+                    onClick={() => setMapPickerTarget("work")}
+                  >
+                    <MapIcon className="size-3.5" />
+                    {workAddress ? "Change on Map" : "Choose on Map"}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -592,6 +767,41 @@ function ProfilePage() {
           customer={{ fullName, phone, email: user?.email }}
         />
       )}
+
+      {/* Map Picker Modal for Home / Work Saved Places */}
+      <Dialog
+        open={mapPickerTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setMapPickerTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background border border-border sm:rounded-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Pick {mapPickerTarget === "home" ? "Home" : "Work"} Location</DialogTitle>
+            <DialogDescription>
+              Select your exact {mapPickerTarget === "home" ? "home" : "work"} address on the interactive map
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="h-[80vh] max-h-[720px] w-full flex flex-col">
+            <MapPicker
+              label={mapPickerTarget === "home" ? "Pin Home Address" : "Pin Work Address"}
+              placeholder={mapPickerTarget === "home" ? "Search house, society, landmark, or drag map..." : "Search office, building, IT park, or drag map..."}
+              areas={areas}
+              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}
+              initialLocation={
+                mapPickerTarget === "home" && homeCoords
+                  ? { name: homeAddress || "Home", lat: homeCoords.lat, lng: homeCoords.lng }
+                  : mapPickerTarget === "work" && workCoords
+                  ? { name: workAddress || "Work", lat: workCoords.lat, lng: workCoords.lng }
+                  : null
+              }
+              onConfirm={handleSaveMapPlace}
+              onBack={() => setMapPickerTarget(null)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
