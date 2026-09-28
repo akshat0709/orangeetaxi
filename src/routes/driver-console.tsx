@@ -2059,7 +2059,7 @@ function DriverConsolePage() {
                     <div className="text-left sm:text-right">
                       <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Balance Due</p>
                       <p className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                        ₹{partnerCommissionDue}
+                        ₹{Number(partnerCommissionDue).toFixed(2)}
                       </p>
                     </div>
                     {partnerCommissionDue > 0 && (
@@ -2082,19 +2082,19 @@ function DriverConsolePage() {
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="rounded-lg border border-border bg-background p-3.5">
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase">Gross Fares Collected</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{allTimeFares}</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Number(allTimeFares).toFixed(2)}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">Cash + UPI from all rides</p>
                   </div>
 
                   <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                     <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">Your Net Take-Home (85%)</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">₹{partnerNetEarnings}</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">₹{Number(partnerNetEarnings).toFixed(2)}</p>
                     <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Retained earnings after platform fee</p>
                   </div>
 
                   <div className="rounded-lg border border-border bg-background p-3.5">
                     <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Paid to Admin</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{partnerCommissionPaid}</p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Number(partnerCommissionPaid).toFixed(2)}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{commissionSettlements.length} recorded settlement{commissionSettlements.length !== 1 ? "s" : ""}</p>
                   </div>
                 </div>
@@ -2213,17 +2213,17 @@ function DriverConsolePage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-muted-foreground">Total Earned</p>
-                  <p className="mt-2 text-3xl font-bold">₹{Math.round(todayTotal)}</p>
+                  <p className="mt-2 text-3xl font-bold font-mono">₹{Number(todayTotal).toFixed(2)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{todayRides.length} ride{todayRides.length !== 1 ? "s" : ""}</p>
                 </div>
                 <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 p-5">
                   <p className="text-xs font-semibold text-blue-600">via UPI</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-700">₹{Math.round(todayUPI)}</p>
+                  <p className="mt-2 text-3xl font-bold font-mono text-blue-700">₹{Number(todayUPI).toFixed(2)}</p>
                   <p className="mt-1 text-xs text-blue-500">{todayRides.filter(r => r.payment_method === "upi").length} rides</p>
                 </div>
                 <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-5">
                   <p className="text-xs font-semibold text-green-600">via Cash</p>
-                  <p className="mt-2 text-3xl font-bold text-green-700">₹{Math.round(todayCash)}</p>
+                  <p className="mt-2 text-3xl font-bold font-mono text-green-700">₹{Number(todayCash).toFixed(2)}</p>
                   <p className="mt-1 text-xs text-green-500">{todayRides.filter(r => r.payment_method === "cash").length} rides</p>
                 </div>
               </div>
@@ -2235,16 +2235,16 @@ function DriverConsolePage() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-muted-foreground">Total</p>
-                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weeklyEarnings)}</p>
+                  <p className="mt-2 text-2xl font-bold font-mono">₹{Number(weeklyEarnings).toFixed(2)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{weeklyRides.length} rides</p>
                 </div>
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-blue-600">UPI</p>
-                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weekUPI)}</p>
+                  <p className="mt-2 text-2xl font-bold font-mono">₹{Number(weekUPI).toFixed(2)}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-green-600">Cash</p>
-                  <p className="mt-2 text-2xl font-bold">₹{Math.round(weekCash)}</p>
+                  <p className="mt-2 text-2xl font-bold font-mono">₹{Number(weekCash).toFixed(2)}</p>
                 </div>
               </div>
             </div>
