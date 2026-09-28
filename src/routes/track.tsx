@@ -262,18 +262,11 @@ function TrackPage() {
 
   const handleShare = () => {
     const url = typeof window !== "undefined" ? window.location.href : "";
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `Orange Taxi Live Tracking - #${booking?.reference || ""}`,
-          text: `Follow this Orange Electric Taxi live ride on the map:`,
-          url,
-        })
-        .catch(() => {});
-    } else {
-      navigator.clipboard?.writeText(url);
-      toast.success("Live tracking link copied to clipboard!");
-    }
+    navigator.clipboard?.writeText(url).then(() => {
+      toast.success("Link copied! Anyone can track this ride");
+    }).catch(() => {
+      toast.success("Link copied! Anyone can track this ride");
+    });
   };
 
   // Coordinates parsing
@@ -391,7 +384,7 @@ function TrackPage() {
                   className="shrink-0 gap-1.5 font-bold text-xs h-9 border-primary/30 text-primary hover:bg-primary/10"
                 >
                   <Share2 className="size-3.5" />
-                  <span>Share Live Trip</span>
+                  <span>Share Tracking Link</span>
                 </Button>
               </div>
 
