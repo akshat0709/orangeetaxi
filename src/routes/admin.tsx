@@ -586,11 +586,35 @@ function AdminPage() {
                                 <SelectValue placeholder={b.status === "scheduled" ? "Pre-assign Chauffeur" : "Assign driver"} />
                               </SelectTrigger>
                               <SelectContent>
-                                {drivers.map(d => (
-                                  <SelectItem key={d.id} value={d.id}>
-                                    {d.full_name} · {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "No plate"} {d.is_online ? '(Online)' : '(Offline)'}
-                                  </SelectItem>
-                                ))}
+                                {(() => {
+                                  let pickupLat = 0;
+                                  let pickupLng = 0;
+                                  if (b.pickup_address && b.pickup_address.includes(',')) {
+                                    const parts = b.pickup_address.split(',');
+                                    pickupLat = parseFloat(parts[0]);
+                                    pickupLng = parseFloat(parts[1]);
+                                  }
+                                  
+                                  const sortedDrivers = [...drivers].sort((d1, d2) => {
+                                    if (!pickupLat || !pickupLng) return 0;
+                                    const dist1 = d1.current_lat && d1.current_lng ? getDistance(pickupLat, pickupLng, d1.current_lat, d1.current_lng) : Infinity;
+                                    const dist2 = d2.current_lat && d2.current_lng ? getDistance(pickupLat, pickupLng, d2.current_lat, d2.current_lng) : Infinity;
+                                    return dist1 - dist2;
+                                  });
+
+                                  return sortedDrivers.map(d => {
+                                    let distLabel = "";
+                                    if (pickupLat && pickupLng && d.current_lat && d.current_lng) {
+                                      const dist = getDistance(pickupLat, pickupLng, d.current_lat, d.current_lng);
+                                      distLabel = ` - ${dist.toFixed(1)}km away`;
+                                    }
+                                    return (
+                                      <SelectItem key={d.id} value={d.id}>
+                                        {d.full_name} · {d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "No plate"} {d.is_online ? `(Online${distLabel})` : '(Offline)'}
+                                      </SelectItem>
+                                    );
+                                  });
+                                })()}
                               </SelectContent>
                             </Select>
                           ) : (
