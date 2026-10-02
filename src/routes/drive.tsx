@@ -222,6 +222,7 @@ const appSchema = z.object({
   full_name: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
   phone: z.string().min(7, "Enter a valid phone number"),
+  aadhaar_number: z.string().min(12, "Enter a valid 12-digit Aadhaar number"),
   city: z.string().min(2, "Enter your city"),
   licence_number: z.string().min(4, "Enter your licence number"),
   experience_years: z.coerce.number().min(0).max(50),
@@ -240,8 +241,11 @@ function DriverApplicationForm() {
   const [submitting, setSubmitting] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
   const [photoError, setPhotoError] = useState(false);
+  const [dlDataUrl, setDlDataUrl] = useState<string>("");
+  const [dlError, setDlError] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dlInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AppValues>({
     resolver: zodResolver(appSchema),
@@ -307,11 +311,35 @@ function DriverApplicationForm() {
     reader.readAsDataURL(file);
   };
 
+  const handleDlSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("File size should be under 8MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setDlDataUrl(event.target?.result as string);
+      setDlError(false);
+      toast.success("Driving Licence uploaded successfully!");
+    };
+    reader.readAsDataURL(file);
+  };
+
   async function onSubmit(values: AppValues) {
     if (!photoDataUrl) {
       setPhotoError(true);
       toast.error("Driver photo is mandatory. Please upload your portrait photo.");
       fileInputRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (!dlDataUrl) {
+      setDlError(true);
+      toast.error("Driving Licence is mandatory. Please upload your document.");
+      dlInputRef.current?.scrollIntoView({ behavior: "smooth" });
       return;
     }
 
@@ -342,6 +370,7 @@ function DriverApplicationForm() {
       full_name: values.full_name,
       email: values.email,
       phone: values.phone,
+      aadhaar_number: values.aadhaar_number,
       city: values.city,
       licence_number: values.licence_number,
       experience_years: values.experience_years,
@@ -350,6 +379,7 @@ function DriverApplicationForm() {
       admin_notes: metaJson,
       // Extended fields (if columns exist in remote table)
       photo_url: photoDataUrl,
+      dl_url: dlDataUrl,
       driver_type: values.owns_vehicle ? "partner" : "company",
       vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
       vehicle_number: values.owns_vehicle ? values.vehicle_number.trim().toUpperCase() : "",
@@ -404,12 +434,14 @@ function DriverApplicationForm() {
         full_name: values.full_name,
         email: values.email,
         phone: values.phone,
+        aadhaar_number: values.aadhaar_number,
         city: values.city,
         licence_number: values.licence_number,
         experience_years: values.experience_years,
         owns_vehicle: values.owns_vehicle,
         message: values.message ?? "",
         admin_notes: metaJson,
+        dl_url: dlDataUrl,
       };
       const retry = await supabase.from("driver_applications").insert(basePayload);
       if (retry.error) {
@@ -508,6 +540,72 @@ function DriverApplicationForm() {
             )}
           </div>
 
+          {/* DRIVING LICENCE UPLOAD */}
+          <div className={`rounded-xl border-2 p-4 transition-all ${dlError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative size-20 shrink-0 rounded-lg border-2 border-primary/40 bg-primary/10 overflow-hidden flex items-center justify-center shadow-inner">
+                {dlDataUrl ? (
+                  <div className="flex flex-col items-center justify-center text-primary text-[10px] font-bold text-center">
+                    <CheckCircle className="size-6 mb-1" />
+                    Doc<br/>Uploaded
+                  </div>
+                ) : (
+                  <ClipboardCheck className="size-9 text-primary/60" />
+                )}
+                {dlDataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setDlDataUrl("")}
+                    className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-[11px] font-bold"
+                    title="Remove Document"
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                  <Label htmlFor="dl-upload-input" className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5">
+                    <Upload className="size-4 text-primary" />
+                    <span>Upload Driving Licence <span className="text-destructive font-bold">*</span></span>
+                  </Label>
+                  <span className="rounded bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
+                    Mandatory
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Clear copy of your valid Driving Licence (Image or PDF).
+                </p>
+                <div className="pt-1">
+                  <input
+                    ref={dlInputRef}
+                    id="dl-upload-input"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={handleDlSelect}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dlInputRef.current?.click()}
+                    className="h-8 text-xs font-semibold gap-1.5"
+                  >
+                    <Upload className="size-3.5" />
+                    <span>{dlDataUrl ? "Replace Document" : "Choose Document"}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {dlError && (
+              <p className="mt-2 text-xs font-semibold text-destructive flex items-center gap-1">
+                <Info className="size-3.5" /> Please upload your Driving Licence before submitting.
+              </p>
+            )}
+          </div>
+
           {/* BASIC INFORMATION */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -529,6 +627,11 @@ function DriverApplicationForm() {
               <Label htmlFor="da-city">City</Label>
               <Input id="da-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
               {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="da-aadhaar">Aadhaar Number</Label>
+              <Input id="da-aadhaar" placeholder="1234 5678 9012" className="mt-1.5 bg-background" {...form.register("aadhaar_number")} />
+              {form.formState.errors.aadhaar_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.aadhaar_number.message}</p>}
             </div>
             <div>
               <Label htmlFor="da-exp">Years Driving</Label>
