@@ -20,21 +20,20 @@ const nav = [
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
+    <button 
       onClick={() => i18n.changeLanguage((i18n.language || "en").startsWith("hi") ? "en" : "hi")} 
-      className="hidden md:flex" 
+      aria-label="Toggle language"
+      className="hidden md:grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary shrink-0"
       title="Toggle Hindi/English"
     >
-      <span className="font-bold text-xs">{(i18n.language || "en").startsWith("hi") ? "अ" : "EN"}</span>
-    </Button>
+      <span className="font-bold text-[10px]">{(i18n.language || "en").startsWith("hi") ? "अ" : "EN"}</span>
+    </button>
   );
 }
 
 export function Brand() {
   return <Link to="/" className="flex items-center gap-2.5" aria-label="Orange Taxi home">
-    <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
+    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
     <span className="text-sm font-bold tracking-[0.14em] text-foreground">ORANGE TAXI</span>
   </Link>;
 }
@@ -53,23 +52,23 @@ export function SiteHeader() {
   return <header className="site-header sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
     <div className="section-shell flex h-16 sm:h-18 items-center justify-between gap-4 min-w-0 max-w-full">
       <Brand />
-      <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
-        {nav.map(([label, to]) => <Link key={to} to={to} className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>{label}</Link>)}
+      <nav className="hidden items-center shrink-0 gap-4 xl:gap-5 lg:flex whitespace-nowrap" aria-label="Main navigation">
+        {nav.map(([label, to]) => <Link key={to} to={to} className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>{label}</Link>)}
         {!loading && user && (
-          <Link to="/profile" className="text-[0.8rem] font-semibold text-primary hover:underline" activeProps={{ className: "text-foreground font-bold" }}>My Rides & Schedule</Link>
+          <Link to="/profile" className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-primary hover:underline" activeProps={{ className: "text-foreground font-bold" }}>My Rides & Schedule</Link>
         )}
         {!loading && role === "driver" && (
-          <Link to="/driver-console" className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>My Console</Link>
+          <Link to="/driver-console" className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>My Console</Link>
         )}
         {!loading && role === "admin" && (
-          <Link to="/admin" className="text-[0.8rem] font-semibold text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
+          <Link to="/admin" className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
         )}
         {/* Install App Trigger */}
         <button
           onClick={triggerPWAInstall}
           type="button"
           aria-label="Install App"
-          className="hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground xl:flex"
+          className="hidden items-center shrink-0 gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground xl:flex"
         >
           <Download className="size-3.5" /> Install App
         </button>
@@ -78,7 +77,7 @@ export function SiteHeader() {
         <button
           onClick={toggle}
           aria-label="Toggle theme"
-          className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
         </button>
@@ -142,7 +141,7 @@ export function SiteHeader() {
         <button
           onClick={toggle}
           aria-label="Toggle theme"
-          className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
         </button>
@@ -209,7 +208,7 @@ export function SiteFooter() {
       <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">O</span>
             <span className="text-sm font-bold tracking-[0.14em] text-white">ORANGE TAXI</span>
           </div>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
