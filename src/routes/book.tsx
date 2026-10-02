@@ -211,6 +211,7 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
 }
 
 function PassengerPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
 
