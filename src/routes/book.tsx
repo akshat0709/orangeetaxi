@@ -470,7 +470,31 @@ function PassengerPage() {
   const drop = dropGPS
     ? { name: dropGPS.name, lat: dropGPS.lat, lng: dropGPS.lng }
     : areas.find(a => a.id === dropId);
-  const distKm = pickup && drop ? Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)) : 0;
+  const [distKm, setDistKm] = useState(0);
+  useEffect(() => {
+    if (pickup && drop) {
+      if (typeof window !== "undefined" && (window as any).google?.maps?.DistanceMatrixService) {
+        const service = new (window as any).google.maps.DistanceMatrixService();
+        service.getDistanceMatrix({
+          origins: [{ lat: pickup.lat, lng: pickup.lng }],
+          destinations: [{ lat: drop.lat, lng: drop.lng }],
+          travelMode: (window as any).google.maps.TravelMode.DRIVING,
+        }, (response: any, status: any) => {
+          if (status === 'OK' && response?.rows[0]?.elements[0]?.distance?.value) {
+            // Convert meters to kilometers
+            const roadDist = response.rows[0].elements[0].distance.value / 1000;
+            setDistKm(Math.max(1, roadDist));
+          } else {
+            setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
+          }
+        });
+      } else {
+        setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
+      }
+    } else {
+      setDistKm(0);
+    }
+  }, [pickup?.lat, pickup?.lng, drop?.lat, drop?.lng]);
   const fareBreakdown = selectedVehicle && distKm > 0 ? calcFare(selectedVehicle, distKm, pricingSettings) : null;
 
 

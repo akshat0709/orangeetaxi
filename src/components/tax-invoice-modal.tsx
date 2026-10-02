@@ -81,6 +81,62 @@ export function TaxInvoiceModal({
     hour12: true,
   });
 
+  async function handleDownloadPDF() {
+    try {
+      toast.info("Generating PDF...");
+      // Dynamically load html2pdf
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.onload = () => {
+        const payload: SendInvoicePayload = {
+          to: customer?.email || booking.customer_email || "Customer",
+          invoiceNumber,
+          customerName: customer?.full_name || booking.customer_name,
+          customerPhone: customer?.phone || booking.customer_phone,
+          pickupArea: booking.pickup_area || "Pickup Location",
+          dropArea: booking.drop_area || "Destination",
+          completedAt: `${formattedDate} ${formattedTime}`,
+          vehicleName: booking.vehicle_name || "Mahindra BE.6",
+          vehiclePlate: getBookingVehiclePlate(booking, driver),
+          paymentMethod: booking.payment_method || "CASH",
+          subtotal: gst.taxableValue,
+          cgst: gst.cgstAmount,
+          sgst: gst.sgstAmount,
+          igst: gst.igstAmount,
+          totalFare: fare,
+          distanceKm: booking.distance_km,
+          durationMinutes: booking.duration_mins,
+          corporateName: b2bMode ? corporateName : undefined,
+          corporateGstin: b2bMode ? corporateGSTIN : undefined,
+          profile,
+        };
+        const htmlString = generateInvoiceHtml(payload);
+        
+        // Create a temporary container
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = htmlString;
+        
+        // html2pdf options
+        const opt = {
+          margin:       0,
+          filename:     `Invoice_${invoiceNumber}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2 },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // @ts-ignore
+        window.html2pdf().set(opt).from(tempDiv).save().then(() => {
+          toast.success("PDF Downloaded!");
+        });
+      };
+      document.body.appendChild(script);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    }
+  }
+
   function handlePrint() {
     window.print();
   }
@@ -196,12 +252,23 @@ export function TaxInvoiceModal({
 
             <Button
               type="button"
+              variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="text-xs gap-1.5 h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow"
+              className="text-xs gap-1.5 h-8"
             >
               <Printer className="size-3.5" />
-              <span>Print / Save PDF</span>
+              <span>Print</span>
+            </Button>
+            
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDownloadPDF}
+              className="text-xs gap-1.5 h-8 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow"
+            >
+              <Download className="size-3.5" />
+              <span>Download PDF</span>
             </Button>
           </div>
         </div>
