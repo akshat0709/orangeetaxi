@@ -1037,7 +1037,20 @@ export function MapPicker({
       {/* MAP VIEW */}
       {mode === "map" && (
         <div className="relative h-64 sm:h-72 w-full overflow-hidden rounded-2xl border border-input bg-muted shadow-inner min-w-0 max-w-full touch-none">
-          <div ref={mapContainerRef} className="size-full z-0 touch-none" />
+          <APIProvider apiKey={apiKey}>
+            <Map
+              defaultCenter={initialLocation ? { lat: initialLocation.lat, lng: initialLocation.lng } : { lat: 28.6139, lng: 77.2090 }}
+              defaultZoom={initialLocation ? 15 : 13}
+              disableDefaultUI={true}
+              onDragend={(e) => {
+                if (e.map.getCenter()) {
+                  const center = e.map.getCenter();
+                  handleMapMoveEnd(center.lat(), center.lng());
+                }
+              }}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </APIProvider>
 
           {/* Center Target Pin (Fixed overlay in center of map) */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">
