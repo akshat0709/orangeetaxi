@@ -23,11 +23,11 @@ export function LanguageSwitcher() {
     <Button 
       variant="ghost" 
       size="icon" 
-      onClick={() => i18n.changeLanguage(i18n.language.startsWith("hi") ? "en" : "hi")} 
+      onClick={() => i18n.changeLanguage((i18n.language || "en").startsWith("hi") ? "en" : "hi")} 
       className="hidden md:flex" 
       title="Toggle Hindi/English"
     >
-      <span className="font-bold text-xs">{i18n.language.startsWith("hi") ? "अ" : "EN"}</span>
+      <span className="font-bold text-xs">{(i18n.language || "en").startsWith("hi") ? "अ" : "EN"}</span>
     </Button>
   );
 }
