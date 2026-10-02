@@ -1,34 +1,3 @@
-// @ts-nocheck
-import { useEffect, useRef, useState } from "react";
-import { Car, Crosshair, Loader2, MapPin, Navigation, ShieldCheck, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-export interface LiveMapProps {
-  pickup: { name: string; lat: number; lng: number };
-  drop: { name: string; lat: number; lng: number };
-  driver?: {
-    full_name?: string;
-    vehicle_number?: string;
-    vehicle_model?: string;
-    current_lat?: number;
-    current_lng?: number;
-  } | null;
-  status: string; // searching | accepted | arrived | in_progress | completed
-  distKm?: number;
-}
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 import { useEffect, useState, useRef } from "react";
 import { MapPin, Navigation, Car } from "lucide-react";
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
