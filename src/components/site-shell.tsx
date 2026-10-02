@@ -73,6 +73,7 @@ export function SiteHeader() {
         >
           <Download className="size-3.5" /> Install App
         </button>
+        <LanguageSwitcher />
         {/* Theme Toggle */}
         <button
           onClick={toggle}
