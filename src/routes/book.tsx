@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { MapPicker, PAN_INDIA_PRESETS } from "@/components/map-picker";
@@ -833,7 +834,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
 
   return (
     <div className="space-y-4 min-w-0 max-w-full">
-      {/* Pickup Location Status Banner (100% Zero-Click Auto-GPS) */}
+      {/* {t("booking.pickup")} Status Banner (100% Zero-Click Auto-GPS) */}
       <div className="flex items-center justify-between gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 p-3 sm:p-3.5 text-xs text-foreground shadow-xs min-w-0 max-w-full">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">

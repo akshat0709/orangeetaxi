@@ -9,5 +9,14 @@
     "title": "A more comfortable way to travel.",
     "subtitle": "Premium electric transit with zero surge pricing.",
     "book_now": "Book Now"
+  },
+  "booking": {
+    "title": "Book Your Ride",
+    "pickup": "Pickup Location",
+    "dropoff": "Drop-off Location",
+    "select_vehicle": "Select Vehicle",
+    "confirm": "Confirm Booking",
+    "searching": "Searching for driver...",
+    "locating": "Locating GPS..."
   }
 }
