@@ -59,7 +59,7 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
     const apiKey =
       (env as any)?.RESEND_API_KEY ||
       (typeof process !== "undefined" ? process.env?.["RESEND_API_KEY"] : undefined) ||
-      "re_GnGbP7X3_ALB8BwSfKRdougXVkmBii7S3";
+      "re_hCxoXrPr_5cMJpV6fD1WQmKcDE6mDgE6Y";
 
     const html = generateInvoiceHtml(body);
 
