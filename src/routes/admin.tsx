@@ -42,7 +42,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 interface Booking { id: string; reference: string; status: string; pickup_area: string; drop_area: string; estimated_fare: number; vehicle_name: string; payment_method: string; created_at: string; driver_id: string | null; customer_id: string; ride_otp: string; scheduled_at?: string | null; }
-interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; photo_url?: string; driver_type?: string; vehicle_model?: string; vehicle_number?: string; chassis_number?: string; vehicle_year?: string; }
+interface Application { id: string; full_name: string; email: string; phone: string; city: string; licence_number: string; experience_years: number; owns_vehicle: boolean; message: string; status: string; admin_notes: string; created_at: string; photo_url?: string; driver_type?: string; vehicle_model?: string; vehicle_number?: string; chassis_number?: string; vehicle_year?: string; aadhaar_number?: string; dl_url?: string; }
 interface Enquiry { id: string; company_name: string; contact_name: string; email: string; phone: string; city: string; team_size: string; requirement: string; message: string; status: string; created_at: string; }
 interface Driver { id: string; full_name: string; phone: string; city: string; is_online: boolean; rating: number; total_rides: number; status: string; vehicle_model: string; vehicle_number: string; vehicle_code?: string; driver_type?: string; photo_url?: string; chassis_number?: string; user_id?: string; }
 
@@ -732,6 +732,7 @@ function AdminPage() {
                             <span>📞 {app.phone}</span>
                             <span>📍 {app.city}</span>
                             <span>🪪 {app.licence_number}</span>
+                            {app.aadhaar_number && <span>🆔 {app.aadhaar_number}</span>}
                             <span>🚗 {app.experience_years} yrs experience</span>
                             <span>{isPartner ? "⚡ Brings Own EV" : "🏢 Company EV"}</span>
                             <span>📅 {new Date(app.created_at).toLocaleDateString()}</span>
@@ -751,6 +752,28 @@ function AdminPage() {
                           )}
 
                           {app.message && <p className="mt-3 rounded-lg bg-muted p-3 text-xs leading-5">{app.message}</p>}
+
+                          {/* Uploaded Documents */}
+                          {(app.photo_url || app.dl_url) && (
+                            <div className="mt-3 flex gap-4">
+                              {app.photo_url && (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-semibold">Photo</span>
+                                  <a href={app.photo_url} target="_blank" rel="noreferrer">
+                                    <img src={app.photo_url} alt="Photo" className="h-20 w-20 rounded-md object-cover border" />
+                                  </a>
+                                </div>
+                              )}
+                              {app.dl_url && (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-semibold">Driving Licence</span>
+                                  <a href={app.dl_url} target="_blank" rel="noreferrer">
+                                    <img src={app.dl_url} alt="DL" className="h-20 w-32 rounded-md object-cover border" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
 
