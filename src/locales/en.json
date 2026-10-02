@@ -1,0 +1,13 @@
+{
+  "nav": {
+    "book": "Book a Ride",
+    "business": "Orange for Business",
+    "drive": "Drive with Us",
+    "support": "Support"
+  },
+  "hero": {
+    "title": "A more comfortable way to travel.",
+    "subtitle": "Premium electric transit with zero surge pricing.",
+    "book_now": "Book Now"
+  }
+}

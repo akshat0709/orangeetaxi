@@ -7,6 +7,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { triggerPWAInstall } from "@/components/pwa-install-prompt";
 
@@ -14,6 +15,22 @@ const nav = [
   ["Experience", "/experience"], ["Electric", "/electric"], ["For Business", "/business"],
   ["Drive With Us", "/drive"], ["Talk to Orange", "/talk-to-orange"], ["About", "/about"],
 ] as const;
+
+
+export function LanguageSwitcher() {
+  const { i18n } = useTranslation();
+  return (
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      onClick={() => i18n.changeLanguage(i18n.language.startsWith("hi") ? "en" : "hi")} 
+      className="hidden md:flex" 
+      title="Toggle Hindi/English"
+    >
+      <span className="font-bold text-xs">{i18n.language.startsWith("hi") ? "अ" : "EN"}</span>
+    </Button>
+  );
+}
 
 export function Brand() {
   return <Link to="/" className="flex items-center gap-2.5" aria-label="Orange Taxi home">

@@ -2,6 +2,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, BatteryCharging, BriefcaseBusiness, Check, Droplets, Leaf, MonitorPlay, Music2, Newspaper, Snowflake, Sparkles, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import heroImage from "@/assets/orange-taxi-hero.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
@@ -56,6 +57,7 @@ const faqs = [
 ];
 
 function HomePage() {
+  const { t } = useTranslation();
   return <>
     <section className="relative min-h-[calc(100svh-8rem)] overflow-hidden bg-night text-white">
       <img src={heroImage} alt="Mahindra BE.6 orange electric SUV on a premium city boulevard" width={1920} height={1280} fetchPriority="high" className="absolute inset-0 size-full object-cover object-[62%_center]" />
