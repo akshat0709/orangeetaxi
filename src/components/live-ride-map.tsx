@@ -1,9 +1,8 @@
 import { MapPin, Car } from "lucide-react";
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 
+// NOTE: This component requires a parent <APIProvider> to be mounted
 export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-
   const parseCoords = (loc: any) => {
     if (!loc) return null;
     const lat = Number(loc.lat);
@@ -21,40 +20,38 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
 
   return (
     <div className="w-full overflow-hidden rounded-xl" style={{ height: "420px" }}>
-      <APIProvider apiKey={apiKey}>
-        <Map
-          defaultCenter={center}
-          defaultZoom={14}
-          disableDefaultUI={true}
-          gestureHandling="greedy"
-          style={{ width: "100%", height: "420px" }}
-        >
-          {parsedPickup && (
-            <AdvancedMarker position={parsedPickup}>
-              <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500 shadow-lg ring-2 ring-white">
-                <MapPin className="size-4 text-white" />
-              </div>
-            </AdvancedMarker>
-          )}
-          {parsedDropoff && (
-            <AdvancedMarker position={parsedDropoff}>
-              <div className="flex size-8 items-center justify-center rounded-full bg-red-500 shadow-lg ring-2 ring-white">
-                <MapPin className="size-4 text-white" />
-              </div>
-            </AdvancedMarker>
-          )}
-          {parsedDriver && (
-            <AdvancedMarker position={parsedDriver}>
-              <div
-                className="flex size-10 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-primary/30"
-                style={{ transform: `rotate(${driverLocation?.heading || 0}deg)` }}
-              >
-                <Car className="size-5 text-white" />
-              </div>
-            </AdvancedMarker>
-          )}
-        </Map>
-      </APIProvider>
+      <Map
+        defaultCenter={center}
+        defaultZoom={14}
+        disableDefaultUI={true}
+        gestureHandling="greedy"
+        style={{ width: "100%", height: "420px" }}
+      >
+        {parsedPickup && (
+          <AdvancedMarker position={parsedPickup}>
+            <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500 shadow-lg ring-2 ring-white">
+              <MapPin className="size-4 text-white" />
+            </div>
+          </AdvancedMarker>
+        )}
+        {parsedDropoff && (
+          <AdvancedMarker position={parsedDropoff}>
+            <div className="flex size-8 items-center justify-center rounded-full bg-red-500 shadow-lg ring-2 ring-white">
+              <MapPin className="size-4 text-white" />
+            </div>
+          </AdvancedMarker>
+        )}
+        {parsedDriver && (
+          <AdvancedMarker position={parsedDriver}>
+            <div
+              className="flex size-10 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-primary/30"
+              style={{ transform: `rotate(${driverLocation?.heading || 0}deg)` }}
+            >
+              <Car className="size-5 text-white" />
+            </div>
+          </AdvancedMarker>
+        )}
+      </Map>
     </div>
   );
 }

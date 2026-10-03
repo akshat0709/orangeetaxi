@@ -894,24 +894,22 @@ export function MapPicker({
       {/* MAP VIEW */}
       {mode === "map" && (
         <div className="relative h-64 sm:h-72 w-full overflow-hidden rounded-2xl border border-input bg-muted shadow-inner min-w-0 max-w-full touch-none">
-          <APIProvider apiKey={apiKey}>
-            <Map
-              defaultCenter={defaultCenter}
-              gestureHandling="greedy"
-              mapId="orange-taxi-picker"
-              defaultZoom={initialLocation ? 15 : 13}
-              disableDefaultUI={true}
-              onDragend={(e) => {
-                if (e.map.getCenter()) {
-                  const center = e.map.getCenter();
-                  handleMapMoveEnd(center.lat(), center.lng());
-                }
-              }}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <MapPanController target={panTarget} onPanned={() => setPanTarget(null)} />
-            </Map>
-          </APIProvider>
+          <Map
+            defaultCenter={defaultCenter}
+            gestureHandling="greedy"
+            mapId="orange-taxi-picker"
+            defaultZoom={initialLocation ? 15 : 13}
+            disableDefaultUI={true}
+            onDragend={(e) => {
+              if (e.map.getCenter()) {
+                const center = e.map.getCenter();
+                handleMapMoveEnd(center.lat(), center.lng());
+              }
+            }}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <MapPanController target={panTarget} onPanned={() => setPanTarget(null)} />
+          </Map>
 
           {/* Center Target Pin (Fixed overlay in center of map) */}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center z-10">

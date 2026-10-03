@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { MapPicker, PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import { LiveRideMap } from "@/components/live-ride-map";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { RatingModal } from "@/components/rating-modal";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
@@ -578,7 +579,7 @@ function PassengerPage() {
     setSubmitting(false);
   }
 
-  return <>
+  return <APIProvider apiKey={GOOGLE_MAPS_KEY}>
     {step !== 4 && (
       <section className="relative overflow-hidden bg-night text-foreground">
         <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
@@ -732,7 +733,7 @@ function PassengerPage() {
         </div>
       </div>
     </section>
-  </>;
+  </APIProvider>;
 }
 
 /* ---------- STEP 1 to 3 components omitted for brevity, keeping same logic ---------- */
