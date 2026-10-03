@@ -178,31 +178,16 @@ async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
     } catch (e) {}
   }
 
-  // 4. Try OpenStreetMap Nominatim with fast 1500ms timeout
+  // 4. Try Google Geocoding API (Fallback)
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      { headers: { "Accept-Language": "en" }, signal: controller.signal }
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_KEY}`
     );
-    clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
-      const addr = data.address || {};
-      const landmark = data.name || addr.aeroway || addr.amenity || addr.tourism || addr.railway || addr.office || "";
-      const road = addr.road || addr.street || "";
-      const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || "";
-      const city = addr.city || addr.town || addr.municipality || addr.state_district || "";
-
-      if (landmark && city) return `${landmark}, ${city}`;
-      if (landmark && locality) return `${landmark}, ${locality}`;
-      if (landmark) return landmark;
-      if (road && locality) return `${road}, ${locality}`;
-      if (road && city) return `${road}, ${city}`;
-      if (locality && city) return `${locality}, ${city}`;
-      if (data.display_name) {
-        return data.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
+      if (data.results && data.results.length > 0) {
+        const parts = data.results[0].formatted_address.split(",").map((s: string) => s.trim());
+        return parts.slice(0, 3).join(", ");
       }
     }
   } catch (e) {}

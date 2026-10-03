@@ -4,8 +4,20 @@ import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 
 export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  const center = pickup || dropoff || { lat: 28.6139, lng: 77.2090 };
   
+  const parseCoords = (loc: any) => {
+    if (!loc) return null;
+    const lat = Number(loc.lat);
+    const lng = Number(loc.lng);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+  };
+
+  const parsedPickup = parseCoords(pickup);
+  const parsedDropoff = parseCoords(dropoff);
+  const parsedDriver = parseCoords(driverLocation);
+  
+  const center = parsedPickup || parsedDropoff || { lat: 28.6139, lng: 77.2090 };
   return (
     <div className="relative h-full min-h-[300px] w-full overflow-hidden bg-muted">
       <APIProvider apiKey={apiKey}>
@@ -16,23 +28,23 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
           mapId="LIVE_RIDE_MAP"
           style={{ width: '100%', height: '100%' }}
         >
-          {pickup && (
-            <AdvancedMarker position={pickup}>
+          {parsedPickup && (
+            <AdvancedMarker position={parsedPickup}>
               <div className="flex size-7 items-center justify-center rounded-full bg-emerald-500 shadow-md ring-2 ring-white">
                 <MapPin className="size-4 text-white" />
               </div>
             </AdvancedMarker>
           )}
-          {dropoff && (
-            <AdvancedMarker position={dropoff}>
+          {parsedDropoff && (
+            <AdvancedMarker position={parsedDropoff}>
               <div className="flex size-7 items-center justify-center rounded-full bg-red-500 shadow-md ring-2 ring-white">
                 <MapPin className="size-4 text-white" />
               </div>
             </AdvancedMarker>
           )}
-          {driverLocation && (
-            <AdvancedMarker position={driverLocation}>
-              <div className="flex size-10 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-primary/30" style={{ transform: `rotate(${driverLocation.heading || 0}deg)` }}>
+          {parsedDriver && (
+            <AdvancedMarker position={parsedDriver}>
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-primary/30" style={{ transform: `rotate(${driverLocation?.heading || 0}deg)` }}>
                 <Car className="size-5 text-white" />
               </div>
             </AdvancedMarker>

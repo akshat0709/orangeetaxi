@@ -446,8 +446,6 @@ export function MapPicker({
   initialLocation = null,
   fallbackCenter = null,
 }: MapPickerProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
   const reverseTimeoutRef = useRef<any>(null);
   const searchTimeoutRef = useRef<any>(null);
 
@@ -608,8 +606,8 @@ export function MapPicker({
 
     searchTimeoutRef.current = setTimeout(async () => {
       const qLower = query.trim().toLowerCase();
-      const refLat = selectedLocation?.lat || initialLocation?.lat || mapInstanceRef.current?.getCenter()?.lat || 12.9716;
-      const refLng = selectedLocation?.lng || initialLocation?.lng || mapInstanceRef.current?.getCenter()?.lng || 77.5946;
+      const refLat = selectedLocation?.lat || initialLocation?.lat || 12.9716;
+      const refLng = selectedLocation?.lng || initialLocation?.lng || 77.5946;
 
       const matchedPresets: Array<{ name: string; lat: number; lng: number; sub?: string; distKm: number; isAirport?: boolean }> = [];
 
@@ -675,53 +673,31 @@ export function MapPicker({
         }
       } catch (err) {}
 
-      // 3. Query OpenStreetMap Nominatim with viewbox bias and bus-stop filtering
-      try {
-        const vb = `${refLng - 0.7},${refLat + 0.7},${refLng + 0.7},${refLat - 0.7}`;
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&viewbox=${vb}&addressdetails=1&limit=6`,
-          { headers: { "Accept-Language": "en" } }
-        );
-        if (res.ok) {
-          const apiData = await res.json();
-          apiData.forEach((item: any) => {
-            const isBusStop = item.class === "highway" && (item.type === "bus_stop" || item.type === "platform" || item.type === "stop_position");
-            // Strict bus stop exclusion unless explicitly requested
-            if (isBusStop && !qLower.includes("bus")) return;
-
-            const addr = item.address || {};
-            const landmark = item.name || addr.aeroway || addr.amenity || addr.tourism || addr.railway || addr.office || "";
-            const road = addr.road || addr.street || "";
-            const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || "";
-            const city = addr.city || addr.town || addr.municipality || addr.state_district || "";
-            const state = addr.state || "India";
-
-            let cleanName = "";
-            if (landmark && city) {
-              cleanName = `${landmark}, ${city}`;
-            } else if (landmark) {
-              cleanName = landmark;
-            } else if (road && locality) {
-              cleanName = `${road}, ${locality}`;
-            } else if (road && city) {
-              cleanName = `${road}, ${city}`;
-            } else {
-              cleanName = item.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
-            }
-
-            const subLabel = [locality, city, state].filter(Boolean).slice(0, 2).join(", ") || "India Location";
-
-            if (!combinedResults.some((m) => m.name.toLowerCase() === cleanName.toLowerCase())) {
-              combinedResults.push({
-                name: cleanName,
-                lat: parseFloat(item.lat),
-                lng: parseFloat(item.lon),
-                sub: subLabel,
+      // 3. Query Google Geocoding API
+      if (apiKey) {
+        try {
+          const res = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&components=country:IN&key=${apiKey}`
+          );
+          if (res.ok) {
+            const apiData = await res.json();
+            if (apiData.results) {
+              apiData.results.slice(0, 6).forEach((item: any) => {
+                const cleanName = item.formatted_address.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
+                const subLabel = item.formatted_address.split(",").slice(1).join(", ").trim() || "India Location";
+                if (!combinedResults.some((m) => m.name.toLowerCase() === cleanName.toLowerCase())) {
+                  combinedResults.push({
+                    name: cleanName,
+                    lat: item.geometry.location.lat,
+                    lng: item.geometry.location.lng,
+                    sub: subLabel,
+                  });
+                }
               });
             }
-          });
-        }
-      } catch (err) {}
+          }
+        } catch (err) {}
+      }
 
       setSearchResults(combinedResults);
       setIsSearching(false);
@@ -740,31 +716,32 @@ export function MapPicker({
     if (onConfirm) onConfirm(loc);
   }
 
-  // Robust coordinate resolution fallback via Nominatim search
+  // Robust coordinate resolution fallback via Google Geocoding API
   async function fallbackResolvePlace(loc: { name: string; lat: number; lng: number }) {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc.name)}&countrycodes=in&limit=1`,
-        { headers: { "Accept-Language": "en" } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data[0]) {
-          const lat = parseFloat(data[0].lat);
-          const lng = parseFloat(data[0].lon);
-          const resolved = { name: loc.name, lat, lng };
-          setSelectedLocation(resolved);
-          setSearchValue(loc.name);
-          setSearchResults([]);
-          setIsResolvingAddress(false);
-          if (mode === "map") {
-            setPanTarget(resolved);
+    if (apiKey) {
+      try {
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc.name)}&components=country:IN&key=${apiKey}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            const lat = data.results[0].geometry.location.lat;
+            const lng = data.results[0].geometry.location.lng;
+            const resolved = { name: loc.name, lat, lng };
+            setSelectedLocation(resolved);
+            setSearchValue(loc.name);
+            setSearchResults([]);
+            setIsResolvingAddress(false);
+            if (mode === "map") {
+              setPanTarget(resolved);
+            }
+            if (onConfirm) onConfirm(resolved);
+            return;
           }
-          if (onConfirm) onConfirm(resolved);
-          return;
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
 
     setIsResolvingAddress(false);
     setSelectedLocation(loc);
