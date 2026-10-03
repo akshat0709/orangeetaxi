@@ -873,6 +873,7 @@ function Step2Journey({ areas, pickupId, dropId, onPickup, onDrop, pickupGPS, dr
         areas={areas}
         apiKey={GOOGLE_MAPS_KEY}
         initialLocation={dropGPS}
+        fallbackCenter={pickupGPS}
         onBack={onBack}
         onConfirm={(loc) => {
           onDropGPS(loc);

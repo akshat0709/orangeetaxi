@@ -18,6 +18,7 @@ interface MapPickerProps {
   apiKey?: string;
   areas?: Array<{ id: string; name: string; lat: number; lng: number; is_airport?: boolean }>;
   initialLocation?: MapLocation | null;
+  fallbackCenter?: MapLocation | null;
 }
 
 // Comprehensive quick-select and search-priority presets across major Indian Metros
@@ -431,6 +432,7 @@ export function MapPicker({
   apiKey,
   areas = [],
   initialLocation = null,
+  fallbackCenter = null,
 }: MapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -467,6 +469,8 @@ export function MapPicker({
   // Initial center: Delhi NCR default
   const defaultCenter = initialLocation
     ? { lat: initialLocation.lat, lng: initialLocation.lng }
+    : fallbackCenter
+    ? { lat: fallbackCenter.lat, lng: fallbackCenter.lng }
     : { lat: 28.6139, lng: 77.2090 };
 
   // Load Leaflet dynamically via CDN
@@ -619,41 +623,16 @@ export function MapPicker({
 
       // 2. OpenStreetMap Nominatim with structured Indian address extraction
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-          { headers: { "Accept-Language": "en" } }
-        );
+                const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`);
         if (res.ok) {
           const data = await res.json();
-          const addr = data.address || {};
-          
-          // Prioritize actual POI / Landmark name over road or bus stop
-          const landmark = data.name || addr.aeroway || addr.amenity || addr.tourism || addr.railway || addr.office || "";
-          const road = addr.road || addr.street || "";
-          const locality = addr.suburb || addr.neighbourhood || addr.residential || addr.commercial || addr.quarter || "";
-          const city = addr.city || addr.town || addr.municipality || addr.city_district || addr.county || addr.state_district || "";
-          const state = addr.state || "";
-
-          let formatted = "";
-          if (landmark && city) {
-            formatted = `${landmark}, ${city}`;
-          } else if (landmark) {
-            formatted = landmark;
-          } else if (road && locality) {
-            formatted = `${road}, ${locality}`;
-          } else if (road && city) {
-            formatted = `${road}, ${city}`;
-          } else if (locality && city) {
-            formatted = `${locality}, ${city}`;
-          } else if (data.display_name) {
-            formatted = data.display_name.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
-          }
-
-          if (formatted) {
-            setSelectedLocation({ name: formatted, lat, lng });
+          if (data.results && data.results.length > 0) {
+            const formatted = data.results[0].formatted_address;
             setSearchValue(formatted);
-            setIsResolvingAddress(false);
-            return;
+            setSelectedLocation({ name: formatted, lat, lng });
+            if (onConfirm) onConfirm({ name: formatted, lat, lng });
+          } else {
+            setSearchValue("Unknown Location");
           }
         }
       } catch (e) {
