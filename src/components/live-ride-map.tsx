@@ -1,8 +1,32 @@
 import { MapPin, Car } from "lucide-react";
-import { Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import { useEffect } from "react";
+
+function MapBoundsController({ pickup, dropoff, driver }: any) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    
+    // Create a bounding box that includes all available coordinates
+    const bounds = new window.google.maps.LatLngBounds();
+    let hasPoints = false;
+    
+    if (pickup) { bounds.extend(pickup); hasPoints = true; }
+    if (dropoff) { bounds.extend(dropoff); hasPoints = true; }
+    if (driver) { bounds.extend(driver); hasPoints = true; }
+    
+    if (hasPoints) {
+      // Fit map to bounds with padding
+      map.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+    }
+  }, [map, pickup, dropoff, driver]);
+  
+  return null;
+}
 
 // NOTE: This component requires a parent <APIProvider> to be mounted
 export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
+
   const parseCoords = (loc: any) => {
     if (!loc) return null;
     const lat = Number(loc.lat);
@@ -42,6 +66,7 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
             </div>
           </AdvancedMarker>
         )}
+        <MapBoundsController pickup={parsedPickup} dropoff={parsedDropoff} driver={parsedDriver} />
         {parsedDriver && (
           <AdvancedMarker position={parsedDriver}>
             <div
