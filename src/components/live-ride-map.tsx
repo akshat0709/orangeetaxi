@@ -25,7 +25,7 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
         defaultZoom={14}
         disableDefaultUI={true}
         gestureHandling="greedy"
-        mapId="orange-taxi-live"
+        mapId="orange-taxi-picker"
         style={{ width: "100%", height: "420px" }}
       >
         {parsedPickup && (
