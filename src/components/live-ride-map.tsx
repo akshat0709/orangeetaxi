@@ -1,31 +1,84 @@
-import { MapPin, Car } from "lucide-react";
-import { Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
-import { useEffect } from "react";
+import { MapPin, Car, Clock, Route } from "lucide-react";
+import { Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { useEffect, useState } from "react";
+
+function DirectionsController({ pickup, dropoff, onRouteFound }: any) {
+  const map = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService>();
+  const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer>();
+
+  // Initialize instances
+  useEffect(() => {
+    if (!routesLibrary || !map) return;
+    setDirectionsService(new routesLibrary.DirectionsService());
+    const renderer = new routesLibrary.DirectionsRenderer({
+      map,
+      suppressMarkers: true,
+      polylineOptions: {
+        strokeColor: "#f97316", // Orange-500
+        strokeWeight: 4,
+        strokeOpacity: 0.8,
+      }
+    });
+    setDirectionsRenderer(renderer);
+
+    return () => {
+      renderer.setMap(null);
+    };
+  }, [routesLibrary, map]);
+
+  // Fetch route
+  useEffect(() => {
+    if (!directionsService || !directionsRenderer || !pickup || !dropoff) return;
+
+    directionsService.route(
+      {
+        origin: pickup,
+        destination: dropoff,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      },
+      (response, status) => {
+        if (status === "OK" && response) {
+          directionsRenderer.setDirections(response);
+          const route = response.routes[0];
+          if (route && route.legs && route.legs[0]) {
+            const leg = route.legs[0];
+            onRouteFound({
+              distance: leg.distance?.text,
+              duration: leg.duration?.text
+            });
+          }
+        }
+      }
+    );
+  }, [directionsService, directionsRenderer, pickup, dropoff]);
+
+  return null;
+}
 
 function MapBoundsController({ pickup, dropoff, driver }: any) {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
-    
-    // Create a bounding box that includes all available coordinates
+    // ... we don't strictly need this if DirectionsRenderer auto-fits bounds, but keeping it ensures driver is included.
     const bounds = new window.google.maps.LatLngBounds();
     let hasPoints = false;
-    
     if (pickup) { bounds.extend(pickup); hasPoints = true; }
     if (dropoff) { bounds.extend(dropoff); hasPoints = true; }
     if (driver) { bounds.extend(driver); hasPoints = true; }
-    
     if (hasPoints) {
-      // Fit map to bounds with padding
-      map.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+      map.fitBounds(bounds, { top: 70, bottom: 70, left: 50, right: 50 });
     }
   }, [map, pickup, dropoff, driver]);
-  
   return null;
 }
 
 // NOTE: This component requires a parent <APIProvider> to be mounted
 export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
+  const [routeInfo, setRouteInfo] = useState<{distance?: string, duration?: string} | null>(null);
+
+
 
   const parseCoords = (loc: any) => {
     if (!loc) return null;
@@ -43,7 +96,20 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
   const center = parsedPickup || parsedDropoff || { lat: 12.9716, lng: 77.5946 };
 
   return (
-    <div className="w-full overflow-hidden rounded-xl" style={{ height: "420px" }}>
+    <div className="relative w-full overflow-hidden rounded-xl" style={{ height: "420px" }}>
+      {routeInfo && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4 rounded-full bg-background/95 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-md border border-border">
+          <div className="flex items-center gap-1.5 text-foreground">
+            <Route className="size-4 text-primary" />
+            <span>{routeInfo.distance}</span>
+          </div>
+          <div className="h-4 w-px bg-border"></div>
+          <div className="flex items-center gap-1.5 text-foreground">
+            <Clock className="size-4 text-primary" />
+            <span>{routeInfo.duration}</span>
+          </div>
+        </div>
+      )}
       <Map
         defaultCenter={center}
         defaultZoom={14}
@@ -67,6 +133,13 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
           </AdvancedMarker>
         )}
         <MapBoundsController pickup={parsedPickup} dropoff={parsedDropoff} driver={parsedDriver} />
+        {parsedPickup && parsedDropoff && (
+          <DirectionsController 
+            pickup={parsedPickup} 
+            dropoff={parsedDropoff} 
+            onRouteFound={setRouteInfo} 
+          />
+        )}
         {parsedDriver && (
           <AdvancedMarker position={parsedDriver}>
             <div
