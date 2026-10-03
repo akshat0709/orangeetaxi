@@ -68,35 +68,15 @@ const comforts = [
 
 const DEFAULT_VEHICLES: VehicleCategory[] = [
   {
-    id: "v-sedan",
-    code: "sedan",
-    name: "Orange Sedan",
-    tagline: "Signature Mahindra BE.6 Electric SUV",
+    id: "v-signature",
+    code: "signature",
+    name: "Orange Signature",
+    tagline: "Spotless, Pre-Cooled Mahindra BE 6 EV",
     seats: 4,
     base_fare: 99,
     per_km: 18,
     minimum_fare: 149,
-  },
-  {
-    id: "v-xl",
-    code: "xl",
-    name: "Orange XL",
-    tagline: "Spacious Premium Electric SUV",
-    seats: 6,
-    base_fare: 149,
-    per_km: 24,
-    minimum_fare: 229,
-  },
-  {
-    id: "v-go",
-    code: "go",
-    name: "Orange Go",
-    tagline: "Compact Everyday Electric Cab",
-    seats: 4,
-    base_fare: 69,
-    per_km: 14,
-    minimum_fare: 99,
-  },
+  }
 ];
 
 const DEFAULT_AREAS: ServiceArea[] = [

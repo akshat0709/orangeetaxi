@@ -85,7 +85,7 @@ function getLocalConciergeReply(userQuery: string): string {
   const query = userQuery.toLowerCase().trim();
 
   if (query.includes("fare") || query.includes("price") || query.includes("cost") || query.includes("rate") || query.includes("charge")) {
-    return "🏷️ Transparent Orange Taxi Pricing:\n\n• Orange Go: ₹49 Base + ₹12/km (Min ₹99, 4 seats)\n• Orange Sedan: ₹59 Base + ₹15/km (Min ₹129, 4 seats)\n• Orange XL: ₹79 Base + ₹20/km (Min ₹179, 6–7 seats)\n\n✅ Zero surge pricing on advance scheduled rides.\n✅ 5% GST included with full Input Tax Credit (ITC).\n✅ No cancellation penalties.";
+    return "🏷️ Transparent Orange Taxi Pricing:\n\n• Orange Signature (Mahindra BE 6): ₹99 Base + ₹18/km (Min ₹149, 4 seats)\n\n✅ Zero surge pricing on advance scheduled rides.\n✅ 5% GST included with full Input Tax Credit (ITC).\n✅ No cancellation penalties.";
   }
 
   if (query.includes("airport") || query.includes("igi") || query.includes("flight") || query.includes("terminal")) {
