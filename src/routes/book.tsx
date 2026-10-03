@@ -732,8 +732,8 @@ function PassengerPage() {
           {step === 4 && pickup && drop ? (
             <div className="hidden lg:block sticky top-24 min-w-0 max-w-full">
               <LiveRideMap
-                pickup={pickupGPS}
-                dropoff={dropGPS}
+                pickup={pickup}
+                dropoff={drop}
                 driverLocation={liveDriverInfo}
                 rideStatus={liveRideStatus}
                 distKm={distKm}
@@ -1780,8 +1780,8 @@ function Step4Confirmed({
     {/* Live Map (Mobile View) */}
     <div className="mt-6 lg:hidden">
       <LiveRideMap
-        pickup={pickupGPS}
-        dropoff={dropGPS}
+        pickup={pickup}
+        dropoff={drop}
         driverLocation={driverInfo}
         rideStatus={status}
         distKm={distKm}
