@@ -75,7 +75,7 @@ function MapBoundsController({ pickup, dropoff, driver }: any) {
 }
 
 // NOTE: This component requires a parent <APIProvider> to be mounted
-export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
+export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
   const [routeInfo, setRouteInfo] = useState<{distance?: string, duration?: string} | null>(null);
 
 
@@ -111,6 +111,7 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
         </div>
       )}
       <Map
+        id={id || "default-live-map"}
         defaultCenter={center}
         defaultZoom={14}
         disableDefaultUI={true}
