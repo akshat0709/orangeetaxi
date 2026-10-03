@@ -1080,4 +1080,114 @@ export function MapPicker({
             )}
           </button>
 
+          {/* Map Loading State */}
+          {!mapLoaded && !loadError && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-neutral-950/90 backdrop-blur-xs">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <p className="text-xs font-medium text-muted-foreground">Loading High-Definition Indian Map...</p>
+            </div>
+          )}
+
           {/* Map Status Hint */}
+          <div className="absolute bottom-2.5 left-3 z-10">
+            <span className="rounded-full bg-black/80 border border-input px-2.5 py-0.5 text-[10px] font-medium text-foreground/80 backdrop-blur-xs shadow-xs">
+              {isResolvingAddress ? "📍 Resolving address..." : "Pan or drag pin anywhere across India"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK LIST VIEW (Categorized by City) */}
+      {mode === "list" && (
+        <div className="rounded-2xl border border-input bg-card p-4 space-y-3 shadow-xs">
+          {/* City Category Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border">
+            {["All", "Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad", "Other Metros"].map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setActiveCityTab(c)}
+                className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  activeCityTab === c
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-2 max-h-64 overflow-y-auto pr-1">
+            {PAN_INDIA_PRESETS.filter((item) => {
+              if (activeCityTab === "All") return true;
+              if (activeCityTab === "Other Metros") {
+                return !["Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad"].includes(item.city);
+              }
+              return item.city === activeCityTab;
+            }).map((item: any, i) => {
+              const isSelected = selectedLocation?.name === item.name;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectTargetLocation(item)}
+                  className={`flex items-center justify-between rounded-xl border p-3 text-left transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary/20 text-primary font-semibold shadow-xs"
+                      : "border-white/15 bg-card hover:border-primary/50 hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <MapPin className={`size-4 shrink-0 ${isSelected ? "text-primary" : "text-primary/70"}`} />
+                    <div className="min-w-0">
+                      <p className="text-xs truncate font-medium">{item.name}</p>
+                      <p className="text-[10px] text-foreground/50">{item.city} · Pan-India Hub</p>
+                    </div>
+                  </div>
+                  {item.is_airport || item.tag?.includes("Airport") ? (
+                    <span className="shrink-0 text-[10px] rounded-full bg-amber-500/20 text-amber-300 font-semibold px-2 py-0.5">
+                      Airport
+                    </span>
+                  ) : isSelected ? (
+                    <Check className="size-3.5 text-primary shrink-0" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmed Location Badge */}
+      {selectedLocation && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-primary/40 bg-primary/15 px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs min-w-0 max-w-full">
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-foreground">
+            <Check className="size-3.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] uppercase font-bold tracking-wider text-primary">Selected {label}</p>
+            <p className="font-semibold text-foreground truncate">{selectedLocation.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2.5 sm:gap-3 pt-1 min-w-0 max-w-full">
+        {onBack && (
+          <Button type="button" variant="ghost" className="flex-1 text-muted-foreground hover:text-foreground text-xs sm:text-sm" onClick={onBack}>
+            Back
+          </Button>
+        )}
+        <Button
+          type="button"
+          className="flex-1 text-xs sm:text-sm font-semibold"
+          disabled={!selectedLocation}
+          onClick={() => selectedLocation && onConfirm(selectedLocation)}
+        >
+          Confirm {label} →
+        </Button>
+      </div>
+    </div>
+  );
+}
