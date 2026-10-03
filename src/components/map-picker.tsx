@@ -1080,14 +1080,6 @@ export function MapPicker({
             )}
           </button>
 
-          {/* Map Loading State */}
-          {!mapLoaded && !loadError && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-neutral-950/90 backdrop-blur-xs">
-              <Loader2 className="size-6 animate-spin text-primary" />
-              <p className="text-xs font-medium text-muted-foreground">Loading High-Definition Indian Map...</p>
-            </div>
-          )}
-
           {/* Map Status Hint */}
           <div className="absolute bottom-2.5 left-3 z-10">
             <span className="rounded-full bg-black/80 border border-input px-2.5 py-0.5 text-[10px] font-medium text-foreground/80 backdrop-blur-xs shadow-xs">
