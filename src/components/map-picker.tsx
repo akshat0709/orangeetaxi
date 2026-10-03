@@ -1019,7 +1019,7 @@ export function MapPicker({
         <div className="relative h-64 sm:h-72 w-full overflow-hidden rounded-2xl border border-input bg-muted shadow-inner min-w-0 max-w-full touch-none">
           <APIProvider apiKey={apiKey}>
             <Map
-              defaultCenter={initialLocation ? { lat: initialLocation.lat, lng: initialLocation.lng } : { lat: 28.6139, lng: 77.2090 }}
+              defaultCenter={defaultCenter}
               defaultZoom={initialLocation ? 15 : 13}
               disableDefaultUI={true}
               onDragend={(e) => {
