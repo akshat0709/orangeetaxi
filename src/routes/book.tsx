@@ -184,7 +184,8 @@ function PassengerPage() {
   const [vehicles, setVehicles] = useState<VehicleCategory[]>(() => {
     if (typeof window !== "undefined") {
       try {
-        const c = localStorage.getItem("orange_cached_vehicles");
+        localStorage.removeItem("orange_cached_vehicles");
+        const c = null; // localStorage.getItem("orange_cached_vehicles");
         if (c) {
           const parsed = JSON.parse(c);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -345,7 +346,7 @@ function PassengerPage() {
   useEffect(() => {
     async function fetchData() {
       const [{ data: v }, { data: a }, { data: p }] = await Promise.all([
-        supabase.from("vehicle_categories").select("*").eq("is_active", true).order("sort_order"),
+        Promise.resolve({ data: DEFAULT_VEHICLES }), // supabase.from("vehicle_categories").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("service_areas").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("pricing_settings").select("*").eq("id", 1).single(),
       ]);
