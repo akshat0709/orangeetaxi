@@ -931,7 +931,9 @@ export function MapPicker({
                 }
               }}
               style={{ width: '100%', height: '100%' }}
-            />
+            >
+              <MapPanController target={panTarget} onPanned={() => setPanTarget(null)} />
+            </Map>
           </APIProvider>
 
           {/* Center Target Pin (Fixed overlay in center of map) */}
