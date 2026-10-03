@@ -16,17 +16,18 @@ export function LiveRideMap({ pickup, dropoff, driverLocation, rideStatus, waypo
   const parsedDropoff = parseCoords(dropoff);
   const parsedDriver = parseCoords(driverLocation);
 
+  // Default to Bengaluru if no valid coords provided
   const center = parsedPickup || parsedDropoff || { lat: 12.9716, lng: 77.5946 };
 
   return (
-    <div className="relative h-full min-h-[300px] w-full overflow-hidden rounded-xl bg-muted">
+    <div className="w-full overflow-hidden rounded-xl" style={{ height: "420px" }}>
       <APIProvider apiKey={apiKey}>
         <Map
           defaultCenter={center}
           defaultZoom={14}
           disableDefaultUI={true}
           gestureHandling="greedy"
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: "420px" }}
         >
           {parsedPickup && (
             <AdvancedMarker position={parsedPickup}>
