@@ -424,6 +424,18 @@ function calcHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function MapPanController({ target, onPanned }: { target: MapLocation | null, onPanned: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map && target) {
+      map.panTo({ lat: target.lat, lng: target.lng });
+      map.setZoom(16);
+      onPanned();
+    }
+  }, [map, target, onPanned]);
+  return null;
+}
+
 export function MapPicker({
   label,
   placeholder = "Search street, landmark, or drag map...",
@@ -447,6 +459,7 @@ export function MapPicker({
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [panTarget, setPanTarget] = useState<MapLocation | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [activeCityTab, setActiveCityTab] = useState<string>("All");
 
@@ -473,120 +486,7 @@ export function MapPicker({
     ? { lat: fallbackCenter.lat, lng: fallbackCenter.lng }
     : { lat: 28.6139, lng: 77.2090 };
 
-  // Load Leaflet dynamically via CDN
-  useEffect(() => {
-    let isMounted = true;
-
-    async function initLeaflet() {
-      try {
-        // Ensure Leaflet CSS is in document head
-        if (!document.getElementById("leaflet-cdn-css")) {
-          const link = document.createElement("link");
-          link.id = "leaflet-cdn-css";
-          link.rel = "stylesheet";
-          link.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css";
-          document.head.appendChild(link);
-        }
-
-        // Load Leaflet JS if not already loaded
-        if (!window.L) {
-          await new Promise<void>((resolve, reject) => {
-            const existingScript = document.getElementById("leaflet-cdn-js");
-            if (existingScript) {
-              existingScript.addEventListener("load", () => resolve());
-              existingScript.addEventListener("error", () => reject(new Error("Failed to load Leaflet")));
-              return;
-            }
-            const script = document.createElement("script");
-            script.id = "leaflet-cdn-js";
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js";
-            script.async = true;
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error("Failed to load Leaflet script"));
-            document.head.appendChild(script);
-          });
-        }
-
-        if (!isMounted || !mapContainerRef.current) return;
-
-        // Cleanup existing map if re-initializing
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.remove();
-          mapInstanceRef.current = null;
-        }
-
-        const L = window.L;
-        const map = L.map(mapContainerRef.current, {
-          center: [defaultCenter.lat, defaultCenter.lng],
-          zoom: initialLocation ? 15 : 13,
-          zoomControl: false,
-          attributionControl: false,
-          minZoom: 4,
-          maxZoom: 20,
-        });
-
-        // Clean Google Maps roadmap tiles: fast CDN, highly detailed Indian landmarks/roads, zero watermarks
-        L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-          subdomains: "0123",
-          maxZoom: 20,
-          attribution: "© Google Maps",
-        }).addTo(map);
-
-        // Add subtle zoom control in top right
-        L.control.zoom({ position: "topright" }).addTo(map);
-
-        mapInstanceRef.current = map;
-        setMapLoaded(true);
-
-        // Handle user dragging map -> reverse geocode new center pin
-        map.on("dragend", () => {
-          const center = map.getCenter();
-          handleMapMoveEnd(center.lat, center.lng);
-        });
-
-        // Invalidate size after container rendering animation
-        setTimeout(() => {
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.invalidateSize();
-          }
-        }, 200);
-
-        // Auto-center map view to user's general area without forcing selection
-        if (!initialLocation && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              if (!isMounted || !mapInstanceRef.current) return;
-              const lat = pos.coords.latitude;
-              const lng = pos.coords.longitude;
-              mapInstanceRef.current.setView([lat, lng], 13);
-            },
-            () => {},
-            { enableHighAccuracy: false, timeout: 4000 }
-          );
-        }
-      } catch (err) {
-        console.warn("Leaflet map initialization notice:", err);
-        if (isMounted) {
-          setLoadError(true);
-          setMode("list"); // Auto-fallback to clean list mode if CDN blocked
-        }
-      }
-    }
-
-    if (mode === "map") {
-      initLeaflet();
-    }
-
-    return () => {
-      isMounted = false;
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-      if (reverseTimeoutRef.current) clearTimeout(reverseTimeoutRef.current);
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    };
-  }, [mode]);
+  
 
   // Reverse geocode coordinate to friendly street address
   function handleMapMoveEnd(lat: number, lng: number) {
@@ -834,8 +734,8 @@ export function MapPicker({
     setSearchValue(loc.name);
     setSearchResults([]);
 
-    if (mode === "map" && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([loc.lat, loc.lng], 16, { duration: 1 });
+    if (mode === "map") {
+      setPanTarget(loc);
     }
     if (onConfirm) onConfirm(loc);
   }
@@ -857,8 +757,8 @@ export function MapPicker({
           setSearchValue(loc.name);
           setSearchResults([]);
           setIsResolvingAddress(false);
-          if (mode === "map" && mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1 });
+          if (mode === "map") {
+            setPanTarget(resolved);
           }
           if (onConfirm) onConfirm(resolved);
           return;
@@ -883,8 +783,8 @@ export function MapPicker({
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1.2 });
+        if (mode === "map") {
+          setPanTarget({ name: "Current Location", lat, lng });
         }
         handleMapMoveEnd(lat, lng);
         setLoadingGPS(false);
@@ -892,8 +792,8 @@ export function MapPicker({
       (err) => {
         console.warn("GPS location error:", err);
         setLoadingGPS(false);
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([28.6139, 77.2090], 14);
+        if (mode === "map") {
+          setPanTarget({ name: "Default", lat: 28.6139, lng: 77.2090 });
         }
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -1020,6 +920,8 @@ export function MapPicker({
           <APIProvider apiKey={apiKey}>
             <Map
               defaultCenter={defaultCenter}
+              gestureHandling="greedy"
+              mapId="orange-taxi-picker"
               defaultZoom={initialLocation ? 15 : 13}
               disableDefaultUI={true}
               onDragend={(e) => {
