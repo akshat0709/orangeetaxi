@@ -32,7 +32,7 @@ export function saveRideVehiclePlate(bookingId?: string, plate?: string, referen
 
 /**
  * Extracts a vehicle plate from compound vehicle_name string,
- * e.g. "Orange Go · DL 01 EV 1001" -> "DL 01 EV 1001"
+ * e.g. "Orange Signature · DL 01 EV 1001" -> "DL 01 EV 1001"
  */
 export function extractPlateFromVehicleName(vehicleName?: string): string | null {
   if (!vehicleName) return null;
@@ -58,10 +58,10 @@ export function extractPlateFromVehicleName(vehicleName?: string): string | null
 
 /**
  * Formats vehicle_name with vehicle plate:
- * "Orange Go" + "DL 01 EV 1001" -> "Orange Go · DL 01 EV 1001"
+ * "Orange Signature" + "DL 01 EV 1001" -> "Orange Signature · DL 01 EV 1001"
  */
 export function formatVehicleNameWithPlate(baseName?: string, plate?: string): string {
-  const base = (baseName || "Orange Go").split("·")[0].split("[")[0].split("(")[0].trim();
+  const base = (baseName || "Orange Signature").split("·")[0].split("[")[0].split("(")[0].trim();
   if (!plate || plate === "Unassigned" || plate === "No plate") return base;
   return `${base} · ${plate.trim().toUpperCase()}`;
 }
@@ -76,7 +76,7 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
     return booking.vehicle_number.trim().toUpperCase();
   }
 
-  // 2. Extracted from vehicle_name e.g. "Orange Go · DL 01 EV 1001" or "Orange Go · KA 01 EV 4421"
+  // 2. Extracted from vehicle_name e.g. "Orange Signature · DL 01 EV 1001" or "Orange Signature · KA 01 EV 4421"
   const fromName = extractPlateFromVehicleName(booking?.vehicle_name);
   if (fromName) return fromName;
 

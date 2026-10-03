@@ -108,7 +108,7 @@ function getLocalConciergeReply(userQuery: string): string {
     return 'BOOKING_COMMAND: {"pickup": "Delhi NCR", "drop": "IGI Airport Terminal 3", "vehicle": "orange_sedan", "time": "Now"}\n\nRedirecting you to our Booking Engine to finalize your ride now... 🚕';
   }
 
-  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Go, Sedan, and XL\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 11 4000 7000!";
+  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Signature\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 11 4000 7000!";
 }
 
 function TalkToOrangePage() {

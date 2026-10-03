@@ -648,7 +648,7 @@ function DriverConsolePage() {
     const resolvedDr = resolveDriverDetails(driver);
     const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
     const activeBooking = newRequests.find(b => b.id === bookingId);
-    const updatedVehicleName = formatVehicleNameWithPlate(activeBooking?.vehicle_name || "Orange Go", resolvedPlate);
+    const updatedVehicleName = formatVehicleNameWithPlate(activeBooking?.vehicle_name || "Orange Signature", resolvedPlate);
 
     const { error } = await supabase.from("bookings").update({
       driver_id: driver.id,
@@ -669,7 +669,7 @@ function DriverConsolePage() {
     const resolvedDr = resolveDriverDetails(driver);
     const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
     const schedBooking = scheduledBookings.find(b => b.id === bookingId);
-    const updatedVehicleName = formatVehicleNameWithPlate(schedBooking?.vehicle_name || "Orange Go", resolvedPlate);
+    const updatedVehicleName = formatVehicleNameWithPlate(schedBooking?.vehicle_name || "Orange Signature", resolvedPlate);
 
     const { error } = await supabase.from("bookings").update({
       driver_id: driver.id,
@@ -697,7 +697,7 @@ function DriverConsolePage() {
     }
     const resolvedDr = resolveDriverDetails(driver);
     const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
-    const updatedVehicleName = formatVehicleNameWithPlate(booking.vehicle_name || "Orange Go", resolvedPlate);
+    const updatedVehicleName = formatVehicleNameWithPlate(booking.vehicle_name || "Orange Signature", resolvedPlate);
 
     const { error } = await supabase.from("bookings").update({
       status: "accepted",
