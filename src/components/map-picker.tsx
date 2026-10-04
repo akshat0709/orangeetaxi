@@ -687,37 +687,52 @@ export function MapPicker({
     // Always clone the object to ensure React triggers a state update!
     let finalLoc = { ...loc };
 
-    // Resolve Place ID to coordinates via HTTP Geocoding API if lat/lng are 0
-    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
+    // Resolve Place ID to coordinates using Places API (guaranteed to work if Autocomplete worked)
+    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && typeof window !== "undefined" && window.google?.maps?.places) {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${finalLoc.placeId}&key=${apiKey}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            finalLoc.lat = data.results[0].geometry.location.lat;
-            finalLoc.lng = data.results[0].geometry.location.lng;
-            finalLoc.name = data.results[0].formatted_address.split(",")[0]; // Keep it concise
-            setSearchValue(finalLoc.name);
-          }
-        }
+        await new Promise<void>((resolve) => {
+          const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
+          placesService.getDetails(
+            { placeId: finalLoc.placeId, fields: ['geometry', 'name'] },
+            (place, status) => {
+              if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+                const location = place.geometry.location;
+                finalLoc.lat = typeof location.lat === 'function' ? location.lat() : (location.lat as number);
+                finalLoc.lng = typeof location.lng === 'function' ? location.lng() : (location.lng as number);
+                if (place.name) {
+                  finalLoc.name = place.name;
+                  setSearchValue(finalLoc.name);
+                }
+              } else {
+                console.error("Places API getDetails failed:", status);
+              }
+              resolve();
+            }
+          );
+        });
       } catch (err) {
-        console.error("Geocoding fetch failed", err);
+        console.error("PlacesService exception:", err);
       }
     }
 
-    // Fallback: If Geocoding API fails, fallback to address search
-    if (finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
+    // Extreme Fallback: If PlacesService fails or isn't available, fallback to pure HTTP Places Details API
+    // We use Places Details instead of Geocoding, because the user might not have Geocoding API enabled on GCP!
+    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(finalLoc.name)}&components=country:IN&key=${apiKey}`);
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${finalLoc.placeId}&fields=geometry,name&key=${apiKey}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            finalLoc.lat = data.results[0].geometry.location.lat;
-            finalLoc.lng = data.results[0].geometry.location.lng;
+          if (data.result && data.result.geometry && data.result.geometry.location) {
+            finalLoc.lat = data.result.geometry.location.lat;
+            finalLoc.lng = data.result.geometry.location.lng;
+            if (data.result.name) {
+              finalLoc.name = data.result.name;
+              setSearchValue(finalLoc.name);
+            }
           }
         }
       } catch (err) {
-        console.error("Address fetch fallback failed", err);
+        console.error("Places Details fetch fallback failed", err);
       }
     }
 
