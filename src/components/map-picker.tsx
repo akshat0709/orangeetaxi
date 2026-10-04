@@ -690,15 +690,22 @@ export function MapPicker({
     if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && typeof window !== "undefined" && window.google?.maps) {
       try {
         const geocoder = new window.google.maps.Geocoder();
-        const response = await geocoder.geocode({ placeId: finalLoc.placeId });
-        if (response.results && response.results.length > 0) {
-          finalLoc.lat = response.results[0].geometry.location.lat();
-          finalLoc.lng = response.results[0].geometry.location.lng();
-          finalLoc.name = response.results[0].formatted_address.split(",")[0]; // keep it concise
-          setSearchValue(finalLoc.name);
-        }
+        await new Promise<void>((resolve) => {
+          geocoder.geocode({ placeId: finalLoc.placeId }, (results, status) => {
+            if (status === "OK" && results && results.length > 0) {
+              const location = results[0].geometry.location;
+              finalLoc.lat = typeof location.lat === 'function' ? location.lat() : (location.lat as number);
+              finalLoc.lng = typeof location.lng === 'function' ? location.lng() : (location.lng as number);
+              finalLoc.name = results[0].formatted_address.split(",")[0]; // keep it concise
+              setSearchValue(finalLoc.name);
+            } else {
+              console.error("Geocoding failed for placeId:", status);
+            }
+            resolve();
+          });
+        });
       } catch (err) {
-        console.error("Geocoding failed for placeId:", err);
+        console.error("Geocoding exception:", err);
       }
     }
 
