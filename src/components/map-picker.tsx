@@ -639,64 +639,40 @@ export function MapPicker({
         ...matchedPresets.map(p => ({ name: p.name, lat: p.lat, lng: p.lng, sub: p.sub })),
       ];
 
-      // 2. Query Photon geocoder with city proximity bias
-      try {
-        const pRes = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${refLat}&lon=${refLng}&limit=6`
-        );
-        if (pRes.ok) {
-          const pData = await pRes.json();
-          if (pData?.features) {
-            pData.features.forEach((f: any) => {
-              const p = f.properties || {};
-              const isBusStop = p.osm_key === "highway" && (p.osm_value === "bus_stop" || p.osm_value === "platform" || p.osm_value === "stop_position");
-              // Skip roadside bus stops unless user explicitly searched for "bus"
-              if (isBusStop && !qLower.includes("bus")) return;
-
-              const name = p.name;
-              if (!name) return;
-              const locality = p.district || p.city || "";
-              const state = p.state || "India";
-              const subLabel = [locality, state].filter(Boolean).join(", ") || "India Location";
-              const fullName = locality && !name.toLowerCase().includes(locality.toLowerCase()) ? `${name}, ${locality}` : name;
-
-              if (!combinedResults.some(m => m.name.toLowerCase() === fullName.toLowerCase() || m.name.toLowerCase() === name.toLowerCase())) {
-                combinedResults.push({
-                  name: fullName,
-                  lat: f.geometry.coordinates[1],
-                  lng: f.geometry.coordinates[0],
-                  sub: subLabel,
-                });
-              }
-            });
-          }
-        }
-      } catch (err) {}
-
-      // 3. Query Google Geocoding API
-      if (apiKey) {
+      // 2. Query Google Places Autocomplete API natively via Maps JS SDK
+      if (typeof window !== "undefined" && window.google?.maps?.places) {
         try {
-          const res = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&components=country:IN&key=${apiKey}`
-          );
-          if (res.ok) {
-            const apiData = await res.json();
-            if (apiData.results) {
-              apiData.results.slice(0, 6).forEach((item: any) => {
-                const cleanName = item.formatted_address.split(",").slice(0, 3).map((s: string) => s.trim()).join(", ");
-                const subLabel = item.formatted_address.split(",").slice(1).join(", ").trim() || "India Location";
-                if (!combinedResults.some((m) => m.name.toLowerCase() === cleanName.toLowerCase())) {
-                  combinedResults.push({
-                    name: cleanName,
-                    lat: item.geometry.location.lat,
-                    lng: item.geometry.location.lng,
-                    sub: subLabel,
-                  });
+          const autocomplete = new window.google.maps.places.AutocompleteService();
+          const response = await new Promise((resolve) => {
+            autocomplete.getPlacePredictions(
+              {
+                input: query,
+                componentRestrictions: { country: "IN" },
+              },
+              (predictions, status) => {
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                  resolve(predictions);
+                } else {
+                  resolve([]);
                 }
+              }
+            );
+          });
+          
+          (response as any[]).forEach((p) => {
+            if (!combinedResults.some(m => m.name.toLowerCase() === p.structured_formatting.main_text.toLowerCase())) {
+              combinedResults.push({
+                name: p.structured_formatting.main_text,
+                sub: p.structured_formatting.secondary_text,
+                lat: 0, // Will be resolved on select
+                lng: 0,
+                placeId: p.place_id
               });
             }
-          }
-        } catch (err) {}
+          });
+        } catch (e) {
+          console.error("Places API error", e);
+        }
       }
 
       setSearchResults(combinedResults);
@@ -705,9 +681,25 @@ export function MapPicker({
   }
 
   // Select a location and resolve precise GPS coordinates anywhere in India
-  function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
-    setSelectedLocation(loc);
+  async function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
     setSearchValue(loc.name);
+    
+    // Resolve Place ID to coordinates using Geocoding API if lat/lng are 0 (from Autocomplete)
+    if (loc.placeId && loc.lat === 0 && loc.lng === 0 && apiKey) {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${loc.placeId}&key=${apiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            loc.lat = data.results[0].geometry.location.lat;
+            loc.lng = data.results[0].geometry.location.lng;
+            loc.name = data.results[0].formatted_address.split(",")[0]; // keep it concise
+          }
+        }
+      } catch (err) {}
+    }
+
+    setSelectedLocation(loc);
     setSearchResults([]);
 
     if (mode === "map") {
