@@ -283,13 +283,7 @@ function LoginPage() {
               </form>
             )}
 
-            {/* Admin claim */}
-            <div className="mt-8 border-t border-border pt-6">
-              <button onClick={claimAdmin} className="flex w-full items-center gap-2 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary">
-                <ShieldCheck className="size-4 shrink-0" />
-                <span>First time setup? Click to claim admin role (works once)</span>
-              </button>
-            </div>
+
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
