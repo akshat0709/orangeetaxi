@@ -443,20 +443,43 @@ function PassengerPage() {
   useEffect(() => {
     if (pickup && drop) {
       if (typeof window !== "undefined" && (window as any).google?.maps?.DistanceMatrixService) {
-        const service = new (window as any).google.maps.DistanceMatrixService();
-        service.getDistanceMatrix({
-          origins: [{ lat: pickup.lat, lng: pickup.lng }],
-          destinations: [{ lat: drop.lat, lng: drop.lng }],
-          travelMode: (window as any).google.maps.TravelMode.DRIVING,
-        }, (response: any, status: any) => {
-          if (status === 'OK' && response?.rows[0]?.elements[0]?.distance?.value) {
-            // Convert meters to kilometers
-            const roadDist = response.rows[0].elements[0].distance.value / 1000;
-            setDistKm(Math.max(1, roadDist));
-          } else {
+        let handled = false;
+        
+        // Timeout safeguard: If DistanceMatrixService hangs (e.g. missing API permissions), 
+        // fallback to haversine after 1.5 seconds so the user isn't stuck without a fare!
+        const fallbackTimer = setTimeout(() => {
+          if (!handled) {
+            handled = true;
+            console.warn("DistanceMatrixService timeout! Falling back to haversine.");
             setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
           }
-        });
+        }, 1500);
+
+        try {
+          const service = new (window as any).google.maps.DistanceMatrixService();
+          service.getDistanceMatrix({
+            origins: [{ lat: pickup.lat, lng: pickup.lng }],
+            destinations: [{ lat: drop.lat, lng: drop.lng }],
+            travelMode: (window as any).google.maps.TravelMode.DRIVING,
+          }, (response: any, status: any) => {
+            if (handled) return;
+            handled = true;
+            clearTimeout(fallbackTimer);
+            if (status === 'OK' && response?.rows[0]?.elements[0]?.distance?.value) {
+              // Convert meters to kilometers
+              const roadDist = response.rows[0].elements[0].distance.value / 1000;
+              setDistKm(Math.max(1, roadDist));
+            } else {
+              setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
+            }
+          });
+        } catch (err) {
+          if (!handled) {
+            handled = true;
+            clearTimeout(fallbackTimer);
+            setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
+          }
+        }
       } else {
         setDistKm(Math.max(1, haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)));
       }
