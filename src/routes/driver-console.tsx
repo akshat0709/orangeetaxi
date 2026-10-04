@@ -835,15 +835,15 @@ function DriverConsolePage() {
   const todayRides   = recentRides.filter(r => new Date(r.completed_at ?? "") >= today);
   const todayTotal   = todayRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const todayUPI     = todayRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const todayCash    = todayRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const todayCash    = todayRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const weekStart    = new Date(Date.now() - 7 * 24 * 3600000);
   const weeklyRides  = recentRides.filter(r => new Date(r.completed_at ?? "") >= weekStart);
   const weeklyEarnings = weeklyRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const weekUPI      = weeklyRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const monthlyEarnings = recentRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const monthUPI     = recentRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const monthCash    = recentRides.filter(r => r.payment_method === "cash").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthCash    = recentRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
 
   // Operating model
@@ -858,7 +858,7 @@ function DriverConsolePage() {
 
   // Cash calculations & Admin settlement balance (Strict whole rupees)
   const totalCashCollected = recentRides
-    .filter(r => r.payment_method === "cash")
+    .filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi")
     .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
 
   const totalCashSubmitted = settlements
@@ -2304,8 +2304,8 @@ function DriverConsolePage() {
                             </div>
                           </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
-                            {ride.payment_method?.toUpperCase()}
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
+                            {ride.payment_method === "driver_upi" ? "DRIVER UPI" : ride.payment_method?.toUpperCase()}
                           </span>
                           <span className="font-bold text-primary">₹{Math.round(ride.final_fare ?? ride.estimated_fare)}</span>
                         </div>

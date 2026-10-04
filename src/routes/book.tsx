@@ -1878,6 +1878,56 @@ function Step4Confirmed({
         <span className="text-muted-foreground">Estimated fare</span>
         <span className="font-bold text-primary">₹{Math.round(fare)}</span>
       </div>
+      {currentBooking?.payment_method === "cash" && (status === "accepted" || status === "arrived" || status === "in_progress") && (
+        <div className="mt-4 border-t border-border pt-4">
+          <Button 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-12"
+            onClick={async () => {
+              const loadRazorpay = () => new Promise((resolve) => {
+                const script = document.createElement("script");
+                script.src = "https://checkout.razorpay.com/v1/checkout.js";
+                script.onload = () => resolve(true);
+                script.onerror = () => resolve(false);
+                document.body.appendChild(script);
+              });
+              
+              const isLoaded = await loadRazorpay();
+              if (!isLoaded) return;
+              
+              const options = {
+                key: "rzp_test_TjnylwNIDTQjP2",
+                amount: Math.round(fare * 100),
+                currency: "INR",
+                name: "Orange Taxi",
+                description: "Mid-Ride Online Payment",
+                image: "https://orange-taxi.com/pwa-512x512.png",
+                handler: async function (response: any) {
+                  // Update booking payment method to UPI/Online
+                  await supabase.from("bookings").update({
+                    payment_method: "upi",
+                    payment_status: "paid_online"
+                  }).eq("id", currentBooking.id);
+                  
+                  // Optimistically update local state
+                  setCurrentBooking(prev => ({...prev, payment_method: "upi", payment_status: "paid_online"}));
+                  toast.success("Payment successful! The driver has been notified.");
+                },
+                theme: { color: "#f97316" }
+              };
+              const rzp = new (window as any).Razorpay(options);
+              rzp.open();
+            }}
+          >
+            Switch to Online Payment (Razorpay)
+          </Button>
+          <p className="text-center text-[10px] text-muted-foreground mt-2">Pay securely via UPI / Card while your ride is in progress.</p>
+        </div>
+      )}
+      {currentBooking?.payment_method === "upi" && (
+        <div className="mt-3 p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center justify-center text-green-500 text-xs font-bold gap-1.5">
+          <Check className="size-4" /> Paid Online
+        </div>
+      )}
     </div>
     
     <div className="mt-8 flex justify-center">
