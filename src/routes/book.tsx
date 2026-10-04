@@ -562,14 +562,14 @@ function PassengerPage() {
 
   return <APIProvider apiKey={GOOGLE_MAPS_KEY}>
     {step !== 4 && (
-      <section className="relative overflow-hidden bg-night text-foreground">
+      <section className="relative overflow-hidden bg-night text-white">
         <img src={passengerImage} alt="Passenger" className="absolute inset-0 size-full object-cover object-[70%_center]" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
         <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
           <div className="max-w-2xl animate-gentle-rise min-w-0">
-            <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">For passengers</p>
-            <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-foreground">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
-            <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-foreground/75 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
+            <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For passengers</p>
+            <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-white">Every ride,<br /><span className="text-primary">taken care of.</span></h1>
+            <p className="mt-3 md:mt-7 max-w-xl text-sm leading-6 text-white/80 md:text-lg">Premium electric car, professional driver, complimentary water — designed to be your everyday way to travel.</p>
             <Button asChild size="lg" className="mt-5 md:mt-8"><a href="#booking">Book a Ride <ArrowRight /></a></Button>
           </div>
         </div>
