@@ -684,28 +684,31 @@ export function MapPicker({
   async function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
     setSearchValue(loc.name);
     
-    // Resolve Place ID to coordinates using Geocoding API if lat/lng are 0 (from Autocomplete)
-    if (loc.placeId && loc.lat === 0 && loc.lng === 0 && apiKey) {
+    let finalLoc = { ...loc };
+
+    // Resolve Place ID to coordinates natively using Maps JS Geocoder if lat/lng are 0
+    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && typeof window !== "undefined" && window.google?.maps) {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${loc.placeId}&key=${apiKey}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            loc.lat = data.results[0].geometry.location.lat;
-            loc.lng = data.results[0].geometry.location.lng;
-            loc.name = data.results[0].formatted_address.split(",")[0]; // keep it concise
-          }
+        const geocoder = new window.google.maps.Geocoder();
+        const response = await geocoder.geocode({ placeId: finalLoc.placeId });
+        if (response.results && response.results.length > 0) {
+          finalLoc.lat = response.results[0].geometry.location.lat();
+          finalLoc.lng = response.results[0].geometry.location.lng();
+          finalLoc.name = response.results[0].formatted_address.split(",")[0]; // keep it concise
+          setSearchValue(finalLoc.name);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("Geocoding failed for placeId:", err);
+      }
     }
 
-    setSelectedLocation(loc);
+    setSelectedLocation(finalLoc);
     setSearchResults([]);
 
     if (mode === "map") {
-      setPanTarget(loc);
+      setPanTarget(finalLoc);
     }
-    if (onConfirm) onConfirm(loc);
+    if (onConfirm) onConfirm(finalLoc);
   }
 
   // Robust coordinate resolution fallback via Google Geocoding API
