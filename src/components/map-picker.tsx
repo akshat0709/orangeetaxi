@@ -684,28 +684,40 @@ export function MapPicker({
   async function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
     setSearchValue(loc.name);
     
+    // Always clone the object to ensure React triggers a state update!
     let finalLoc = { ...loc };
 
-    // Resolve Place ID to coordinates natively using Maps JS Geocoder if lat/lng are 0
-    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && typeof window !== "undefined" && window.google?.maps) {
+    // Resolve Place ID to coordinates via HTTP Geocoding API if lat/lng are 0
+    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
       try {
-        const geocoder = new window.google.maps.Geocoder();
-        await new Promise<void>((resolve) => {
-          geocoder.geocode({ placeId: finalLoc.placeId }, (results, status) => {
-            if (status === "OK" && results && results.length > 0) {
-              const location = results[0].geometry.location;
-              finalLoc.lat = typeof location.lat === 'function' ? location.lat() : (location.lat as number);
-              finalLoc.lng = typeof location.lng === 'function' ? location.lng() : (location.lng as number);
-              finalLoc.name = results[0].formatted_address.split(",")[0]; // keep it concise
-              setSearchValue(finalLoc.name);
-            } else {
-              console.error("Geocoding failed for placeId:", status);
-            }
-            resolve();
-          });
-        });
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${finalLoc.placeId}&key=${apiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            finalLoc.lat = data.results[0].geometry.location.lat;
+            finalLoc.lng = data.results[0].geometry.location.lng;
+            finalLoc.name = data.results[0].formatted_address.split(",")[0]; // Keep it concise
+            setSearchValue(finalLoc.name);
+          }
+        }
       } catch (err) {
-        console.error("Geocoding exception:", err);
+        console.error("Geocoding fetch failed", err);
+      }
+    }
+
+    // Fallback: If Geocoding API fails, fallback to address search
+    if (finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(finalLoc.name)}&components=country:IN&key=${apiKey}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results && data.results.length > 0) {
+            finalLoc.lat = data.results[0].geometry.location.lat;
+            finalLoc.lng = data.results[0].geometry.location.lng;
+          }
+        }
+      } catch (err) {
+        console.error("Address fetch fallback failed", err);
       }
     }
 
