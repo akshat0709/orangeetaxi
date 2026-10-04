@@ -474,90 +474,142 @@ function PassengerPage() {
     
     const otp = generateOTP();
 
-    // Ensure customer's profile is up to date with full name and phone number
-    try {
-      const custName = (user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "").trim();
-      const custPhone = (user.user_metadata?.phone || user.phone || "").trim();
-      if (custName || custPhone) {
-        await supabase.from("profiles").upsert({
-          id: user.id,
-          full_name: custName || "Passenger",
-          phone: custPhone,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "id" });
+    const executeBookingInsert = async (transactionId?: string) => {
+      try {
+        const custName = (user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "").trim();
+        const custPhone = (user.user_metadata?.phone || user.phone || "").trim();
+        if (custName || custPhone) {
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            full_name: custName || "Passenger",
+            phone: custPhone,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "id" });
+        }
+      } catch (e) {
+        console.warn("Could not sync profile before booking:", e);
       }
-    } catch (e) {
-      console.warn("Could not sync profile before booking:", e);
-    }
 
-    const effectivePickup = pickupPillar
-      ? `${pickup.name} (${pickupPillar})`
-      : pickup.name;
+      const effectivePickup = pickupPillar
+        ? `${pickup.name} (${pickupPillar})`
+        : pickup.name;
 
-    const encodedPickupAddress = encodePickupAddressWithPrefs(
-      { lat: pickup.lat, lng: pickup.lng },
-      { cabinClimate, quietRide, pickupPillar: pickupPillar || undefined }
-    );
+      const encodedPickupAddress = encodePickupAddressWithPrefs(
+        { lat: pickup.lat, lng: pickup.lng },
+        { cabinClimate, quietRide, pickupPillar: pickupPillar || undefined }
+      );
 
-    const scheduledIso = isAdvanceBooking && scheduledDateTime ? new Date(scheduledDateTime).toISOString() : null;
+      const scheduledIso = isAdvanceBooking && scheduledDateTime ? new Date(scheduledDateTime).toISOString() : null;
 
-    const { data, error } = await supabase.from("bookings").insert({
-      customer_id: user.id,
-      pickup_area: effectivePickup,
-      pickup_address: encodedPickupAddress,
-      drop_area: drop.name,
-      drop_address: `${drop.lat},${drop.lng}`,
-      distance_km: Math.round(distKm * 10) / 10,
-      duration_min: Math.round(distKm / 0.5),
-      vehicle_code: selectedVehicle.code,
-      vehicle_name: selectedVehicle.name,
-      base_fare: Math.round(fareBreakdown.base),
-      distance_fare: Math.round(fareBreakdown.distance),
-      tax_amount: Math.round(fareBreakdown.tax),
-      estimated_fare: Math.round(fareBreakdown.total),
-      payment_method: paymentMethod,
-      status: isAdvanceBooking ? "scheduled" : "searching",
-      scheduled_at: scheduledIso,
-      ride_otp: otp,
-    }).select("id, reference").single();
-    
-    if (error) { 
-      console.error("Booking insert error:", error);
-      toast.error(`Booking failed: ${error.message}`); 
-      setSubmitting(false); 
-      return; 
-    }
-
-    // Persist booking id in localStorage for instant tracking/profile access
-    try {
-      const stored = localStorage.getItem("@orange_booking_history_ids");
-      const idList = stored ? JSON.parse(stored) : [];
-      if (!idList.includes((data as any).id)) {
-        idList.unshift((data as any).id);
-        localStorage.setItem("@orange_booking_history_ids", JSON.stringify(idList.slice(0, 50)));
+      const { data, error } = await supabase.from("bookings").insert({
+        customer_id: user.id,
+        pickup_area: effectivePickup,
+        pickup_address: encodedPickupAddress,
+        drop_area: drop.name,
+        drop_address: `${drop.lat},${drop.lng}`,
+        distance_km: Math.round(distKm * 10) / 10,
+        duration_min: Math.round(distKm / 0.5),
+        vehicle_code: selectedVehicle.code,
+        vehicle_name: selectedVehicle.name,
+        base_fare: Math.round(fareBreakdown.base),
+        distance_fare: Math.round(fareBreakdown.distance),
+        tax_amount: Math.round(fareBreakdown.tax),
+        estimated_fare: Math.round(fareBreakdown.total),
+        payment_method: paymentMethod,
+        status: isAdvanceBooking ? "scheduled" : "searching",
+        scheduled_at: scheduledIso,
+        ride_otp: otp,
+      }).select("id, reference").single();
+      
+      if (error) { 
+        console.error("Booking insert error:", error);
+        toast.error(`Booking failed: ${error.message}`); 
+        setSubmitting(false); 
+        return; 
       }
-    } catch (e) {}
 
-    // Persist ride preferences for this booking (viewable by driver across devices)
-    const ridePref = {
-      cabinClimate,
-      quietRide,
-      pickupPillar: pickupPillar || undefined,
+      try {
+        const stored = localStorage.getItem("@orange_booking_history_ids");
+        const idList = stored ? JSON.parse(stored) : [];
+        if (!idList.includes((data as any).id)) {
+          idList.unshift((data as any).id);
+          localStorage.setItem("@orange_booking_history_ids", JSON.stringify(idList.slice(0, 50)));
+        }
+      } catch (e) {}
+
+      const ridePref = {
+        cabinClimate,
+        quietRide,
+        pickupPillar: pickupPillar || undefined,
+        razorpay_payment_id: transactionId,
+      };
+      try {
+        localStorage.setItem(`orange_ride_pref_${(data as any).id}`, JSON.stringify(ridePref));
+        localStorage.setItem(`orange_ride_pref_${(data as any).reference}`, JSON.stringify(ridePref));
+      } catch {}
+      
+      setBookingData({ id: (data as any).id, reference: (data as any).reference, otp });
+      setLiveRideStatus(isAdvanceBooking ? "scheduled" : "searching");
+      setStep(4);
+      if (isAdvanceBooking) {
+        toast.success("Advance Ride Scheduled! 🍊 Zero-surge fare locked.");
+      } else {
+        toast.success("Ride confirmed! Searching for nearest EV chauffeur.");
+      }
+      setSubmitting(false);
     };
-    try {
-      localStorage.setItem(`orange_ride_pref_${(data as any).id}`, JSON.stringify(ridePref));
-      localStorage.setItem(`orange_ride_pref_${(data as any).reference}`, JSON.stringify(ridePref));
-    } catch {}
-    
-    setBookingData({ id: (data as any).id, reference: (data as any).reference, otp });
-    setLiveRideStatus(isAdvanceBooking ? "scheduled" : "searching");
-    setStep(4);
-    if (isAdvanceBooking) {
-      toast.success("Advance Ride Scheduled! 🍊 Zero-surge fare locked.");
+
+    if (paymentMethod !== "cash") {
+      const loadRazorpay = () => new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        toast.error("Failed to load secure payment gateway. Please check your connection.");
+        setSubmitting(false);
+        return;
+      }
+
+      const options = {
+        key: "rzp_test_TjnylwNIDTQjP2",
+        amount: Math.round(fareBreakdown.total * 100),
+        currency: "INR",
+        name: "Orange Taxi",
+        description: `Premium EV Ride to ${drop.name.substring(0, 30)}`,
+        image: "https://orange-taxi.com/pwa-512x512.png",
+        handler: async function (response: any) {
+          toast.success("Payment successful! Confirming your ride...");
+          await executeBookingInsert(response.razorpay_payment_id);
+        },
+        prefill: {
+          name: user.user_metadata?.full_name || "",
+          email: user.email || "",
+          contact: user.phone || ""
+        },
+        theme: {
+          color: "#f97316"
+        },
+        modal: {
+          ondismiss: function() {
+            setSubmitting(false);
+            toast.error("Payment cancelled.");
+          }
+        }
+      };
+
+      const rzp1 = new (window as any).Razorpay(options);
+      rzp1.on('payment.failed', function (response: any) {
+        toast.error(`Payment failed: ${response.error.description}`);
+      });
+      rzp1.open();
     } else {
-      toast.success("Ride confirmed! Searching for nearest EV chauffeur.");
+      await executeBookingInsert();
     }
-    setSubmitting(false);
   }
 
   return <APIProvider apiKey={GOOGLE_MAPS_KEY}>
@@ -1048,7 +1100,7 @@ function Step3Confirm({
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment method</p>
           <RadioGroup value={paymentMethod} onValueChange={onPaymentChange} className="mt-2.5 flex gap-3">
-            {([["cash", "Cash"], ["upi", "UPI"]] as const).map(([val, label]) => (
+            {([["cash", "Pay to Chauffeur"], ["upi", "Online (UPI/Cards)"]] as const).map(([val, label]) => (
               <label key={val} className={`flex flex-1 cursor-pointer items-center gap-3 rounded-lg border p-3.5 sm:p-4 min-w-0 ${paymentMethod === val ? "border-primary bg-primary/10" : "border-white/15 hover:border-white/30"}`}>
                 <RadioGroupItem value={val} className="border-muted-foreground text-primary" />
                 <Wallet className="size-4 text-primary shrink-0" />
