@@ -96,6 +96,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 import { PWAInstallPrompt } from "../components/pwa-install-prompt";
+import { CookieBanner } from "../components/cookie-banner";
 
 const SCHEMA_JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
@@ -251,6 +252,7 @@ function RootComponent() {
       <SiteHeader />
       <main className="min-w-0 max-w-full overflow-x-hidden"><Outlet /></main>
       <SiteFooter />
+      <CookieBanner />
     </QueryClientProvider>
   );
 }

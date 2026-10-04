@@ -238,6 +238,7 @@ type AppValues = z.infer<typeof appSchema>;
 
 function DriverApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
   const [photoError, setPhotoError] = useState(false);
