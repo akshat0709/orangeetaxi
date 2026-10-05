@@ -220,7 +220,7 @@ export function SiteFooter() {
             <p><span className="font-semibold text-white/80">CIN:</span> U49224DL2026PLC461350</p>
             <p><span className="font-semibold text-white/80">Registered Office:</span> S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi 110017, India</p>
             <p className="pt-1">
-              <span className="font-semibold text-white/80">24x7 Helpline:</span> +91 11 4000 7000 · <span className="font-semibold text-white/80">Support:</span> support@orange-taxi.com
+              <span className="font-semibold text-white/80">24x7 Helpline:</span> +91 72940 73222 · <span className="font-semibold text-white/80">Support:</span> support@orange-taxi.com
             </p>
             <p>
               <span className="font-semibold text-white/80">Bookings:</span> bookings@orange-taxi.com · <span className="font-semibold text-white/80">Invoicing:</span> billing@orange-taxi.com

@@ -63,7 +63,7 @@ function ContactPage() {
             <h3 className="mt-3 text-base font-bold">24x7 Customer Care</h3>
             <p className="mt-1 text-xs text-muted-foreground">For ride bookings, passenger queries, and live trip assistance.</p>
             <div className="mt-4 text-xs space-y-1">
-              <p className="font-mono text-primary font-semibold"><a href="tel:+911140007000">+91 11 4000 7000</a></p>
+              <p className="font-mono text-primary font-semibold"><a href="tel:+917294073222">+91 72940 73222</a></p>
               <p><span className="text-muted-foreground">Bookings:</span> <a href="mailto:bookings@orange-taxi.com" className="text-primary font-medium hover:underline">bookings@orange-taxi.com</a></p>
               <p><span className="text-muted-foreground">Support:</span> <a href="mailto:support@orange-taxi.com" className="text-muted-foreground hover:underline">support@orange-taxi.com</a></p>
             </div>

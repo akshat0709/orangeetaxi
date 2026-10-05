@@ -108,7 +108,7 @@ function getLocalConciergeReply(userQuery: string): string {
     return 'BOOKING_COMMAND: {"pickup": "Delhi NCR", "drop": "IGI Airport Terminal 3", "vehicle": "orange_sedan", "time": "Now"}\n\nRedirecting you to our Booking Engine to finalize your ride now... 🚕';
   }
 
-  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Signature\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 11 4000 7000!";
+  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Signature\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 72940 73222!";
 }
 
 function TalkToOrangePage() {
@@ -219,12 +219,12 @@ function TalkToOrangePage() {
             <Bot className="size-4" /> Open Orange Assistant
           </Button>
           <Button asChild variant="outline" size="lg" className="gap-2 border-white/30 text-white hover:bg-white/10 hover:text-white">
-            <a href="tel:+911140007000">
+            <a href="tel:+917294073222">
               <Phone className="size-4 text-primary" /> Call 24x7 Concierge
             </a>
           </Button>
           <Button asChild variant="ghost" size="lg" className="gap-2 text-white/80 hover:bg-white/10 hover:text-white">
-            <a href="https://wa.me/911140007000?text=Hi%20Orange%20Concierge%2C%20I%20have%20an%20enquiry%20regarding%20Orange%20Taxi" target="_blank" rel="noreferrer">
+            <a href="https://wa.me/917294073222?text=Hi%20Orange%20Concierge%2C%20I%20have%20an%20enquiry%20regarding%20Orange%20Taxi" target="_blank" rel="noreferrer">
               <MessageCircle className="size-4 text-emerald-400" /> WhatsApp Desk
             </a>
           </Button>

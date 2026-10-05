@@ -438,7 +438,7 @@ export function GuardianSafetyModal({
                 </a>
 
                 <a
-                  href="tel:9810012345"
+                  href="tel:7294073222"
                   className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 p-2.5 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <LifeBuoy className="size-4 shrink-0" />

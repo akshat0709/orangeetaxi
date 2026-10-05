@@ -66,7 +66,7 @@ function SupportPage() {
             <h3 className="mt-3 text-base font-bold">24x7 Call Centre</h3>
             <p className="mt-1 text-xs text-muted-foreground">Bilingual phone assistance (English & Hindi) for live trips and urgent assistance.</p>
             <p className="mt-4 font-mono text-sm font-bold text-primary">
-              <a href="tel:+911140007000" className="hover:underline">+91 11 4000 7000</a>
+              <a href="tel:+917294073222" className="hover:underline">+91 72940 73222</a>
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">Toll-free / Local STD rates apply</p>
           </div>

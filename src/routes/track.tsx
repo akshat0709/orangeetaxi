@@ -298,13 +298,13 @@ function TrackPage() {
 
           <div className="flex items-center gap-2">
             <a
-              href="tel:+911140007000"
+              href="tel:+917294073222"
               className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
               title="24x7 Safety Helpline"
             >
               <LifeBuoy className="size-3.5 text-primary" />
               <span className="hidden sm:inline">24x7 Helpline:</span>
-              <span className="font-mono text-foreground">011 4000 7000</span>
+              <span className="font-mono text-foreground">+91 72940 73222</span>
             </a>
           </div>
         </div>
@@ -602,7 +602,7 @@ function TrackPage() {
                   Dial 112 (Police)
                 </a>
                 <a
-                  href="tel:+911140007000"
+                  href="tel:+917294073222"
                   className="rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
                 >
                   Helpline

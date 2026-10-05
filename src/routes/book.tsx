@@ -1357,7 +1357,7 @@ function Step4Confirmed({
     };
   }, [bookingData.id]);
 
-  const activeDriverPhone = driverInfo?.phone && driverInfo.phone.trim() !== "" ? driverInfo.phone.trim() : "+91 11 4000 7000";
+  const activeDriverPhone = driverInfo?.phone && driverInfo.phone.trim() !== "" ? driverInfo.phone.trim() : "+91 72940 73222";
   const cleanDialPhone = activeDriverPhone.replace(/[^0-9+]/g, "");
 
   const [guardianModalOpen, setGuardianModalOpen] = useState(false);
