@@ -395,12 +395,25 @@ function AdminPage() {
             type: isPartner ? "partner" : "company",
           };
 
+          // Look up the driver's Supabase auth user_id by their email via the profiles table
+          let driverAuthUserId: string | null = null;
+          if (email) {
+            const { data: profileRow } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("email", email)
+              .maybeSingle();
+            if (profileRow?.id) driverAuthUserId = profileRow.id;
+          }
+
           const updates: any = {
             vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
             vehicle_number: plate,
             vehicle_model: model,
           };
           if (appObj.phone) updates.phone = appObj.phone;
+          // Crucially: store the auth user_id so the driver app can find this row
+          if (driverAuthUserId) updates.user_id = driverAuthUserId;
 
           if (existingDr) {
             await supabase.from("drivers").update(updates).eq("id", existingDr.id);
@@ -417,9 +430,13 @@ function AdminPage() {
               vehicle_code: updates.vehicle_code,
               vehicle_number: plate,
               vehicle_model: model,
+              photo_url: photo || null,
+              dl_url: appObj.dl_url || null,
               rating: 5,
               total_rides: 0,
               is_online: false,
+              // Store user_id so the driver app can find this record on login
+              ...(driverAuthUserId ? { user_id: driverAuthUserId } : {}),
             }).select().maybeSingle();
 
             if (createdDr && photo) {
