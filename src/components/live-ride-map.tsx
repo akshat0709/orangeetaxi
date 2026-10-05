@@ -2,40 +2,45 @@ import { MapPin, Car, Clock, Route } from "lucide-react";
 import { Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
 
-function DirectionsController({ pickup, dropoff, onRouteFound }: any) {
+function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFound }: any) {
   const map = useMap();
   const routesLibrary = useMapsLibrary("routes");
   const [directionsService, setDirectionsService] = useState<google.maps.DirectionsService>();
   const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer>();
 
-  // Initialize instances
   useEffect(() => {
     if (!routesLibrary || !map) return;
     setDirectionsService(new routesLibrary.DirectionsService());
     const renderer = new routesLibrary.DirectionsRenderer({
       map,
       suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: "#f97316", // Orange-500
-        strokeWeight: 4,
-        strokeOpacity: 0.8,
-      }
+      polylineOptions: { strokeColor: "#f97316", strokeWeight: 4, strokeOpacity: 0.8 }
     });
     setDirectionsRenderer(renderer);
-
-    return () => {
-      renderer.setMap(null);
-    };
+    return () => renderer.setMap(null);
   }, [routesLibrary, map]);
 
-  // Fetch route
   useEffect(() => {
-    if (!directionsService || !directionsRenderer || !pickup || !dropoff) return;
+    if (!directionsService || !directionsRenderer) return;
+
+    let origin = pickup;
+    let destination = dropoff;
+    
+    // If accepted, driver is driving to pickup
+    if ((rideStatus === "accepted" || rideStatus === "arrived") && driver && pickup) {
+      origin = driver;
+      destination = pickup;
+    } else if (rideStatus === "in_progress" && driver && dropoff) {
+      origin = driver;
+      destination = dropoff;
+    }
+
+    if (!origin || !destination) return;
 
     directionsService.route(
       {
-        origin: pickup,
-        destination: dropoff,
+        origin,
+        destination,
         travelMode: window.google.maps.TravelMode.DRIVING,
       },
       (response, status) => {
@@ -52,7 +57,7 @@ function DirectionsController({ pickup, dropoff, onRouteFound }: any) {
         }
       }
     );
-  }, [directionsService, directionsRenderer, pickup, dropoff]);
+  }, [directionsService, directionsRenderer, pickup, dropoff, driver, rideStatus]);
 
   return null;
 }
@@ -82,8 +87,8 @@ export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, w
 
   const parseCoords = (loc: any) => {
     if (!loc) return null;
-    const lat = Number(loc.lat);
-    const lng = Number(loc.lng);
+    const lat = Number(loc.lat ?? loc.current_lat);
+    const lng = Number(loc.lng ?? loc.current_lng);
     if (isNaN(lat) || isNaN(lng)) return null;
     return { lat, lng };
   };
@@ -98,15 +103,27 @@ export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, w
   return (
     <div className="relative w-full overflow-hidden rounded-xl" style={{ height: "420px" }}>
       {routeInfo && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4 rounded-full bg-background/95 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-md border border-border">
-          <div className="flex items-center gap-1.5 text-foreground">
-            <Route className="size-4 text-primary" />
-            <span>{routeInfo.distance}</span>
-          </div>
-          <div className="h-4 w-px bg-border"></div>
-          <div className="flex items-center gap-1.5 text-foreground">
-            <Clock className="size-4 text-primary" />
-            <span>{routeInfo.duration}</span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1">
+          {rideStatus === "accepted" && (
+            <div className="rounded-full bg-amber-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+              Driver Arriving in {routeInfo.duration}
+            </div>
+          )}
+          {rideStatus === "in_progress" && (
+            <div className="rounded-full bg-blue-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+              Drop-off in {routeInfo.duration}
+            </div>
+          )}
+          <div className="flex items-center gap-4 rounded-full bg-background/95 px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur-md border border-border">
+            <div className="flex items-center gap-1.5 text-foreground">
+              <Route className="size-4 text-primary" />
+              <span>{routeInfo.distance}</span>
+            </div>
+            <div className="h-4 w-px bg-border"></div>
+            <div className="flex items-center gap-1.5 text-foreground">
+              <Clock className="size-4 text-primary" />
+              <span>{routeInfo.duration}</span>
+            </div>
           </div>
         </div>
       )}
@@ -134,13 +151,13 @@ export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, w
           </AdvancedMarker>
         )}
         <MapBoundsController pickup={parsedPickup} dropoff={parsedDropoff} driver={parsedDriver} />
-        {parsedPickup && parsedDropoff && (
-          <DirectionsController 
-            pickup={parsedPickup} 
-            dropoff={parsedDropoff} 
-            onRouteFound={setRouteInfo} 
-          />
-        )}
+        <DirectionsController 
+          pickup={parsedPickup} 
+          dropoff={parsedDropoff} 
+          driver={parsedDriver}
+          rideStatus={rideStatus}
+          onRouteFound={setRouteInfo} 
+        />
         {parsedDriver && (
           <AdvancedMarker position={parsedDriver}>
             <div

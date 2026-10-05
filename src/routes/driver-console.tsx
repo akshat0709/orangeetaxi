@@ -501,8 +501,27 @@ function DriverConsolePage() {
 
     const { data: requests } = await supabase.from("bookings").select("*")
       .eq("status", "searching").is("driver_id", null)
-      .order("created_at", { ascending: false }).limit(5);
-    const reqList = (requests as Booking[]) ?? [];
+      .order("created_at", { ascending: false }).limit(20);
+    const rawReqList = (requests as Booking[]) ?? [];
+    
+    const now = Date.now();
+    const declines = JSON.parse(localStorage.getItem("orange_declines") || "{}");
+    
+    const reqList = rawReqList.filter(r => {
+      // 5km radius check
+      if (driverData.current_lat && driverData.current_lng && r.pickup_lat && r.pickup_lng) {
+        const d = getDistanceInKm(driverData.current_lat, driverData.current_lng, r.pickup_lat, r.pickup_lng);
+        if (d > 5) return false;
+      }
+      // decline check
+      const dec = declines[r.id];
+      if (dec) {
+        if (dec.count >= 2) return false; // declined twice, never show
+        if (dec.count === 1 && (now - dec.lastDeclinedAt < 30000)) return false; // 30s cooldown
+      }
+      return true;
+    }).slice(0, 5); // take top 5 visible
+    
     setNewRequests(reqList);
 
     const { data: schedData } = await supabase.from("bookings").select("*")
@@ -636,6 +655,18 @@ function DriverConsolePage() {
       toast.error("Could not update status: " + error.message);
     }
     setToggling(false);
+  }
+
+  async function handleDecline(bookingId: string) {
+    const decs = JSON.parse(localStorage.getItem("orange_declines") || "{}");
+    const now = Date.now();
+    if (!decs[bookingId]) decs[bookingId] = { count: 1, lastDeclinedAt: now };
+    else {
+      decs[bookingId].count += 1;
+      decs[bookingId].lastDeclinedAt = now;
+    }
+    localStorage.setItem("orange_declines", JSON.stringify(decs));
+    setNewRequests(p => p.filter(r => r.id !== bookingId));
   }
 
   async function acceptRide(bookingId: string) {
@@ -1825,7 +1856,7 @@ function DriverConsolePage() {
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0 items-start">
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setNewRequests(p => p.filter(r => r.id !== ride.id))}><X className="size-4" /></Button>
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDecline(ride.id)}><X className="size-4" /></Button>
                           <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept</Button>
                         </div>
                       </div>
