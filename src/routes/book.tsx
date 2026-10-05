@@ -16,6 +16,19 @@ import { MapPicker, PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import { LiveRideMap } from "@/components/live-ride-map";
 import { APIProvider } from "@vis.gl/react-google-maps";
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
+
 import { RatingModal } from "@/components/rating-modal";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
@@ -772,16 +785,18 @@ function PassengerPage() {
             )}
           </div>
           {step === 4 && pickup && drop ? (
-            <div className="hidden lg:block sticky top-24 min-w-0 max-w-full">
-              <LiveRideMap
-                id="desktop-live-map"
-                pickup={pickup}
-                dropoff={drop}
-                driverLocation={liveDriverInfo}
-                rideStatus={liveRideStatus}
-                distKm={distKm}
-              />
-            </div>
+            isDesktop ? (
+              <div className="hidden lg:block sticky top-24 min-w-0 max-w-full">
+                <LiveRideMap
+                  id="desktop-live-map"
+                  pickup={pickup}
+                  dropoff={drop}
+                  driverLocation={liveDriverInfo}
+                  rideStatus={liveRideStatus}
+                  distKm={distKm}
+                />
+              </div>
+            ) : null
           ) : (
             <figure className="overflow-hidden rounded-xl hidden lg:block">
               <img src={interiorImage} alt="Premium Orange cabin" className="aspect-[4/3] size-full object-cover" />
@@ -1821,16 +1836,18 @@ function Step4Confirmed({
     />
 
     {/* Live Map (Mobile View) */}
-    <div className="mt-6 lg:hidden">
-      <LiveRideMap
-        id="mobile-live-map"
-        pickup={pickup}
-        dropoff={drop}
-        driverLocation={driverInfo}
-        rideStatus={status}
-        distKm={distKm}
-      />
-    </div>
+    {!isDesktop && (
+      <div className="mt-6 lg:hidden">
+        <LiveRideMap
+          id="mobile-live-map"
+          pickup={pickup}
+          dropoff={drop}
+          driverLocation={driverInfo}
+          rideStatus={status}
+          distKm={distKm}
+        />
+      </div>
+    )}
 
     {/* 5-Star Post-Ride Rating Modal */}
     <RatingModal
