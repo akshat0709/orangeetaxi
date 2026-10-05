@@ -228,7 +228,7 @@ function AdminPage() {
         await supabase.from("drivers").update({
           vehicle_number: dr.vehicle_number,
           vehicle_model: dr.vehicle_model,
-          vehicle_code: updatedCode,
+          
         }).eq("id", dr.id);
         dr.vehicle_code = updatedCode;
       } catch (err) {
@@ -279,8 +279,7 @@ function AdminPage() {
             full_name: app.full_name,
             phone: app.phone || "",
             city: app.city || "Bengaluru",
-            status: "active",
-            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+            
             vehicle_number: plate,
             vehicle_model: model,
             rating: 5,
@@ -407,7 +406,7 @@ function AdminPage() {
           }
 
           const updates: any = {
-            vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+            
             vehicle_number: plate,
             vehicle_model: model,
           };
@@ -426,8 +425,7 @@ function AdminPage() {
               full_name: appObj.full_name,
               phone: appObj.phone || "",
               city: appObj.city || "Bengaluru",
-              status: "active",
-              vehicle_code: updates.vehicle_code,
+              
               vehicle_number: plate,
               vehicle_model: model,
               photo_url: photo || null,
@@ -438,6 +436,7 @@ function AdminPage() {
               // Store user_id so the driver app can find this record on login
               ...(driverAuthUserId ? { user_id: driverAuthUserId } : {}),
             }).select().maybeSingle();
+            if (arguments[0]?.error) console.error("Insert Driver Error:", arguments[0].error);
 
             if (createdDr && photo) {
               localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
@@ -480,7 +479,7 @@ function AdminPage() {
       .eq("id", bookingId);
 
     if (error) {
-      toast.error("Assignment failed");
+      toast.error("Assignment failed: " + (error?.message || JSON.stringify(error)));
       return;
     }
 
@@ -1123,11 +1122,11 @@ function DriverAnalyticsPanel({
     const { error } = await supabase.from("drivers").update({
       vehicle_number: cleanPlate,
       vehicle_model: cleanModel,
-      vehicle_code: updatedCode,
+      
     }).eq("id", driver.id);
 
     if (error) {
-      toast.error("Could not update partner vehicle: " + error.message);
+      toast.error("Could not update partner vehicle: " + (error?.message || JSON.stringify(error)));
     } else {
       try {
         const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
@@ -1185,7 +1184,7 @@ function DriverAnalyticsPanel({
     const { error } = await supabase.from("drivers").update({
       vehicle_number: targetPlate,
       vehicle_model: targetModel,
-      vehicle_code: updatedCode,
+      
     }).eq("id", driver.id);
 
     if (error) {

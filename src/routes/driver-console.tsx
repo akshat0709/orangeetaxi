@@ -387,7 +387,7 @@ function DriverConsolePage() {
         phone: loginPhone,
         vehicle_model: model,
         vehicle_number: plate,
-        vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+        
       }).select().single();
       driverData = newDriver;
     } else if (driverData && loginPhone) {
@@ -442,7 +442,7 @@ function DriverConsolePage() {
       }
 
       const needsPlateSync = !driverData.vehicle_number || driverData.vehicle_number === "Unassigned";
-      const needsCodeSync = !driverData.vehicle_code || !driverData.vehicle_code.startsWith("ORANGE_META:");
+      const needsCodeSync = false;
       const needsModelSync = !driverData.vehicle_model;
 
       if (needsPlateSync || needsCodeSync || needsModelSync) {
@@ -455,7 +455,7 @@ function DriverConsolePage() {
         const dbUpdates: any = {
           vehicle_number: resolvedPlate,
           vehicle_model: resolvedModel,
-          vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
+          
         };
         try {
           await supabase.from("drivers").update(dbUpdates).eq("id", driverData.id);
