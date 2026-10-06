@@ -1191,6 +1191,7 @@ function Step4Confirmed({
   onReset?: () => void;
 }) {
   const { user } = useAuth();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [status, setStatus] = useState("searching");
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
