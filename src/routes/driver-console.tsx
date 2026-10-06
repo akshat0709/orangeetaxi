@@ -157,6 +157,7 @@ function DriverConsolePage() {
   const [driver, setDriver] = useState<DriverProfile | null>(null);
   const [areas, setAreas] = useState<Record<string, ServiceArea>>({});
   const [activeRides, setActiveRides] = useState<Booking[]>([]);
+  const [activeTab, setActiveTab] = useState("rides");
   const [newRequests, setNewRequests] = useState<Booking[]>([]);
   const [scheduledBookings, setScheduledBookings] = useState<Booking[]>([]);
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
@@ -695,6 +696,7 @@ function DriverConsolePage() {
     await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, activeBooking?.reference);
 
     toast.success("Ride accepted!");
+    setActiveTab("rides");
     loadData();
   }
 
@@ -1349,7 +1351,7 @@ function DriverConsolePage() {
           );
         })()}
 
-        <Tabs defaultValue="rides" className="mt-10">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-10">
           <TabsList className="mb-6">
             <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
             <TabsTrigger value="requests">New Requests {newRequests.length > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{newRequests.length}</span>}</TabsTrigger>
