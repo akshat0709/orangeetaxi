@@ -487,58 +487,55 @@ function DriverConsolePage() {
     driverData = resolveDriverDetails(driverData);
     setDriver(driverData as DriverProfile);
 
-    // Fetch areas for coordinates
-    const { data: areaData } = await supabase.from("service_areas").select("*");
+    // Parallelize all main dashboard queries!
+    const [
+      { data: areaData },
+      { data: active },
+      { data: requests },
+      { data: schedData },
+      { data: recent },
+      { data: settleData }
+    ] = await Promise.all([
+      supabase.from("service_areas").select("*"),
+      supabase.from("bookings").select("*").eq("driver_id", driverData.id).in("status", ["accepted", "arrived", "in_progress"]).order("created_at", { ascending: false }),
+      supabase.from("bookings").select("*").eq("status", "searching").is("driver_id", null).order("created_at", { ascending: false }).limit(20),
+      supabase.from("bookings").select("*").eq("status", "scheduled").order("scheduled_at", { ascending: true }).limit(30),
+      supabase.from("bookings").select("*").eq("driver_id", driverData.id).eq("status", "completed").order("completed_at", { ascending: false }).limit(100),
+      supabase.from("driver_cash_settlements").select("*").eq("driver_id", driverData.id).order("created_at", { ascending: false })
+    ]);
+
     const areaMap: Record<string, ServiceArea> = {};
     (areaData || []).forEach((a: any) => areaMap[a.name] = a);
     setAreas(areaMap);
 
-    const { data: active } = await supabase.from("bookings").select("*")
-      .eq("driver_id", driverData.id)
-      .in("status", ["accepted", "arrived", "in_progress"])
-      .order("created_at", { ascending: false });
     const activeList = (active as Booking[]) ?? [];
     setActiveRides(activeList);
 
-    const { data: requests } = await supabase.from("bookings").select("*")
-      .eq("status", "searching").is("driver_id", null)
-      .order("created_at", { ascending: false }).limit(20);
     const rawReqList = (requests as Booking[]) ?? [];
-    
     const now = Date.now();
     const declines = JSON.parse(localStorage.getItem("orange_declines") || "{}");
     
     let reqList: any[] = [];
     if (driverData.is_online) {
       reqList = rawReqList.filter(r => {
-        // 5km radius check
         if (driverData.current_lat && driverData.current_lng && r.pickup_lat && r.pickup_lng) {
           const d = getDistanceInKm(driverData.current_lat, driverData.current_lng, r.pickup_lat, r.pickup_lng);
           if (d > 5) return false;
         }
-        // decline check
         const dec = declines[r.id];
         if (dec) {
-          if (dec.count >= 2) return false; // declined twice, never show
-          if (dec.count === 1 && (now - dec.lastDeclinedAt < 30000)) return false; // 30s cooldown
+          if (dec.count >= 2) return false;
+          if (dec.count === 1 && (now - dec.lastDeclinedAt < 30000)) return false;
         }
         return true;
-      }).slice(0, 5); // take top 5 visible
+      }).slice(0, 5);
     }
-    
     setNewRequests(reqList);
 
-    const { data: schedData } = await supabase.from("bookings").select("*")
-      .eq("status", "scheduled")
-      .order("scheduled_at", { ascending: true })
-      .limit(30);
     const rawSchedList = (schedData as Booking[]) ?? [];
-    const schedList = rawSchedList.filter(
-      b => !b.driver_id || b.driver_id === driverData.id
-    );
+    const schedList = rawSchedList.filter(b => !b.driver_id || b.driver_id === driverData.id);
     setScheduledBookings(schedList);
 
-    // Fetch customer profiles for active rides, incoming requests, and scheduled bookings
     const allCustIds = Array.from(new Set([
       ...activeList.map(b => b.customer_id),
       ...reqList.map(b => b.customer_id),
@@ -550,17 +547,12 @@ function DriverConsolePage() {
         const { data: profs } = await supabase.from("profiles").select("id, full_name, phone").in("id", allCustIds);
         if (profs) {
           const map: Record<string, { full_name: string; phone: string }> = {};
-          profs.forEach((p: any) => {
-            map[p.id] = { full_name: p.full_name || "Passenger", phone: p.phone || "" };
-          });
+          profs.forEach((p: any) => { map[p.id] = { full_name: p.full_name || "Passenger", phone: p.phone || "" }; });
           setCustomerProfiles(prev => ({ ...prev, ...map }));
         }
-      } catch (e) {
-        console.warn("Could not fetch customer profiles:", e);
-      }
+      } catch (e) {}
     }
 
-    // If new requests arrived and driver is online, play chime alert!
     if (reqList.length > prevRequestsCountRef.current && prevRequestsCountRef.current !== -1) {
       if (soundEnabled && driverData?.is_online) {
         playRideRequestChime();
@@ -569,18 +561,12 @@ function DriverConsolePage() {
     }
     prevRequestsCountRef.current = reqList.length;
 
-    const { data: recent } = await supabase.from("bookings").select("*")
-      .eq("driver_id", driverData.id).eq("status", "completed")
-      .order("completed_at", { ascending: false }).limit(100);
     const recentList = (recent as Booking[]) ?? [];
     if (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned") {
-      recentList.forEach(r => {
-        saveRideVehiclePlate(r.id, driverData.vehicle_number, r.reference);
-      });
+      recentList.forEach(r => saveRideVehiclePlate(r.id, driverData.vehicle_number, r.reference));
     }
     setRecentRides(recentList);
 
-    // Automatically synchronize total_rides and rating on driver record if discrepancy exists
     const totalCompleted = recentList.length;
     const ratedRides = recentList.filter(r => r.rating);
     const calculatedAvgRating = ratedRides.length > 0
@@ -590,10 +576,7 @@ function DriverConsolePage() {
     if (totalCompleted > (driverData.total_rides || 0) || (ratedRides.length > 0 && Math.abs((driverData.rating || 0) - calculatedAvgRating) > 0.05)) {
       try {
         const nextRides = Math.max(driverData.total_rides || 0, totalCompleted);
-        await supabase.from("drivers").update({
-          total_rides: nextRides,
-          rating: calculatedAvgRating,
-        }).eq("id", driverData.id);
+        await supabase.from("drivers").update({ total_rides: nextRides, rating: calculatedAvgRating }).eq("id", driverData.id);
         driverData.total_rides = nextRides;
         driverData.rating = calculatedAvgRating;
         setDriver(prev => prev ? { ...prev, total_rides: nextRides, rating: calculatedAvgRating } : prev);
@@ -601,11 +584,6 @@ function DriverConsolePage() {
     }
 
     try {
-      const { data: settleData } = await supabase
-        .from("driver_cash_settlements")
-        .select("*")
-        .eq("driver_id", driverData.id)
-        .order("created_at", { ascending: false });
       if (settleData) {
         setSettlements(settleData);
       } else {
