@@ -8,7 +8,7 @@ interface WaitingFeeTimerProps {
 }
 
 const FREE_WAITING_SECONDS = 180; // 3 minutes complimentary under pricing settings
-const WAITING_RATE_PER_MIN = 2;   // ₹2 per minute thereafter
+const WAITING_RATE_PER_MIN = 2; // ₹2 per minute thereafter
 
 export function WaitingFeeTimer({ arrivedAt, isDriver = false }: WaitingFeeTimerProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -54,9 +54,7 @@ export function WaitingFeeTimer({ arrivedAt, isDriver = false }: WaitingFeeTimer
         </div>
         <span
           className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
-            isFree
-              ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
-              : "bg-rose-500 text-white"
+            isFree ? "bg-amber-500/20 text-amber-700 dark:text-amber-300" : "bg-rose-500 text-white"
           }`}
         >
           {isFree

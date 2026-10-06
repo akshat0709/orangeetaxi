@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { MapPin, Car, Clock, Route } from "lucide-react";
 import { Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
     const renderer = new routesLibrary.DirectionsRenderer({
       map,
       suppressMarkers: true,
-      polylineOptions: { strokeColor: "#f97316", strokeWeight: 4, strokeOpacity: 0.8 }
+      polylineOptions: { strokeColor: "#f97316", strokeWeight: 4, strokeOpacity: 0.8 },
     });
     setDirectionsRenderer(renderer);
     return () => renderer.setMap(null);
@@ -25,7 +26,7 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
 
     let origin = pickup;
     let destination = dropoff;
-    
+
     // If accepted, driver is driving to pickup
     if ((rideStatus === "accepted" || rideStatus === "arrived") && driver && pickup) {
       origin = driver;
@@ -43,7 +44,7 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
         destination,
         travelMode: window.google.maps.TravelMode.DRIVING,
       },
-      (response, status) => {
+      (response: any, status: any) => {
         if (status === "OK" && response) {
           directionsRenderer.setDirections(response);
           const route = response.routes[0];
@@ -51,11 +52,11 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
             const leg = route.legs[0];
             onRouteFound({
               distance: leg.distance?.text,
-              duration: leg.duration?.text
+              duration: leg.duration?.text,
             });
           }
         }
-      }
+      },
     );
   }, [directionsService, directionsRenderer, pickup, dropoff, driver, rideStatus]);
 
@@ -69,9 +70,18 @@ function MapBoundsController({ pickup, dropoff, driver }: any) {
     // ... we don't strictly need this if DirectionsRenderer auto-fits bounds, but keeping it ensures driver is included.
     const bounds = new window.google.maps.LatLngBounds();
     let hasPoints = false;
-    if (pickup) { bounds.extend(pickup); hasPoints = true; }
-    if (dropoff) { bounds.extend(dropoff); hasPoints = true; }
-    if (driver) { bounds.extend(driver); hasPoints = true; }
+    if (pickup) {
+      bounds.extend(pickup);
+      hasPoints = true;
+    }
+    if (dropoff) {
+      bounds.extend(dropoff);
+      hasPoints = true;
+    }
+    if (driver) {
+      bounds.extend(driver);
+      hasPoints = true;
+    }
     if (hasPoints) {
       map.fitBounds(bounds, { top: 70, bottom: 70, left: 50, right: 50 });
     }
@@ -80,10 +90,15 @@ function MapBoundsController({ pickup, dropoff, driver }: any) {
 }
 
 // NOTE: This component requires a parent <APIProvider> to be mounted
-export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, waypoints = [] }: any) {
-  const [routeInfo, setRouteInfo] = useState<{distance?: string, duration?: string} | null>(null);
-
-
+export function LiveRideMap({
+  id,
+  pickup,
+  dropoff,
+  driverLocation,
+  rideStatus,
+  waypoints = [],
+}: any) {
+  const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
 
   const parseCoords = (loc: any) => {
     if (!loc) return null;
@@ -151,12 +166,12 @@ export function LiveRideMap({ id, pickup, dropoff, driverLocation, rideStatus, w
           </AdvancedMarker>
         )}
         <MapBoundsController pickup={parsedPickup} dropoff={parsedDropoff} driver={parsedDriver} />
-        <DirectionsController 
-          pickup={parsedPickup} 
-          dropoff={parsedDropoff} 
+        <DirectionsController
+          pickup={parsedPickup}
+          dropoff={parsedDropoff}
           driver={parsedDriver}
           rideStatus={rideStatus}
-          onRouteFound={setRouteInfo} 
+          onRouteFound={setRouteInfo}
         />
         {parsedDriver && (
           <AdvancedMarker position={parsedDriver}>

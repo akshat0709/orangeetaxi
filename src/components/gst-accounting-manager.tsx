@@ -44,7 +44,9 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
   const [editingGSTIN, setEditingGSTIN] = useState(profile.gstin);
   const [isSavingGSTIN, setIsSavingGSTIN] = useState(false);
 
-  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "week" | "month" | "all">("today");
+  const [dateFilter, setDateFilter] = useState<"today" | "yesterday" | "week" | "month" | "all">(
+    "today",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBookingForInvoice, setSelectedBookingForInvoice] = useState<any | null>(null);
 
@@ -116,11 +118,12 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
   });
 
   const totalGSTLiability = totalCGST + totalSGST + totalIGST;
-  const intraStateSubtitle = intraStates.size === 1
-    ? `${Array.from(intraStates)[0]} · 2.5% + 2.5%`
-    : intraStates.size > 1
-    ? Array.from(intraStates).join(", ")
-    : "CGST (2.5%) + SGST (2.5%)";
+  const intraStateSubtitle =
+    intraStates.size === 1
+      ? `${Array.from(intraStates)[0]} · 2.5% + 2.5%`
+      : intraStates.size > 1
+        ? Array.from(intraStates).join(", ")
+        : "CGST (2.5%) + SGST (2.5%)";
 
   function handleSaveGSTIN() {
     setIsSavingGSTIN(true);
@@ -164,12 +167,16 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
               <FileSpreadsheet className="size-4" />
             </span>
             <h2 className="text-xl font-bold tracking-tight">GST & Accounting Center</h2>
-            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+            <Badge
+              variant="outline"
+              className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+            >
               SAC 996412 · 5% GST
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Official statutory invoicing, automated Place-of-Supply tax splitting, and government GSTR-1 offline tool export.
+            Official statutory invoicing, automated Place-of-Supply tax splitting, and government
+            GSTR-1 offline tool export.
           </p>
         </div>
 
@@ -214,22 +221,32 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
                 Incorporated: {profile.incorporationDate}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {profile.address}
-            </p>
+            <p className="text-xs text-muted-foreground">{profile.address}</p>
             <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 flex-wrap font-mono">
-              <span>CIN: <strong className="text-foreground">{profile.cin}</strong></span>
+              <span>
+                CIN: <strong className="text-foreground">{profile.cin}</strong>
+              </span>
               <span>·</span>
-              <span>PAN: <strong className="text-foreground">{profile.pan}</strong></span>
+              <span>
+                PAN: <strong className="text-foreground">{profile.pan}</strong>
+              </span>
               <span>·</span>
-              <span>Principal Reg. HQ: <strong className="text-foreground">{profile.state} (Code {profile.stateCode})</strong></span>
+              <span>
+                Principal Reg. HQ:{" "}
+                <strong className="text-foreground">
+                  {profile.state} (Code {profile.stateCode})
+                </strong>
+              </span>
             </div>
           </div>
 
           {/* Quick GSTIN Configurator */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="space-y-1">
-              <Label htmlFor="gstinInput" className="text-[11px] text-muted-foreground uppercase font-semibold">
+              <Label
+                htmlFor="gstinInput"
+                className="text-[11px] text-muted-foreground uppercase font-semibold"
+              >
                 GSTIN (15 Digits)
               </Label>
               <div className="flex items-center gap-2">
@@ -294,19 +311,31 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
       {/* High-Level Financial & Tax Metrics Grid */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Gross Turnover (GMV)</p>
-          <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Math.round(totalGMV).toLocaleString("en-IN")}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">{filteredBookings.length} completed rides</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+            Gross Turnover (GMV)
+          </p>
+          <p className="mt-1 text-2xl font-bold font-mono text-foreground">
+            ₹{Math.round(totalGMV).toLocaleString("en-IN")}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {filteredBookings.length} completed rides
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Taxable Value</p>
-          <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{totalTaxable.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+            Taxable Value
+          </p>
+          <p className="mt-1 text-2xl font-bold font-mono text-foreground">
+            ₹{totalTaxable.toFixed(2)}
+          </p>
           <p className="text-[11px] text-muted-foreground mt-1">Excl. 5% GST rate</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Intra-State GST (CGST+SGST)</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+            Intra-State GST (CGST+SGST)
+          </p>
           <p className="mt-1 text-xl font-bold font-mono text-foreground">
             ₹{(totalCGST + totalSGST).toFixed(2)}
           </p>
@@ -316,13 +345,19 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Inter-State IGST (5%)</p>
-          <p className="mt-1 text-xl font-bold font-mono text-foreground">₹{totalIGST.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+            Inter-State IGST (5%)
+          </p>
+          <p className="mt-1 text-xl font-bold font-mono text-foreground">
+            ₹{totalIGST.toFixed(2)}
+          </p>
           <p className="text-[11px] text-muted-foreground mt-1">Cross-Border / Inter-State</p>
         </div>
 
         <div className="col-span-2 sm:col-span-1 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 shadow-sm">
-          <p className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider font-bold">Total GST Payable</p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wider font-bold">
+            Total GST Payable
+          </p>
           <p className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
             ₹{totalGSTLiability.toFixed(2)}
           </p>
@@ -334,13 +369,21 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
       <div className="rounded-xl border border-border bg-background overflow-hidden shadow-sm">
         <div className="border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-sm">Completed Invoiced Rides ({filteredBookings.length})</h3>
-            <p className="text-xs text-muted-foreground">Each booking is auto-assigned an official GST invoice number</p>
+            <h3 className="font-semibold text-sm">
+              Completed Invoiced Rides ({filteredBookings.length})
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Each booking is auto-assigned an official GST invoice number
+            </p>
           </div>
           <div className="flex items-center gap-4 text-xs font-mono">
-            <span>Cash: <strong className="text-foreground">₹{Math.round(cashTotal)}</strong></span>
+            <span>
+              Cash: <strong className="text-foreground">₹{Math.round(cashTotal)}</strong>
+            </span>
             <span>·</span>
-            <span>UPI: <strong className="text-foreground">₹{Math.round(upiTotal)}</strong></span>
+            <span>
+              UPI: <strong className="text-foreground">₹{Math.round(upiTotal)}</strong>
+            </span>
           </div>
         </div>
 
@@ -373,7 +416,8 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
                   const gst = calculateRideGST(fare, b.pickup_area, b.drop_area);
                   const rawDate = b.completed_at || b.created_at;
                   const invNo = formatInvoiceNumber(b.reference, rawDate);
-                  const validDate = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
+                  const validDate =
+                    rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
                   const dateStr = validDate.toLocaleDateString("en-IN", {
                     day: "2-digit",
                     month: "short",
@@ -389,18 +433,27 @@ export function GSTAccountingManager({ bookings = [], onRefresh }: GSTAccounting
                         <span>{b.drop_area}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-mono text-[10px] font-semibold whitespace-nowrap">
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-[10px] font-semibold whitespace-nowrap"
+                        >
                           {gst.posCode} · {gst.placeOfSupply}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono">₹{gst.taxableValue.toFixed(2)}</td>
                       <td className="px-4 py-3 text-right font-mono">
-                        {!gst.isInterState ? `₹${(gst.cgstAmount + gst.sgstAmount).toFixed(2)}` : "—"}
+                        ₹{gst.taxableValue.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        {!gst.isInterState
+                          ? `₹${(gst.cgstAmount + gst.sgstAmount).toFixed(2)}`
+                          : "—"}
                       </td>
                       <td className="px-4 py-3 text-right font-mono">
                         {gst.isInterState ? `₹${gst.igstAmount.toFixed(2)}` : "—"}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-primary">₹{fare.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-primary">
+                        ₹{fare.toFixed(2)}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-muted">
                           {b.payment_method || "cash"}

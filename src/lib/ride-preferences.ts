@@ -15,7 +15,7 @@ export interface RidePreferences {
  */
 export function encodePickupAddressWithPrefs(
   coords: { lat: number; lng: number } | string,
-  prefs: RidePreferences
+  prefs: RidePreferences,
 ): string {
   let coordStr = "";
   if (typeof coords === "string") {
@@ -27,7 +27,8 @@ export function encodePickupAddressWithPrefs(
   const cleanPrefs: RidePreferences = {};
   if (prefs.cabinClimate) cleanPrefs.cabinClimate = prefs.cabinClimate;
   if (typeof prefs.quietRide === "boolean") cleanPrefs.quietRide = prefs.quietRide;
-  if (prefs.pickupPillar && prefs.pickupPillar.trim()) cleanPrefs.pickupPillar = prefs.pickupPillar.trim();
+  if (prefs.pickupPillar && prefs.pickupPillar.trim())
+    cleanPrefs.pickupPillar = prefs.pickupPillar.trim();
 
   if (Object.keys(cleanPrefs).length === 0) {
     return coordStr;
@@ -41,7 +42,7 @@ export function encodePickupAddressWithPrefs(
  * cleanly ignoring any embedded preference tokens.
  */
 export function parseCleanCoords(
-  coordsOrAddress?: string | null
+  coordsOrAddress?: string | null,
 ): { lat: number; lng: number } | null {
   if (!coordsOrAddress || typeof coordsOrAddress !== "string") return null;
 
@@ -74,7 +75,7 @@ export function parseCleanCoords(
  */
 export function parseRidePreferences(
   pickupAddress?: string | null,
-  bookingIdOrRef?: string | null
+  bookingIdOrRef?: string | null,
 ): RidePreferences {
   const prefs: RidePreferences = {};
 
@@ -107,7 +108,8 @@ export function parseRidePreferences(
         localStorage.getItem(`orange_ride_pref_${String(bookingIdOrRef).trim()}`);
       if (stored) {
         const localParsed = JSON.parse(stored);
-        if (!prefs.cabinClimate && localParsed.cabinClimate) prefs.cabinClimate = localParsed.cabinClimate;
+        if (!prefs.cabinClimate && localParsed.cabinClimate)
+          prefs.cabinClimate = localParsed.cabinClimate;
         if (typeof prefs.quietRide !== "boolean" && typeof localParsed.quietRide === "boolean") {
           prefs.quietRide = localParsed.quietRide;
         }

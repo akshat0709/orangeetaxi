@@ -16,7 +16,7 @@ import {
   X,
   ExternalLink,
   LifeBuoy,
-  Radio
+  Radio,
 } from "lucide-react";
 import {
   Dialog,
@@ -42,7 +42,12 @@ interface GuardianSafetyModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingData?: { id: string; reference: string; otp?: string };
-  driverInfo?: { full_name: string; phone: string; vehicle_number?: string; vehicle_model?: string };
+  driverInfo?: {
+    full_name: string;
+    phone: string;
+    vehicle_number?: string;
+    vehicle_model?: string;
+  };
   pickup?: { name: string };
   drop?: { name: string };
   vehicle?: { name: string };
@@ -99,7 +104,8 @@ export function GuardianSafetyModal({
 
   async function executeEmergencySos() {
     setSosActive(true);
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
     const refStr = bookingData?.reference ? `#${bookingData.reference}` : "Active Ride";
     const driverName = driverInfo?.full_name || "Assigned Driver";
     const driverPhone = driverInfo?.phone || "Direct";
@@ -116,7 +122,8 @@ export function GuardianSafetyModal({
     }
 
     // 2. Dispatch emergency WhatsApp / SMS to Guardian if available
-    const sosMessage = `🚨 *URGENT EMERGENCY SOS ALERT*\n\n` +
+    const sosMessage =
+      `🚨 *URGENT EMERGENCY SOS ALERT*\n\n` +
       `I have raised an emergency SOS in my Orange Electric Taxi.\n\n` +
       `• *Booking Ref:* ${refStr}\n` +
       `• *Vehicle:* ${carPlate}\n` +
@@ -199,19 +206,22 @@ export function GuardianSafetyModal({
   }
 
   function handleShareWhatsApp() {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
     const refStr = bookingData?.reference ? `#${bookingData.reference}` : "Active Ride";
     const driverName = driverInfo?.full_name || "Assigned Chauffeur";
     const driverPhone = driverInfo?.phone || "Pending";
     const carModel = driverInfo?.vehicle_model || vehicle?.name || "Mahindra BE.6";
-    const carPlate = driverInfo?.vehicle_number && driverInfo.vehicle_number !== "Unassigned"
-      ? driverInfo.vehicle_number
-      : getBookingVehiclePlate(bookingData, driverInfo);
+    const carPlate =
+      driverInfo?.vehicle_number && driverInfo.vehicle_number !== "Unassigned"
+        ? driverInfo.vehicle_number
+        : getBookingVehiclePlate(bookingData, driverInfo);
     const pName = pickup?.name || "Pickup Point";
     const dName = drop?.name || "Destination";
     const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
 
-    const message = `🚨 *Orange Taxi Safety & Live Ride Alert*\n\n` +
+    const message =
+      `🚨 *Orange Taxi Safety & Live Ride Alert*\n\n` +
       `Hi, I am currently traveling in an Orange Electric Taxi.\n\n` +
       `• *Booking Ref:* ${refStr}\n` +
       `• *Vehicle:* ${carModel} (${carPlate})\n` +
@@ -235,7 +245,8 @@ export function GuardianSafetyModal({
   }
 
   function handleCopyDetails() {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://orangeetaxi.vercel.app";
     const refStr = bookingData?.reference ? `#${bookingData.reference}` : "Active Ride";
     const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
     const summary = `Orange Taxi Ride Ref: ${refStr} | Driver: ${driverInfo?.full_name || "Assigned"} (${driverInfo?.phone || "Pending"}) | Vehicle: ${driverInfo?.vehicle_number || "BE.6"} | Track Live: ${trackUrl}`;
@@ -270,13 +281,17 @@ export function GuardianSafetyModal({
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 text-xs text-muted-foreground flex items-start gap-2.5">
               <ShieldCheck className="size-4 shrink-0 text-primary mt-0.5" />
               <span>
-                Add a trusted contact (parent, partner, friend). During any ride, you can call them with 1 tap or share your live driver & plate details.
+                Add a trusted contact (parent, partner, friend). During any ride, you can call them
+                with 1 tap or share your live driver & plate details.
               </span>
             </div>
 
             <div className="space-y-3">
               <div>
-                <Label htmlFor="guardian-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="guardian-name"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Guardian Name or Relationship
                 </Label>
                 <Input
@@ -290,7 +305,10 @@ export function GuardianSafetyModal({
               </div>
 
               <div>
-                <Label htmlFor="guardian-phone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Label
+                  htmlFor="guardian-phone"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
                   Guardian Phone Number
                 </Label>
                 <Input
@@ -316,7 +334,10 @@ export function GuardianSafetyModal({
                   Cancel
                 </Button>
               )}
-              <Button type="submit" className="flex-1 bg-primary text-primary-foreground font-bold text-xs">
+              <Button
+                type="submit"
+                className="flex-1 bg-primary text-primary-foreground font-bold text-xs"
+              >
                 Save Guardian Contact
               </Button>
             </div>
@@ -336,7 +357,8 @@ export function GuardianSafetyModal({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                In distress, trigger instant SOS. Automatically dials 112, dispatches live GPS tracking to your guardian, and alerts Orange Command.
+                In distress, trigger instant SOS. Automatically dials 112, dispatches live GPS
+                tracking to your guardian, and alerts Orange Command.
               </p>
 
               {sosCountdown !== null ? (
@@ -372,7 +394,9 @@ export function GuardianSafetyModal({
                   {guardian?.name?.charAt(0).toUpperCase() || "G"}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Your Designated Guardian</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Your Designated Guardian
+                  </p>
                   <p className="font-bold text-foreground truncate">{guardian?.name}</p>
                   <p className="font-mono text-xs font-semibold text-primary">{guardian?.phone}</p>
                 </div>
@@ -416,7 +440,11 @@ export function GuardianSafetyModal({
               onClick={handleCopyDetails}
               className="w-full flex items-center justify-center gap-2 rounded-lg border border-border/80 bg-muted/20 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+              {copied ? (
+                <Check className="size-3.5 text-emerald-500" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
               <span>{copied ? "Trip details copied!" : "Copy Trip Details to Clipboard"}</span>
             </button>
 

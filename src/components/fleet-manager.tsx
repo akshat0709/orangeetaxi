@@ -30,7 +30,7 @@ import {
   CheckCircle2,
   Trash2,
   Calendar,
-  FileText
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -198,8 +198,10 @@ export async function registerApprovedPartnerCar(carData: {
 
     // Update localStorage
     const stored = localStorage.getItem("orange_partner_vehicles");
-    let list: PartnerVehicle[] = stored ? JSON.parse(stored) : [...DEFAULT_SAMPLE_PARTNER_VEHICLES];
-    if (!list.some(v => v.plate_number === cleanPlate)) {
+    const list: PartnerVehicle[] = stored
+      ? JSON.parse(stored)
+      : [...DEFAULT_SAMPLE_PARTNER_VEHICLES];
+    if (!list.some((v) => v.plate_number === cleanPlate)) {
       list.unshift(newCar);
       localStorage.setItem("orange_partner_vehicles", JSON.stringify(list));
       window.dispatchEvent(new Event("partner_vehicles_updated"));
@@ -226,7 +228,13 @@ const STANDARD_BAYS = [
   "Washing Bay",
 ];
 
-function BayDropdown({ currentBay, onSelect }: { currentBay: string; onSelect: (bay: string) => void }) {
+function BayDropdown({
+  currentBay,
+  onSelect,
+}: {
+  currentBay: string;
+  onSelect: (bay: string) => void;
+}) {
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
 
@@ -236,7 +244,7 @@ function BayDropdown({ currentBay, onSelect }: { currentBay: string; onSelect: (
         <input
           type="text"
           value={customValue}
-          onChange={e => setCustomValue(e.target.value)}
+          onChange={(e) => setCustomValue(e.target.value)}
           placeholder="New Bay..."
           autoFocus
           className="h-6 w-24 rounded border border-blue-400 bg-background px-1.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-blue-500"
@@ -269,7 +277,7 @@ function BayDropdown({ currentBay, onSelect }: { currentBay: string; onSelect: (
       <ParkingSquare className="absolute left-2 size-3 text-blue-600 pointer-events-none dark:text-blue-400" />
       <select
         value={STANDARD_BAYS.includes(currentBay) ? currentBay : "custom_saved"}
-        onChange={e => {
+        onChange={(e) => {
           if (e.target.value === "custom_prompt") {
             setIsCustom(true);
             setCustomValue(currentBay);
@@ -280,9 +288,7 @@ function BayDropdown({ currentBay, onSelect }: { currentBay: string; onSelect: (
         className="h-6 appearance-none rounded-md border border-blue-200 bg-blue-50/90 pl-6 pr-6 text-[11px] font-semibold text-blue-700 outline-none hover:bg-blue-100/80 hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
         title="Click to relocate vehicle to another bay"
       >
-        {!STANDARD_BAYS.includes(currentBay) && (
-          <option value="custom_saved">{currentBay}</option>
-        )}
+        {!STANDARD_BAYS.includes(currentBay) && <option value="custom_saved">{currentBay}</option>}
         <optgroup label="Terminal Bays">
           <option value="Bay A-1">Bay A-1</option>
           <option value="Bay A-2">Bay A-2</option>
@@ -457,7 +463,10 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       }
     } else {
       setPartnerVehicles(DEFAULT_SAMPLE_PARTNER_VEHICLES);
-      localStorage.setItem("orange_partner_vehicles", JSON.stringify(DEFAULT_SAMPLE_PARTNER_VEHICLES));
+      localStorage.setItem(
+        "orange_partner_vehicles",
+        JSON.stringify(DEFAULT_SAMPLE_PARTNER_VEHICLES),
+      );
     }
   }
 
@@ -501,7 +510,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     try {
       await supabase.from("partner_vehicles").delete().eq("id", id);
     } catch (e) {}
-    const updated = partnerVehicles.filter(v => v.id !== id);
+    const updated = partnerVehicles.filter((v) => v.id !== id);
     setPartnerVehicles(updated);
     localStorage.setItem("orange_partner_vehicles", JSON.stringify(updated));
     toast.success(`Vehicle ${plate} unlinked from partner fleet`);
@@ -547,7 +556,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         })
         .eq("id", updatedVehicle.id);
     } else {
-      const updatedList = vehicles.map(v => (v.id === updatedVehicle.id ? updatedVehicle : v));
+      const updatedList = vehicles.map((v) => (v.id === updatedVehicle.id ? updatedVehicle : v));
       setVehicles(updatedList);
       localStorage.setItem("orange_fleet_vehicles", JSON.stringify(updatedList));
     }
@@ -557,7 +566,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
   async function updateBattery(vehicle: FleetVehicle, newPct: number) {
     const clamped = Math.max(0, Math.min(100, newPct));
     const updated = { ...vehicle, battery_percentage: clamped };
-    setVehicles(prev => prev.map(v => (v.id === vehicle.id ? updated : v)));
+    setVehicles((prev) => prev.map((v) => (v.id === vehicle.id ? updated : v)));
     await persistVehicleUpdate(updated);
     toast.success(`${vehicle.plate_number} battery updated to ${clamped}%`);
   }
@@ -566,11 +575,10 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
   async function changeBay(vehicle: FleetVehicle, newBay: string) {
     if (!newBay || newBay === vehicle.bay_number) return;
     const updated: FleetVehicle = { ...vehicle, bay_number: newBay };
-    setVehicles(prev => prev.map(v => (v.id === vehicle.id ? updated : v)));
+    setVehicles((prev) => prev.map((v) => (v.id === vehicle.id ? updated : v)));
     await persistVehicleUpdate(updated);
     toast.success(`🅿️ ${vehicle.plate_number} relocated to ${newBay}!`);
   }
-
 
   // Register a new vehicle
   async function handleRegisterVehicle(e: React.FormEvent) {
@@ -580,7 +588,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       return;
     }
     const cleanPlate = newPlate.trim().toUpperCase();
-    if (vehicles.some(v => v.plate_number === cleanPlate)) {
+    if (vehicles.some((v) => v.plate_number === cleanPlate)) {
       toast.error(`Vehicle with plate ${cleanPlate} already registered`);
       return;
     }
@@ -599,14 +607,18 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     };
 
     if (!isUsingFallback) {
-      const { data, error } = await supabase.from("fleet_vehicles").insert({
-        plate_number: newVehicle.plate_number,
-        model: newVehicle.model,
-        color: newVehicle.color,
-        battery_percentage: newVehicle.battery_percentage,
-        status: newVehicle.status,
-        bay_number: newVehicle.bay_number,
-      }).select().single();
+      const { data, error } = await supabase
+        .from("fleet_vehicles")
+        .insert({
+          plate_number: newVehicle.plate_number,
+          model: newVehicle.model,
+          color: newVehicle.color,
+          battery_percentage: newVehicle.battery_percentage,
+          status: newVehicle.status,
+          bay_number: newVehicle.bay_number,
+        })
+        .select()
+        .single();
 
       if (error) {
         toast.error("Could not register in Supabase: " + error.message);
@@ -622,7 +634,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       localStorage.setItem("orange_fleet_vehicles", JSON.stringify(updated));
     }
 
-    toast.success(`🎉 ${cleanPlate} (${newVehicle.model}) registered to fleet in ${newVehicle.bay_number}!`);
+    toast.success(
+      `🎉 ${cleanPlate} (${newVehicle.model}) registered to fleet in ${newVehicle.bay_number}!`,
+    );
     setNewPlate("");
     setIsRegistering(false);
     setSavingNew(false);
@@ -641,11 +655,13 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       toast.error("Please choose a driver");
       return;
     }
-    const driver = drivers.find(d => d.id === driverId);
+    const driver = drivers.find((d) => d.id === driverId);
     if (!driver) return;
 
     // Check if this driver already has another vehicle assigned
-    const olderVehicle = vehicles.find(v => v.assigned_driver_id === driverId && v.id !== vehicle.id);
+    const olderVehicle = vehicles.find(
+      (v) => v.assigned_driver_id === driverId && v.id !== vehicle.id,
+    );
 
     let updatedList = [...vehicles];
 
@@ -659,8 +675,10 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         bay_number: olderVehicle.bay_number || "Bay A-1",
       };
       await persistVehicleUpdate(olderParked);
-      updatedList = updatedList.map(v => (v.id === olderVehicle.id ? olderParked : v));
-      toast.info(`🅿️ Older vehicle ${olderVehicle.plate_number} has been parked back in ${olderParked.bay_number}.`);
+      updatedList = updatedList.map((v) => (v.id === olderVehicle.id ? olderParked : v));
+      toast.info(
+        `🅿️ Older vehicle ${olderVehicle.plate_number} has been parked back in ${olderParked.bay_number}.`,
+      );
     }
 
     // 2. Assign the new vehicle
@@ -671,7 +689,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       assigned_at: new Date().toISOString(),
     };
     await persistVehicleUpdate(newlyAssigned);
-    updatedList = updatedList.map(v => (v.id === vehicle.id ? newlyAssigned : v));
+    updatedList = updatedList.map((v) => (v.id === vehicle.id ? newlyAssigned : v));
     setVehicles(updatedList);
 
     // 3. Update driver's vehicle_number & vehicle_model in Supabase drivers table
@@ -687,7 +705,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       console.warn("Could not update driver table:", driverErr);
     }
 
-    toast.success(`🚗 ${newlyAssigned.plate_number} successfully assigned to ${driver.full_name}! Customer rides updated.`);
+    toast.success(
+      `🚗 ${newlyAssigned.plate_number} successfully assigned to ${driver.full_name}! Customer rides updated.`,
+    );
     setAssigningVehicleId(null);
     setSelectedDriverId("");
     onRefresh();
@@ -697,7 +717,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
   async function returnVehicleToBay(vehicle: FleetVehicle, targetBay: string) {
     const bayToUse = targetBay?.trim() || vehicle.bay_number || "Bay A-1";
     const previousDriverId = vehicle.assigned_driver_id;
-    const previousDriver = drivers.find(d => d.id === previousDriverId);
+    const previousDriver = drivers.find((d) => d.id === previousDriverId);
 
     const updated: FleetVehicle = {
       ...vehicle,
@@ -708,7 +728,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     };
 
     await persistVehicleUpdate(updated);
-    setVehicles(prev => prev.map(v => (v.id === vehicle.id ? updated : v)));
+    setVehicles((prev) => prev.map((v) => (v.id === vehicle.id ? updated : v)));
 
     // Unassign driver's vehicle in drivers table
     if (previousDriverId) {
@@ -720,16 +740,18 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         .eq("id", previousDriverId);
     }
 
-    toast.success(`🅿️ ${vehicle.plate_number} parked in ${bayToUse}. ${previousDriver ? `${previousDriver.full_name}'s daily car unassigned.` : ""}`);
+    toast.success(
+      `🅿️ ${vehicle.plate_number} parked in ${bayToUse}. ${previousDriver ? `${previousDriver.full_name}'s daily car unassigned.` : ""}`,
+    );
     setReturningVehicleId(null);
     onRefresh();
   }
 
   // Filtered vehicles
-  const inBayVehicles = vehicles.filter(v => v.status === "in_bay");
-  const assignedVehicles = vehicles.filter(v => v.status === "assigned");
+  const inBayVehicles = vehicles.filter((v) => v.status === "in_bay");
+  const assignedVehicles = vehicles.filter((v) => v.status === "assigned");
 
-  const filteredInBay = inBayVehicles.filter(v => {
+  const filteredInBay = inBayVehicles.filter((v) => {
     const matchSearch =
       v.plate_number.toLowerCase().includes(search.toLowerCase()) ||
       v.bay_number.toLowerCase().includes(search.toLowerCase()) ||
@@ -739,8 +761,8 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     return true;
   });
 
-  const filteredAssigned = assignedVehicles.filter(v => {
-    const driver = drivers.find(d => d.id === v.assigned_driver_id);
+  const filteredAssigned = assignedVehicles.filter((v) => {
+    const driver = drivers.find((d) => d.id === v.assigned_driver_id);
     const matchSearch =
       v.plate_number.toLowerCase().includes(search.toLowerCase()) ||
       v.model.toLowerCase().includes(search.toLowerCase()) ||
@@ -751,7 +773,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
   });
 
   // Filtered partner vehicles
-  const filteredPartnerVehicles = partnerVehicles.filter(v => {
+  const filteredPartnerVehicles = partnerVehicles.filter((v) => {
     const term = partnerSearch.toLowerCase().trim();
     if (!term) return true;
     return (
@@ -765,10 +787,11 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
   // Calculate fleet stats
   const totalFleetCount = vehicles.length;
-  const avgBattery = totalFleetCount > 0
-    ? Math.round(vehicles.reduce((acc, v) => acc + v.battery_percentage, 0) / totalFleetCount)
-    : 0;
-  const lowBatteryCount = vehicles.filter(v => v.battery_percentage < 30).length;
+  const avgBattery =
+    totalFleetCount > 0
+      ? Math.round(vehicles.reduce((acc, v) => acc + v.battery_percentage, 0) / totalFleetCount)
+      : 0;
+  const lowBatteryCount = vehicles.filter((v) => v.battery_percentage < 30).length;
 
   return (
     <div className="space-y-6">
@@ -780,7 +803,8 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
             <div>
               <p className="font-bold">Operating on Local Fleet Storage</p>
               <p className="text-[11px] opacity-80">
-                To sync fleet vehicles to your permanent cloud database, run the SQL setup script in your Supabase SQL Editor.
+                To sync fleet vehicles to your permanent cloud database, run the SQL setup script in
+                your Supabase SQL Editor.
               </p>
             </div>
           </div>
@@ -837,11 +861,13 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         <div className="text-xs text-muted-foreground">
           {activeSubTab === "company" ? (
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-blue-500" /> Fixed Salary Drivers · Depot Bays & Charging
+              <span className="size-2 rounded-full bg-blue-500" /> Fixed Salary Drivers · Depot Bays
+              & Charging
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" /> 15% Platform Commission Model · Owner-Operators
+              <span className="size-2 rounded-full bg-emerald-500" /> 15% Platform Commission Model
+              · Owner-Operators
             </span>
           )}
         </div>
@@ -851,656 +877,698 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         <div className="space-y-6">
           {/* Header & Registration CTA */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="display-serif text-2xl font-bold">Fleet & Bay Operations</h2>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
-              Mahindra BE.6 Fleet
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Track EV battery telemetry, manage parked cars in the bay, and assign daily vehicles to drivers.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setIsRegistering(!isRegistering)}
-            className="gap-2 text-xs font-semibold h-9"
-          >
-            <Plus className="size-4" /> Register New Vehicle
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadFleet}
-            className="h-9 px-2 text-muted-foreground hover:text-foreground"
-            title="Refresh Fleet"
-          >
-            <RotateCcw className="size-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Total Fleet</span>
-            <Car className="size-4 text-primary" />
-          </div>
-          <p className="mt-2 text-2xl font-bold">{totalFleetCount}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Mahindra BE.6 EVs</p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Parked in Bay</span>
-            <ParkingSquare className="size-4 text-blue-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-blue-600">{inBayVehicles.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Available for drivers</p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Active on Shift</span>
-            <Zap className="size-4 text-emerald-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{assignedVehicles.length}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Assigned to drivers</p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Avg Battery</span>
-            <BatteryCharging className="size-4 text-primary" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-primary">{avgBattery}%</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {lowBatteryCount > 0 ? `${lowBatteryCount} low (<30%)` : "All healthy"}
-          </p>
-        </div>
-      </div>
-
-      {/* New Registration Form */}
-      {isRegistering && (
-        <form
-          onSubmit={handleRegisterVehicle}
-          className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
-        >
-          <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-            <div className="flex items-center gap-2">
-              <Plus className="size-4 text-primary" />
-              <p className="text-sm font-bold uppercase tracking-wider text-primary">
-                Register New EV into Orange Fleet
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="display-serif text-2xl font-bold">Fleet & Bay Operations</h2>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/30 text-xs"
+                >
+                  Mahindra BE.6 Fleet
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Track EV battery telemetry, manage parked cars in the bay, and assign daily vehicles
+                to drivers.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsRegistering(false)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Registration Plate *
-              </label>
-              <input
-                type="text"
-                value={newPlate}
-                onChange={e => setNewPlate(e.target.value)}
-                placeholder="e.g. DL 01 EV 8092"
-                required
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Vehicle Model
-              </label>
-              <input
-                type="text"
-                value={newModel}
-                onChange={e => setNewModel(e.target.value)}
-                placeholder="Mahindra BE.6"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Color
-              </label>
-              <input
-                type="text"
-                value={newColor}
-                onChange={e => setNewColor(e.target.value)}
-                placeholder="Signature Orange"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Initial Battery %
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={newBattery}
-                onChange={e => setNewBattery(Number(e.target.value))}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Initial Bay Location
-              </label>
-              <input
-                type="text"
-                value={newBay}
-                onChange={e => setNewBay(e.target.value)}
-                placeholder="e.g. Bay A-3"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setIsRegistering(!isRegistering)}
+                className="gap-2 text-xs font-semibold h-9"
+              >
+                <Plus className="size-4" /> Register New Vehicle
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadFleet}
+                className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                title="Refresh Fleet"
+              >
+                <RotateCcw className="size-4" />
+              </Button>
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-end gap-2 border-t border-primary/20 pt-3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsRegistering(false)}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={savingNew}
-              className="text-xs font-semibold"
-            >
-              {savingNew ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Check className="size-3.5 mr-1" />}
-              Save & Register to Bay
-            </Button>
+          {/* KPI Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Total Fleet
+                </span>
+                <Car className="size-4 text-primary" />
+              </div>
+              <p className="mt-2 text-2xl font-bold">{totalFleetCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Mahindra BE.6 EVs</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Parked in Bay
+                </span>
+                <ParkingSquare className="size-4 text-blue-600" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-blue-600">{inBayVehicles.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Available for drivers</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Active on Shift
+                </span>
+                <Zap className="size-4 text-emerald-600" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-emerald-600">{assignedVehicles.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Assigned to drivers</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Avg Battery
+                </span>
+                <BatteryCharging className="size-4 text-primary" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-primary">{avgBattery}%</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {lowBatteryCount > 0 ? `${lowBatteryCount} low (<30%)` : "All healthy"}
+              </p>
+            </div>
           </div>
-        </form>
-      )}
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search plate, bay, or driver..."
-            className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-8 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          {/* New Registration Form */}
+          {isRegistering && (
+            <form
+              onSubmit={handleRegisterVehicle}
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
             >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 self-start sm:self-auto overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: "all", label: "All Vehicles", count: vehicles.length },
-            { id: "bay", label: "In Bay", count: inBayVehicles.length },
-            { id: "assigned", label: "Assigned", count: assignedVehicles.length },
-            { id: "low_battery", label: "Low Battery (<30%)", count: lowBatteryCount },
-          ].map(btn => (
-            <button
-              key={btn.id}
-              onClick={() => setFilter(btn.id as any)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                filter === btn.id
-                  ? "bg-primary text-primary-foreground font-semibold"
-                  : "bg-background border border-border text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <span>{btn.label}</span>
-              <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-[10px]">
-                {btn.count}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="size-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {/* SECTION 1: VEHICLES IN BAY */}
-          {(filter === "all" || filter === "bay" || filter === "low_battery") && (
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center justify-between border-b border-primary/20 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="grid size-7 place-items-center rounded-lg bg-blue-500/10 text-blue-600">
-                    <ParkingSquare className="size-4" />
-                  </span>
-                  <div>
-                    <h3 className="font-bold text-sm">Vehicles in Bay (Available & Charging)</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Ready to be assigned to drivers starting their shift
-                    </p>
-                  </div>
+                  <Plus className="size-4 text-primary" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                    Register New EV into Orange Fleet
+                  </p>
                 </div>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
-                  {filteredInBay.length} in bay
-                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setIsRegistering(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              {filteredInBay.length === 0 ? (
-                <p className="p-8 text-center text-xs text-muted-foreground">
-                  No vehicles currently in bay matching your filter.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-                  {filteredInBay.map(v => {
-                    const isAssigning = assigningVehicleId === v.id;
-                    const isLowBattery = v.battery_percentage < 30;
-
-                    return (
-                      <div
-                        key={v.id}
-                        className={`rounded-xl border p-4 transition-all ${
-                          isLowBattery
-                            ? "border-red-200 bg-red-50/30 dark:border-red-950 dark:bg-red-950/10"
-                            : "border-border bg-background hover:border-primary/40 shadow-sm"
-                        }`}
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="font-mono text-base font-bold tracking-wider text-foreground">
-                              {v.plate_number}
-                            </span>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {v.model} · {v.color}
-                            </p>
-                          </div>
-                          <BayDropdown
-                            currentBay={v.bay_number}
-                            onSelect={(newBay) => changeBay(v, newBay)}
-                          />
-                        </div>
-
-
-                        {/* Battery Level Meter & Telemetry */}
-                        <div className="mt-4 rounded-lg border border-border/70 bg-muted/30 p-3">
-                          <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="flex items-center gap-1.5 font-semibold text-muted-foreground">
-                              {v.battery_percentage >= 80 ? (
-                                <BatteryFull className="size-4 text-emerald-600" />
-                              ) : v.battery_percentage >= 30 ? (
-                                <BatteryMedium className="size-4 text-amber-600" />
-                              ) : (
-                                <BatteryLow className="size-4 text-red-600" />
-                              )}
-                              Battery Telemetry
-                            </span>
-                            <span
-                              className={`font-mono font-bold text-sm ${
-                                v.battery_percentage >= 60
-                                  ? "text-emerald-600"
-                                  : v.battery_percentage >= 30
-                                  ? "text-amber-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {v.battery_percentage}%
-                            </span>
-                          </div>
-
-                          {/* Progress bar */}
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-border">
-                            <div
-                              className={`h-full transition-all duration-300 ${
-                                v.battery_percentage >= 60
-                                  ? "bg-emerald-500"
-                                  : v.battery_percentage >= 30
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{ width: `${v.battery_percentage}%` }}
-                            />
-                          </div>
-
-                          {/* Quick battery adjustments */}
-                          <div className="mt-2.5 flex items-center justify-between gap-1 text-[10px]">
-                            <span className="text-muted-foreground font-medium">Quick Adjust:</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => updateBattery(v, v.battery_percentage - 10)}
-                                className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
-                                title="-10%"
-                              >
-                                -10%
-                              </button>
-                              <button
-                                onClick={() => updateBattery(v, v.battery_percentage + 10)}
-                                className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
-                                title="+10%"
-                              >
-                                +10%
-                              </button>
-                              <button
-                                onClick={() => updateBattery(v, 100)}
-                                className="inline-flex items-center gap-1 rounded bg-emerald-600/10 text-emerald-600 px-2 py-0.5 font-semibold hover:bg-emerald-600/20"
-                                title="Mark 100% Charged"
-                              >
-                                <Zap className="size-2.5" /> 100%
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Assign to Driver Flow */}
-                        {!isAssigning ? (
-                          <div className="mt-4 flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              className="w-full h-8 text-xs font-semibold gap-1.5"
-                              onClick={() => {
-                                setAssigningVehicleId(v.id);
-                                setSelectedDriverId("");
-                              }}
-                            >
-                              <Car className="size-3.5" /> Assign to Driver
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-primary">Assign Driver</span>
-                              <button
-                                onClick={() => setAssigningVehicleId(null)}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <X className="size-3.5" />
-                              </button>
-                            </div>
-
-                            <select
-                              value={selectedDriverId}
-                              onChange={e => setSelectedDriverId(e.target.value)}
-                              className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
-                            >
-                              <option value="">-- Choose Active Driver --</option>
-                              {drivers.map(d => (
-                                <option key={d.id} value={d.id}>
-                                  {d.full_name} {d.is_online ? "● Online" : "(Offline)"} {d.vehicle_number && d.vehicle_number !== "Unassigned" ? `[Current: ${d.vehicle_number}]` : ""}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Driver already has older car notice */}
-                            {(() => {
-                              const chosen = drivers.find(d => d.id === selectedDriverId);
-                              const older = vehicles.find(veh => veh.assigned_driver_id === selectedDriverId && veh.id !== v.id);
-                              if (chosen && older) {
-                                return (
-                                  <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                                    <p className="font-semibold flex items-center gap-1">
-                                      <RotateCcw className="size-3 text-amber-600" />
-                                      Auto Bay Return:
-                                    </p>
-                                    <p className="mt-0.5 opacity-90">
-                                      {chosen.full_name} currently has <strong>{older.plate_number}</strong>. It will be moved back to the bay automatically!
-                                    </p>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            <div className="flex items-center gap-2 pt-1">
-                              <Button
-                                size="sm"
-                                disabled={!selectedDriverId}
-                                onClick={() => assignToDriver(v, selectedDriverId)}
-                                className="flex-1 h-7 text-xs font-semibold"
-                              >
-                                Confirm Assignment
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setAssigningVehicleId(null)}
-                                className="h-7 text-xs"
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Registration Plate *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPlate}
+                    onChange={(e) => setNewPlate(e.target.value)}
+                    placeholder="e.g. DL 01 EV 8092"
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
                 </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Vehicle Model
+                  </label>
+                  <input
+                    type="text"
+                    value={newModel}
+                    onChange={(e) => setNewModel(e.target.value)}
+                    placeholder="Mahindra BE.6"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Color
+                  </label>
+                  <input
+                    type="text"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    placeholder="Signature Orange"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Initial Battery %
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={newBattery}
+                    onChange={(e) => setNewBattery(Number(e.target.value))}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Initial Bay Location
+                  </label>
+                  <input
+                    type="text"
+                    value={newBay}
+                    onChange={(e) => setNewBay(e.target.value)}
+                    placeholder="e.g. Bay A-3"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end gap-2 border-t border-primary/20 pt-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsRegistering(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={savingNew}
+                  className="text-xs font-semibold"
+                >
+                  {savingNew ? (
+                    <Loader2 className="size-3.5 animate-spin mr-1" />
+                  ) : (
+                    <Check className="size-3.5 mr-1" />
+                  )}
+                  Save & Register to Bay
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search plate, bay, or driver..."
+                className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-8 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
               )}
             </div>
-          )}
 
-          {/* SECTION 2: VEHICLES ASSIGNED TO DRIVERS */}
-          {(filter === "all" || filter === "assigned" || filter === "low_battery") && (
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                    <Zap className="size-4" />
+            <div className="flex items-center gap-1.5 self-start sm:self-auto overflow-x-auto pb-1 sm:pb-0">
+              {[
+                { id: "all", label: "All Vehicles", count: vehicles.length },
+                { id: "bay", label: "In Bay", count: inBayVehicles.length },
+                { id: "assigned", label: "Assigned", count: assignedVehicles.length },
+                { id: "low_battery", label: "Low Battery (<30%)", count: lowBatteryCount },
+              ].map((btn) => (
+                <button
+                  key={btn.id}
+                  onClick={() => setFilter(btn.id as any)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    filter === btn.id
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "bg-background border border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <span>{btn.label}</span>
+                  <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-[10px]">
+                    {btn.count}
                   </span>
-                  <div>
-                    <h3 className="font-bold text-sm">Assigned Vehicles (On Shift / Road)</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Actively operating with drivers. Live battery & car-swap management.
-                    </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* SECTION 1: VEHICLES IN BAY */}
+              {(filter === "all" || filter === "bay" || filter === "low_battery") && (
+                <div className="rounded-xl border border-border bg-background overflow-hidden">
+                  <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="grid size-7 place-items-center rounded-lg bg-blue-500/10 text-blue-600">
+                        <ParkingSquare className="size-4" />
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-sm">
+                          Vehicles in Bay (Available & Charging)
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Ready to be assigned to drivers starting their shift
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+                    >
+                      {filteredInBay.length} in bay
+                    </Badge>
                   </div>
-                </div>
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900">
-                  {filteredAssigned.length} on road
-                </Badge>
-              </div>
 
-              {filteredAssigned.length === 0 ? (
-                <p className="p-8 text-center text-xs text-muted-foreground">
-                  No vehicles currently assigned to drivers.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-                  {filteredAssigned.map(v => {
-                    const driver = drivers.find(d => d.id === v.assigned_driver_id);
-                    const isReturning = returningVehicleId === v.id;
+                  {filteredInBay.length === 0 ? (
+                    <p className="p-8 text-center text-xs text-muted-foreground">
+                      No vehicles currently in bay matching your filter.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
+                      {filteredInBay.map((v) => {
+                        const isAssigning = assigningVehicleId === v.id;
+                        const isLowBattery = v.battery_percentage < 30;
 
-                    return (
-                      <div
-                        key={v.id}
-                        className="rounded-xl border border-border bg-background p-4 shadow-sm"
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="font-mono text-base font-bold tracking-wider text-foreground">
-                              {v.plate_number}
-                            </span>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {v.model} · {v.color}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-                              ● On Duty
-                            </span>
-                            <BayDropdown
-                              currentBay={v.bay_number}
-                              onSelect={(newBay) => changeBay(v, newBay)}
-                            />
-                          </div>
-                        </div>
-
-
-                        {/* Assigned Driver Card */}
-                        <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                              {driver ? driver.full_name.charAt(0).toUpperCase() : "?"}
-                            </div>
-                            <div>
-                              <p className="text-xs font-semibold text-foreground">
-                                {driver ? driver.full_name : "Assigned Driver"}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">
-                                {driver?.phone ? driver.phone : "No phone"} · {driver?.is_online ? "Online" : "Offline"}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            {v.assigned_at ? new Date(v.assigned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Active"}
-                          </span>
-                        </div>
-
-                        {/* Battery Level Meter & Telemetry */}
-                        <div className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="flex items-center gap-1.5 font-semibold text-muted-foreground text-[11px]">
-                              <BatteryCharging className="size-3.5 text-primary" />
-                              Live Battery
-                            </span>
-                            <span
-                              className={`font-mono font-bold text-xs ${
-                                v.battery_percentage >= 60
-                                  ? "text-emerald-600"
-                                  : v.battery_percentage >= 30
-                                  ? "text-amber-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {v.battery_percentage}%
-                            </span>
-                          </div>
-
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
-                            <div
-                              className={`h-full transition-all duration-300 ${
-                                v.battery_percentage >= 60
-                                  ? "bg-emerald-500"
-                                  : v.battery_percentage >= 30
-                                  ? "bg-amber-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{ width: `${v.battery_percentage}%` }}
-                            />
-                          </div>
-
-                          <div className="mt-2 flex items-center justify-between gap-1 text-[10px]">
-                            <span className="text-muted-foreground">Telemetry update:</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => updateBattery(v, v.battery_percentage - 10)}
-                                className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
-                              >
-                                -10%
-                              </button>
-                              <button
-                                onClick={() => updateBattery(v, v.battery_percentage + 10)}
-                                className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
-                              >
-                                +10%
-                              </button>
-                              <button
-                                onClick={() => updateBattery(v, 100)}
-                                className="rounded bg-emerald-600/10 text-emerald-600 px-1.5 py-0.5 font-semibold hover:bg-emerald-600/20"
-                              >
-                                ⚡ 100%
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions: Return to Bay / Park */}
-                        {!isReturning ? (
-                          <div className="mt-3 flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full h-8 text-xs font-semibold gap-1.5 border-border hover:bg-muted"
-                              onClick={() => {
-                                setReturningVehicleId(v.id);
-                                setReturnBayNumber(v.bay_number || "Bay A-1");
-                              }}
-                            >
-                              <ParkingSquare className="size-3.5 text-blue-600" /> Park Back in Bay
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 p-3 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-bold text-blue-700 dark:text-blue-300">Park in Bay</span>
-                              <button
-                                onClick={() => setReturningVehicleId(null)}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <X className="size-3.5" />
-                              </button>
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-semibold text-muted-foreground uppercase">
-                                Destination Bay Number
-                              </label>
-                              <input
-                                type="text"
-                                value={returnBayNumber}
-                                onChange={e => setReturnBayNumber(e.target.value)}
-                                placeholder="e.g. Bay A-1"
-                                className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1 text-xs outline-none focus:border-primary"
+                        return (
+                          <div
+                            key={v.id}
+                            className={`rounded-xl border p-4 transition-all ${
+                              isLowBattery
+                                ? "border-red-200 bg-red-50/30 dark:border-red-950 dark:bg-red-950/10"
+                                : "border-border bg-background hover:border-primary/40 shadow-sm"
+                            }`}
+                          >
+                            {/* Card Header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="font-mono text-base font-bold tracking-wider text-foreground">
+                                  {v.plate_number}
+                                </span>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {v.model} · {v.color}
+                                </p>
+                              </div>
+                              <BayDropdown
+                                currentBay={v.bay_number}
+                                onSelect={(newBay) => changeBay(v, newBay)}
                               />
                             </div>
-                            <div className="flex items-center gap-2 pt-1">
-                              <Button
-                                size="sm"
-                                onClick={() => returnVehicleToBay(v, returnBayNumber)}
-                                className="flex-1 h-7 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white"
-                              >
-                                Confirm Park in Bay
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setReturningVehicleId(null)}
-                                className="h-7 text-xs"
-                              >
-                                Cancel
-                              </Button>
+
+                            {/* Battery Level Meter & Telemetry */}
+                            <div className="mt-4 rounded-lg border border-border/70 bg-muted/30 p-3">
+                              <div className="flex items-center justify-between text-xs mb-1.5">
+                                <span className="flex items-center gap-1.5 font-semibold text-muted-foreground">
+                                  {v.battery_percentage >= 80 ? (
+                                    <BatteryFull className="size-4 text-emerald-600" />
+                                  ) : v.battery_percentage >= 30 ? (
+                                    <BatteryMedium className="size-4 text-amber-600" />
+                                  ) : (
+                                    <BatteryLow className="size-4 text-red-600" />
+                                  )}
+                                  Battery Telemetry
+                                </span>
+                                <span
+                                  className={`font-mono font-bold text-sm ${
+                                    v.battery_percentage >= 60
+                                      ? "text-emerald-600"
+                                      : v.battery_percentage >= 30
+                                        ? "text-amber-600"
+                                        : "text-red-600"
+                                  }`}
+                                >
+                                  {v.battery_percentage}%
+                                </span>
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-border">
+                                <div
+                                  className={`h-full transition-all duration-300 ${
+                                    v.battery_percentage >= 60
+                                      ? "bg-emerald-500"
+                                      : v.battery_percentage >= 30
+                                        ? "bg-amber-500"
+                                        : "bg-red-500"
+                                  }`}
+                                  style={{ width: `${v.battery_percentage}%` }}
+                                />
+                              </div>
+
+                              {/* Quick battery adjustments */}
+                              <div className="mt-2.5 flex items-center justify-between gap-1 text-[10px]">
+                                <span className="text-muted-foreground font-medium">
+                                  Quick Adjust:
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => updateBattery(v, v.battery_percentage - 10)}
+                                    className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
+                                    title="-10%"
+                                  >
+                                    -10%
+                                  </button>
+                                  <button
+                                    onClick={() => updateBattery(v, v.battery_percentage + 10)}
+                                    className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
+                                    title="+10%"
+                                  >
+                                    +10%
+                                  </button>
+                                  <button
+                                    onClick={() => updateBattery(v, 100)}
+                                    className="inline-flex items-center gap-1 rounded bg-emerald-600/10 text-emerald-600 px-2 py-0.5 font-semibold hover:bg-emerald-600/20"
+                                    title="Mark 100% Charged"
+                                  >
+                                    <Zap className="size-2.5" /> 100%
+                                  </button>
+                                </div>
+                              </div>
                             </div>
+
+                            {/* Assign to Driver Flow */}
+                            {!isAssigning ? (
+                              <div className="mt-4 flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  className="w-full h-8 text-xs font-semibold gap-1.5"
+                                  onClick={() => {
+                                    setAssigningVehicleId(v.id);
+                                    setSelectedDriverId("");
+                                  }}
+                                >
+                                  <Car className="size-3.5" /> Assign to Driver
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-primary">Assign Driver</span>
+                                  <button
+                                    onClick={() => setAssigningVehicleId(null)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
+                                </div>
+
+                                <select
+                                  value={selectedDriverId}
+                                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                                  className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+                                >
+                                  <option value="">-- Choose Active Driver --</option>
+                                  {drivers.map((d) => (
+                                    <option key={d.id} value={d.id}>
+                                      {d.full_name} {d.is_online ? "● Online" : "(Offline)"}{" "}
+                                      {d.vehicle_number && d.vehicle_number !== "Unassigned"
+                                        ? `[Current: ${d.vehicle_number}]`
+                                        : ""}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                {/* Driver already has older car notice */}
+                                {(() => {
+                                  const chosen = drivers.find((d) => d.id === selectedDriverId);
+                                  const older = vehicles.find(
+                                    (veh) =>
+                                      veh.assigned_driver_id === selectedDriverId &&
+                                      veh.id !== v.id,
+                                  );
+                                  if (chosen && older) {
+                                    return (
+                                      <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                                        <p className="font-semibold flex items-center gap-1">
+                                          <RotateCcw className="size-3 text-amber-600" />
+                                          Auto Bay Return:
+                                        </p>
+                                        <p className="mt-0.5 opacity-90">
+                                          {chosen.full_name} currently has{" "}
+                                          <strong>{older.plate_number}</strong>. It will be moved
+                                          back to the bay automatically!
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                <div className="flex items-center gap-2 pt-1">
+                                  <Button
+                                    size="sm"
+                                    disabled={!selectedDriverId}
+                                    onClick={() => assignToDriver(v, selectedDriverId)}
+                                    className="flex-1 h-7 text-xs font-semibold"
+                                  >
+                                    Confirm Assignment
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setAssigningVehicleId(null)}
+                                    className="h-7 text-xs"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 2: VEHICLES ASSIGNED TO DRIVERS */}
+              {(filter === "all" || filter === "assigned" || filter === "low_battery") && (
+                <div className="rounded-xl border border-border bg-background overflow-hidden">
+                  <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                        <Zap className="size-4" />
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-sm">Assigned Vehicles (On Shift / Road)</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Actively operating with drivers. Live battery & car-swap management.
+                        </p>
                       </div>
-                    );
-                  })}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900"
+                    >
+                      {filteredAssigned.length} on road
+                    </Badge>
+                  </div>
+
+                  {filteredAssigned.length === 0 ? (
+                    <p className="p-8 text-center text-xs text-muted-foreground">
+                      No vehicles currently assigned to drivers.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
+                      {filteredAssigned.map((v) => {
+                        const driver = drivers.find((d) => d.id === v.assigned_driver_id);
+                        const isReturning = returningVehicleId === v.id;
+
+                        return (
+                          <div
+                            key={v.id}
+                            className="rounded-xl border border-border bg-background p-4 shadow-sm"
+                          >
+                            {/* Card Header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="font-mono text-base font-bold tracking-wider text-foreground">
+                                  {v.plate_number}
+                                </span>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {v.model} · {v.color}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                  ● On Duty
+                                </span>
+                                <BayDropdown
+                                  currentBay={v.bay_number}
+                                  onSelect={(newBay) => changeBay(v, newBay)}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Assigned Driver Card */}
+                            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted/30 p-2.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className="grid size-8 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                                  {driver ? driver.full_name.charAt(0).toUpperCase() : "?"}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-foreground">
+                                    {driver ? driver.full_name : "Assigned Driver"}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {driver?.phone ? driver.phone : "No phone"} ·{" "}
+                                    {driver?.is_online ? "Online" : "Offline"}
+                                  </p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                {v.assigned_at
+                                  ? new Date(v.assigned_at).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })
+                                  : "Active"}
+                              </span>
+                            </div>
+
+                            {/* Battery Level Meter & Telemetry */}
+                            <div className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="flex items-center gap-1.5 font-semibold text-muted-foreground text-[11px]">
+                                  <BatteryCharging className="size-3.5 text-primary" />
+                                  Live Battery
+                                </span>
+                                <span
+                                  className={`font-mono font-bold text-xs ${
+                                    v.battery_percentage >= 60
+                                      ? "text-emerald-600"
+                                      : v.battery_percentage >= 30
+                                        ? "text-amber-600"
+                                        : "text-red-600"
+                                  }`}
+                                >
+                                  {v.battery_percentage}%
+                                </span>
+                              </div>
+
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
+                                <div
+                                  className={`h-full transition-all duration-300 ${
+                                    v.battery_percentage >= 60
+                                      ? "bg-emerald-500"
+                                      : v.battery_percentage >= 30
+                                        ? "bg-amber-500"
+                                        : "bg-red-500"
+                                  }`}
+                                  style={{ width: `${v.battery_percentage}%` }}
+                                />
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between gap-1 text-[10px]">
+                                <span className="text-muted-foreground">Telemetry update:</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => updateBattery(v, v.battery_percentage - 10)}
+                                    className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
+                                  >
+                                    -10%
+                                  </button>
+                                  <button
+                                    onClick={() => updateBattery(v, v.battery_percentage + 10)}
+                                    className="rounded border border-border bg-background px-1.5 py-0.5 hover:bg-accent"
+                                  >
+                                    +10%
+                                  </button>
+                                  <button
+                                    onClick={() => updateBattery(v, 100)}
+                                    className="rounded bg-emerald-600/10 text-emerald-600 px-1.5 py-0.5 font-semibold hover:bg-emerald-600/20"
+                                  >
+                                    ⚡ 100%
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Actions: Return to Bay / Park */}
+                            {!isReturning ? (
+                              <div className="mt-3 flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full h-8 text-xs font-semibold gap-1.5 border-border hover:bg-muted"
+                                  onClick={() => {
+                                    setReturningVehicleId(v.id);
+                                    setReturnBayNumber(v.bay_number || "Bay A-1");
+                                  }}
+                                >
+                                  <ParkingSquare className="size-3.5 text-blue-600" /> Park Back in
+                                  Bay
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 p-3 space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-bold text-blue-700 dark:text-blue-300">
+                                    Park in Bay
+                                  </span>
+                                  <button
+                                    onClick={() => setReturningVehicleId(null)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                    Destination Bay Number
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={returnBayNumber}
+                                    onChange={(e) => setReturnBayNumber(e.target.value)}
+                                    placeholder="e.g. Bay A-1"
+                                    className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1 text-xs outline-none focus:border-primary"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2 pt-1">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => returnVehicleToBay(v, returnBayNumber)}
+                                    className="flex-1 h-7 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    Confirm Park in Bay
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setReturningVehicleId(null)}
+                                    className="h-7 text-xs"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      )}
         </div>
       ) : (
         /* ================= PARTNER / DRIVER-OWNED CARS TAB ================= */
@@ -1510,12 +1578,16 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="display-serif text-2xl font-bold">Partner / Driver-Owned Fleet</h2>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs flex items-center gap-1">
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs flex items-center gap-1"
+                >
                   <Sparkles className="size-3" /> Orange Standard Certified
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Vehicles brought by partner owner-operators under the 15% platform commission model. Segregated from company depot bays.
+                Vehicles brought by partner owner-operators under the 15% platform commission model.
+                Segregated from company depot bays.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1541,7 +1613,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-border bg-background p-4">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">Partner Cars</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Partner Cars
+                </span>
                 <Car className="size-4 text-primary" />
               </div>
               <p className="mt-2 text-2xl font-bold">{partnerVehicles.length}</p>
@@ -1550,7 +1624,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
             <div className="rounded-xl border border-border bg-background p-4">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">Orange Standard</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Orange Standard
+                </span>
                 <ShieldCheck className="size-4 text-emerald-600" />
               </div>
               <p className="mt-2 text-2xl font-bold text-emerald-600">100% BEV</p>
@@ -1559,7 +1635,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
             <div className="rounded-xl border border-border bg-background p-4">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">Operating Model</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Operating Model
+                </span>
                 <Handshake className="size-4 text-blue-600" />
               </div>
               <p className="mt-2 text-2xl font-bold text-blue-600">15% Comm.</p>
@@ -1568,11 +1646,13 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
             <div className="rounded-xl border border-border bg-background p-4">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">Active Status</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Active Status
+                </span>
                 <CheckCircle2 className="size-4 text-emerald-600" />
               </div>
               <p className="mt-2 text-2xl font-bold text-emerald-600">
-                {partnerVehicles.filter(v => v.status === "active").length}
+                {partnerVehicles.filter((v) => v.status === "active").length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">Onboarded & Approved</p>
             </div>
@@ -1608,7 +1688,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="text"
                     value={partnerPlate}
-                    onChange={e => setPartnerPlate(e.target.value)}
+                    onChange={(e) => setPartnerPlate(e.target.value)}
                     placeholder="e.g. DL 01 EV 8092"
                     required
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
@@ -1622,7 +1702,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="text"
                     value={partnerChassis}
-                    onChange={e => setPartnerChassis(e.target.value)}
+                    onChange={(e) => setPartnerChassis(e.target.value)}
                     placeholder="e.g. MA3EHB6S7P99999"
                     required
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
@@ -1636,7 +1716,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="text"
                     value={partnerModel}
-                    onChange={e => setPartnerModel(e.target.value)}
+                    onChange={(e) => setPartnerModel(e.target.value)}
                     placeholder="e.g. Tata Nexon EV / Mahindra BE.6"
                     required
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
@@ -1650,7 +1730,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="text"
                     value={partnerYear}
-                    onChange={e => setPartnerYear(e.target.value)}
+                    onChange={(e) => setPartnerYear(e.target.value)}
                     placeholder="2024 / 2025"
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
@@ -1663,7 +1743,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="text"
                     value={partnerOwnerName}
-                    onChange={e => setPartnerOwnerName(e.target.value)}
+                    onChange={(e) => setPartnerOwnerName(e.target.value)}
                     placeholder="e.g. Rajesh Sharma"
                     required
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
@@ -1677,7 +1757,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   <input
                     type="tel"
                     value={partnerOwnerPhone}
-                    onChange={e => setPartnerOwnerPhone(e.target.value)}
+                    onChange={(e) => setPartnerOwnerPhone(e.target.value)}
                     placeholder="+91 98765 43210"
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
@@ -1700,7 +1780,11 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   disabled={savingPartner}
                   className="text-xs font-semibold gap-1.5"
                 >
-                  {savingPartner ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                  {savingPartner ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
                   Add to Partner Fleet
                 </Button>
               </div>
@@ -1715,7 +1799,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 type="text"
                 placeholder="Search partner cars by plate, chassis number, model, or driver name..."
                 value={partnerSearch}
-                onChange={e => setPartnerSearch(e.target.value)}
+                onChange={(e) => setPartnerSearch(e.target.value)}
                 className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-4 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -1737,12 +1821,13 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
               <Handshake className="size-10 text-muted-foreground/40" />
               <p className="mt-3 text-sm font-semibold">No Partner Vehicles Found</p>
               <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                Vehicles submitted by partner drivers at /drive will appear here upon admin approval, or you can register one manually.
+                Vehicles submitted by partner drivers at /drive will appear here upon admin
+                approval, or you can register one manually.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPartnerVehicles.map(v => (
+              {filteredPartnerVehicles.map((v) => (
                 <div
                   key={v.id}
                   className="rounded-xl border border-border bg-background p-5 hover:border-primary/40 transition-all shadow-xs space-y-3.5"
@@ -1767,8 +1852,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   {/* Chassis Number (VIN) */}
                   <div className="rounded-lg bg-muted/40 p-2.5 text-xs flex items-center justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">Chassis / VIN</p>
-                      <p className="font-mono font-bold text-foreground truncate">{v.chassis_number || "N/A"}</p>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                        Chassis / VIN
+                      </p>
+                      <p className="font-mono font-bold text-foreground truncate">
+                        {v.chassis_number || "N/A"}
+                      </p>
                     </div>
                     <button
                       type="button"

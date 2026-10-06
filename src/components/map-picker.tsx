@@ -1,7 +1,24 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from "react";
-import { APIProvider, Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { MapPin, Navigation, Search, Loader2, Crosshair, Sparkles, Check, List, Map as MapIcon, X } from "lucide-react";
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  useMap,
+  useMapsLibrary,
+} from "@vis.gl/react-google-maps";
+import {
+  MapPin,
+  Navigation,
+  Search,
+  Loader2,
+  Crosshair,
+  Sparkles,
+  Check,
+  List,
+  Map as MapIcon,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface MapLocation {
@@ -31,7 +48,23 @@ export const PAN_INDIA_PRESETS = [
     lng: 77.7066,
     tag: "✈️ BLR Airport",
     is_airport: true,
-    keywords: ["airport", "blr", "kempegowda", "bangalore airport", "bengaluru airport", "kial", "kia", "t1", "t2", "terminal 1", "terminal 2", "devanahalli", "flight", "departure", "arrival"],
+    keywords: [
+      "airport",
+      "blr",
+      "kempegowda",
+      "bangalore airport",
+      "bengaluru airport",
+      "kial",
+      "kia",
+      "t1",
+      "t2",
+      "terminal 1",
+      "terminal 2",
+      "devanahalli",
+      "flight",
+      "departure",
+      "arrival",
+    ],
   },
   {
     name: "Kempegowda Airport T2 (Garden Terminal)",
@@ -45,8 +78,8 @@ export const PAN_INDIA_PRESETS = [
   {
     name: "HAL Old Airport Road, Bengaluru",
     city: "Bengaluru",
-    lat: 12.9560,
-    lng: 77.6650,
+    lat: 12.956,
+    lng: 77.665,
     tag: "📍 HAL Airport",
     keywords: ["hal", "old airport", "airport road", "marathahalli", "vibhootipura"],
   },
@@ -56,7 +89,14 @@ export const PAN_INDIA_PRESETS = [
     lat: 12.9784,
     lng: 77.6408,
     tag: "📍 Indiranagar",
-    keywords: ["indiranagar", "100ft road", "12th main", "cmh road", "metro station", "defence colony"],
+    keywords: [
+      "indiranagar",
+      "100ft road",
+      "12th main",
+      "cmh road",
+      "metro station",
+      "defence colony",
+    ],
   },
   {
     name: "Koramangala 4th Block, Bengaluru",
@@ -64,7 +104,15 @@ export const PAN_INDIA_PRESETS = [
     lat: 12.9345,
     lng: 77.6266,
     tag: "🏢 Koramangala",
-    keywords: ["koramangala", "sony world", "kora", "4th block", "5th block", "forum mall", "oasis mall"],
+    keywords: [
+      "koramangala",
+      "sony world",
+      "kora",
+      "4th block",
+      "5th block",
+      "forum mall",
+      "oasis mall",
+    ],
   },
   {
     name: "Whitefield ITPL, Bengaluru",
@@ -80,7 +128,15 @@ export const PAN_INDIA_PRESETS = [
     lat: 12.8452,
     lng: 77.6602,
     tag: "⚡ Electronic City",
-    keywords: ["electronic city", "ecity", "phase 1", "phase 2", "infosys", "wipro ecity", "velankani"],
+    keywords: [
+      "electronic city",
+      "ecity",
+      "phase 1",
+      "phase 2",
+      "infosys",
+      "wipro ecity",
+      "velankani",
+    ],
   },
   {
     name: "HSR Layout Sector 1 to 7, Bengaluru",
@@ -93,10 +149,18 @@ export const PAN_INDIA_PRESETS = [
   {
     name: "Bellandur / EcoWorld Tech Park, Bengaluru",
     city: "Bengaluru",
-    lat: 12.9260,
+    lat: 12.926,
     lng: 77.6762,
     tag: "🏢 EcoWorld",
-    keywords: ["bellandur", "ecoworld", "ecospace", "outer ring road", "orr", "marathahalli orr", "devarabisanahalli"],
+    keywords: [
+      "bellandur",
+      "ecoworld",
+      "ecospace",
+      "outer ring road",
+      "orr",
+      "marathahalli orr",
+      "devarabisanahalli",
+    ],
   },
   {
     name: "Manyata Tech Park, Bengaluru",
@@ -104,7 +168,14 @@ export const PAN_INDIA_PRESETS = [
     lat: 13.0475,
     lng: 77.6214,
     tag: "💼 Manyata",
-    keywords: ["manyata", "manyata tech park", "nagavara", "hebbal", "karle town", "outer ring road north"],
+    keywords: [
+      "manyata",
+      "manyata tech park",
+      "nagavara",
+      "hebbal",
+      "karle town",
+      "outer ring road north",
+    ],
   },
   {
     name: "MG Road Metro Station, Bengaluru",
@@ -112,7 +183,14 @@ export const PAN_INDIA_PRESETS = [
     lat: 12.9756,
     lng: 77.6066,
     tag: "🛍️ MG Road",
-    keywords: ["mg road", "brigade road", "church street", "metro", "commercial street", "residency road"],
+    keywords: [
+      "mg road",
+      "brigade road",
+      "church street",
+      "metro",
+      "commercial street",
+      "residency road",
+    ],
   },
   {
     name: "KSR Bengaluru City Railway Station (Majestic)",
@@ -121,7 +199,15 @@ export const PAN_INDIA_PRESETS = [
     lng: 77.5696,
     tag: "🚆 Majestic Station",
     is_railway: true,
-    keywords: ["railway station", "railway", "majestic", "ksr", "train", "bangalore railway station", "central railway"],
+    keywords: [
+      "railway station",
+      "railway",
+      "majestic",
+      "ksr",
+      "train",
+      "bangalore railway station",
+      "central railway",
+    ],
   },
   {
     name: "Yeshwanthpur Junction Railway Station (YPR)",
@@ -130,7 +216,15 @@ export const PAN_INDIA_PRESETS = [
     lng: 77.5503,
     tag: "🚆 Yeshwanthpur",
     is_railway: true,
-    keywords: ["railway station", "railway", "yeshwanthpur", "yeshwantpur", "ypr", "train", "gorguntepalya"],
+    keywords: [
+      "railway station",
+      "railway",
+      "yeshwanthpur",
+      "yeshwantpur",
+      "ypr",
+      "train",
+      "gorguntepalya",
+    ],
   },
   {
     name: "SMVT Bengaluru Railway Terminal",
@@ -147,15 +241,29 @@ export const PAN_INDIA_PRESETS = [
     lat: 12.9961,
     lng: 77.6963,
     tag: "🏬 Phoenix Mall",
-    keywords: ["phoenix", "phoenix marketcity", "vr mall", "mall", "whitefield road", "mahadevapura"],
+    keywords: [
+      "phoenix",
+      "phoenix marketcity",
+      "vr mall",
+      "mall",
+      "whitefield road",
+      "mahadevapura",
+    ],
   },
   {
     name: "Orion Mall Rajajinagar, Bengaluru",
     city: "Bengaluru",
     lat: 13.0112,
-    lng: 77.5550,
+    lng: 77.555,
     tag: "🏬 Orion Mall",
-    keywords: ["orion", "orion mall", "brigade gateway", "rajajinagar", "mall", "world trade center"],
+    keywords: [
+      "orion",
+      "orion mall",
+      "brigade gateway",
+      "rajajinagar",
+      "mall",
+      "world trade center",
+    ],
   },
   {
     name: "UB City, Bengaluru",
@@ -182,7 +290,15 @@ export const PAN_INDIA_PRESETS = [
     lng: 77.0856,
     tag: "✈️ Delhi T3",
     is_airport: true,
-    keywords: ["airport", "delhi airport", "igi", "t3", "terminal 3", "indira gandhi airport", "flight"],
+    keywords: [
+      "airport",
+      "delhi airport",
+      "igi",
+      "t3",
+      "terminal 3",
+      "indira gandhi airport",
+      "flight",
+    ],
   },
   {
     name: "IGI Airport Terminal 1, Delhi",
@@ -243,7 +359,15 @@ export const PAN_INDIA_PRESETS = [
     lng: 72.8656,
     tag: "✈️ Mumbai T2",
     is_airport: true,
-    keywords: ["airport", "mumbai airport", "csia", "t2", "terminal 2", "sahar", "chhatrapati shivaji"],
+    keywords: [
+      "airport",
+      "mumbai airport",
+      "csia",
+      "t2",
+      "terminal 2",
+      "sahar",
+      "chhatrapati shivaji",
+    ],
   },
   {
     name: "CSMIA Airport Terminal 1, Mumbai",
@@ -339,7 +463,7 @@ export const PAN_INDIA_PRESETS = [
     name: "Koregaon Park / Kalyani Nagar, Pune",
     city: "Pune",
     lat: 18.5362,
-    lng: 73.8940,
+    lng: 73.894,
     tag: "📍 Koregaon Park",
     keywords: ["koregaon park", "kp", "kalyani nagar", "german bakery"],
   },
@@ -385,9 +509,9 @@ export const PAN_INDIA_PRESETS = [
 
 const MAJOR_INDIAN_CITIES = [
   { name: "Bengaluru", state: "Karnataka", lat: 12.9716, lng: 77.5946 },
-  { name: "Delhi NCR", state: "Delhi", lat: 28.6139, lng: 77.2090 },
-  { name: "Mumbai", state: "Maharashtra", lat: 19.0760, lng: 72.8777 },
-  { name: "Hyderabad", state: "Telangana", lat: 17.3850, lng: 78.4867 },
+  { name: "Delhi NCR", state: "Delhi", lat: 28.6139, lng: 77.209 },
+  { name: "Mumbai", state: "Maharashtra", lat: 19.076, lng: 72.8777 },
+  { name: "Hyderabad", state: "Telangana", lat: 17.385, lng: 78.4867 },
   { name: "Chennai", state: "Tamil Nadu", lat: 13.0827, lng: 80.2707 },
   { name: "Kolkata", state: "West Bengal", lat: 22.5726, lng: 88.3639 },
   { name: "Pune", state: "Maharashtra", lat: 18.5204, lng: 73.8567 },
@@ -409,7 +533,7 @@ const MAJOR_INDIAN_CITIES = [
   { name: "Guwahati", state: "Assam", lat: 26.1445, lng: 91.7362 },
   { name: "Bhubaneswar", state: "Odisha", lat: 20.2961, lng: 85.8245 },
   { name: "Dehradun", state: "Uttarakhand", lat: 30.3165, lng: 78.0322 },
-  { name: "Amritsar", state: "Punjab", lat: 31.6340, lng: 74.8723 },
+  { name: "Amritsar", state: "Punjab", lat: 31.634, lng: 74.8723 },
 ];
 
 function calcHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -418,13 +542,17 @@ function calcHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number)
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function MapPanController({ target, onPanned }: { target: MapLocation | null, onPanned: () => void }) {
+function MapPanController({
+  target,
+  onPanned,
+}: {
+  target: MapLocation | null;
+  onPanned: () => void;
+}) {
   const map = useMap();
   useEffect(() => {
     if (map && target) {
@@ -452,7 +580,9 @@ export function MapPicker({
   const [mode, setMode] = useState<"map" | "list">("map");
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(initialLocation);
   const [searchValue, setSearchValue] = useState(initialLocation?.name || "");
-  const [searchResults, setSearchResults] = useState<Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }>>([]);
+  const [searchResults, setSearchResults] = useState<
+    Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }>
+  >([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingGPS, setLoadingGPS] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -472,7 +602,8 @@ export function MapPicker({
       script.id = scriptId;
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
-      script.onerror = () => console.warn("Google Maps JS API notice: falling back to local/OSM geocoder.");
+      script.onerror = () =>
+        console.warn("Google Maps JS API notice: falling back to local/OSM geocoder.");
       document.head.appendChild(script);
     }
   }, [apiKey]);
@@ -481,10 +612,8 @@ export function MapPicker({
   const defaultCenter = initialLocation
     ? { lat: initialLocation.lat, lng: initialLocation.lng }
     : fallbackCenter
-    ? { lat: fallbackCenter.lat, lng: fallbackCenter.lng }
-    : { lat: 28.6139, lng: 77.2090 };
-
-  
+      ? { lat: fallbackCenter.lat, lng: fallbackCenter.lng }
+      : { lat: 28.6139, lng: 77.209 };
 
   // Reverse geocode coordinate to friendly street address
   function handleMapMoveEnd(lat: number, lng: number) {
@@ -521,7 +650,9 @@ export function MapPicker({
 
       // 2. OpenStreetMap Nominatim with structured Indian address extraction
       try {
-                const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`);
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`,
+        );
         if (res.ok) {
           const data = await res.json();
           if (data.results && data.results.length > 0) {
@@ -609,15 +740,25 @@ export function MapPicker({
       const refLat = selectedLocation?.lat || initialLocation?.lat || 12.9716;
       const refLng = selectedLocation?.lng || initialLocation?.lng || 77.5946;
 
-      const matchedPresets: Array<{ name: string; lat: number; lng: number; sub?: string; distKm: number; isAirport?: boolean }> = [];
+      const matchedPresets: Array<{
+        name: string;
+        lat: number;
+        lng: number;
+        sub?: string;
+        distKm: number;
+        isAirport?: boolean;
+      }> = [];
 
       // 1. Instant match against curated Pan-India presets & service areas
       [...PAN_INDIA_PRESETS, ...areas].forEach((item) => {
         const keywords = (item as any).keywords || [];
-        const fullTokens = `${item.name} ${item.city || ""} ${item.tag || ""} ${keywords.join(" ")}`.toLowerCase();
-        
+        const fullTokens =
+          `${item.name} ${item.city || ""} ${item.tag || ""} ${keywords.join(" ")}`.toLowerCase();
+
         // Exact substring match or multi-word match
-        const isMatch = fullTokens.includes(qLower) || qLower.split(/\s+/).every(word => word.length >= 2 && fullTokens.includes(word));
+        const isMatch =
+          fullTokens.includes(qLower) ||
+          qLower.split(/\s+/).every((word) => word.length >= 2 && fullTokens.includes(word));
 
         if (isMatch && !matchedPresets.some((m) => m.name === item.name)) {
           const distKm = calcHaversineKm(refLat, refLng, item.lat, item.lng);
@@ -625,7 +766,11 @@ export function MapPicker({
             name: item.name,
             lat: item.lat,
             lng: item.lng,
-            sub: item.city ? `${item.city} Hub · ${item.tag || "Orange Hub"}` : (item.is_airport ? "Airport Hub" : "Orange Service Area"),
+            sub: item.city
+              ? `${item.city} Hub · ${item.tag || "Orange Hub"}`
+              : item.is_airport
+                ? "Airport Hub"
+                : "Orange Service Area",
             distKm,
             isAirport: !!item.is_airport,
           });
@@ -635,9 +780,13 @@ export function MapPicker({
       // Sort matched presets: nearest to current location first!
       matchedPresets.sort((a, b) => a.distKm - b.distKm);
 
-      const combinedResults: Array<{ name: string; lat: number; lng: number; sub?: string; placeId?: string }> = [
-        ...matchedPresets.map(p => ({ name: p.name, lat: p.lat, lng: p.lng, sub: p.sub })),
-      ];
+      const combinedResults: Array<{
+        name: string;
+        lat: number;
+        lng: number;
+        sub?: string;
+        placeId?: string;
+      }> = [...matchedPresets.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, sub: p.sub }))];
 
       // 2. Query Google Places Autocomplete API natively via Maps JS SDK
       if (typeof window !== "undefined" && window.google?.maps?.places) {
@@ -655,18 +804,22 @@ export function MapPicker({
                 } else {
                   resolve([]);
                 }
-              }
+              },
             );
           });
-          
+
           (response as any[]).forEach((p) => {
-            if (!combinedResults.some(m => m.name.toLowerCase() === p.structured_formatting.main_text.toLowerCase())) {
+            if (
+              !combinedResults.some(
+                (m) => m.name.toLowerCase() === p.structured_formatting.main_text.toLowerCase(),
+              )
+            ) {
               combinedResults.push({
                 name: p.structured_formatting.main_text,
                 sub: p.structured_formatting.secondary_text,
                 lat: 0, // Will be resolved on select
                 lng: 0,
-                placeId: p.place_id
+                placeId: p.place_id,
               });
             }
           });
@@ -681,24 +834,42 @@ export function MapPicker({
   }
 
   // Select a location and resolve precise GPS coordinates anywhere in India
-  async function selectTargetLocation(loc: { name: string; lat: number; lng: number; placeId?: string }) {
+  async function selectTargetLocation(loc: {
+    name: string;
+    lat: number;
+    lng: number;
+    placeId?: string;
+  }) {
     setSearchValue(loc.name);
-    
+
     // Always clone the object to ensure React triggers a state update!
-    let finalLoc = { ...loc };
+    const finalLoc = { ...loc };
 
     // Resolve Place ID to coordinates using Places API (guaranteed to work if Autocomplete worked)
-    if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && typeof window !== "undefined" && window.google?.maps?.places) {
+    if (
+      finalLoc.placeId &&
+      finalLoc.lat === 0 &&
+      finalLoc.lng === 0 &&
+      typeof window !== "undefined" &&
+      window.google?.maps?.places
+    ) {
       try {
         await new Promise<void>((resolve) => {
-          const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
+          const placesService = new window.google.maps.places.PlacesService(
+            document.createElement("div"),
+          );
           placesService.getDetails(
-            { placeId: finalLoc.placeId, fields: ['geometry', 'name'] },
+            { placeId: finalLoc.placeId, fields: ["geometry", "name"] },
             (place, status) => {
-              if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+              if (
+                status === window.google.maps.places.PlacesServiceStatus.OK &&
+                place?.geometry?.location
+              ) {
                 const location = place.geometry.location;
-                finalLoc.lat = typeof location.lat === 'function' ? location.lat() : (location.lat as number);
-                finalLoc.lng = typeof location.lng === 'function' ? location.lng() : (location.lng as number);
+                finalLoc.lat =
+                  typeof location.lat === "function" ? location.lat() : (location.lat as number);
+                finalLoc.lng =
+                  typeof location.lng === "function" ? location.lng() : (location.lng as number);
                 if (place.name) {
                   finalLoc.name = place.name;
                   setSearchValue(finalLoc.name);
@@ -707,7 +878,7 @@ export function MapPicker({
                 console.error("Places API getDetails failed:", status);
               }
               resolve();
-            }
+            },
           );
         });
       } catch (err) {
@@ -719,7 +890,9 @@ export function MapPicker({
     // We use Places Details instead of Geocoding, because the user might not have Geocoding API enabled on GCP!
     if (finalLoc.placeId && finalLoc.lat === 0 && finalLoc.lng === 0 && apiKey) {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${finalLoc.placeId}&fields=geometry,name&key=${apiKey}`);
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${finalLoc.placeId}&fields=geometry,name&key=${apiKey}`,
+        );
         if (res.ok) {
           const data = await res.json();
           if (data.result && data.result.geometry && data.result.geometry.location) {
@@ -750,7 +923,7 @@ export function MapPicker({
     if (apiKey) {
       try {
         const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc.name)}&components=country:IN&key=${apiKey}`
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc.name)}&components=country:IN&key=${apiKey}`,
         );
         if (res.ok) {
           const data = await res.json();
@@ -799,10 +972,10 @@ export function MapPicker({
         console.warn("GPS location error:", err);
         setLoadingGPS(false);
         if (mode === "map") {
-          setPanTarget({ name: "Default", lat: 28.6139, lng: 77.2090 });
+          setPanTarget({ name: "Default", lat: 28.6139, lng: 77.209 });
         }
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 8000 },
     );
   }
 
@@ -811,9 +984,13 @@ export function MapPicker({
       {/* Header with Mode Switcher */}
       <div className="flex items-center justify-between gap-2 min-w-0 max-w-full">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary truncate">{label}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary truncate">
+            {label}
+          </p>
           <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-            {mode === "map" ? "Drag pin or search your destination" : "Select from popular hubs across India"}
+            {mode === "map"
+              ? "Drag pin or search your destination"
+              : "Select from popular hubs across India"}
           </p>
         </div>
 
@@ -823,7 +1000,9 @@ export function MapPicker({
             type="button"
             onClick={() => setMode("map")}
             className={`flex items-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-2.5 py-1 font-medium transition-colors ${
-              mode === "map" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              mode === "map"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <MapIcon className="size-3.5" /> <span className="text-xs">Map</span>
@@ -832,7 +1011,9 @@ export function MapPicker({
             type="button"
             onClick={() => setMode("list")}
             className={`flex items-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-2.5 py-1 font-medium transition-colors ${
-              mode === "list" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              mode === "list"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <List className="size-3.5" /> <span className="text-xs">Hubs</span>
@@ -935,7 +1116,7 @@ export function MapPicker({
                 handleMapMoveEnd(center.lat(), center.lng());
               }
             }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
           >
             <MapPanController target={panTarget} onPanned={() => setPanTarget(null)} />
           </Map>
@@ -970,7 +1151,9 @@ export function MapPicker({
           {/* Map Status Hint */}
           <div className="absolute bottom-2.5 left-3 z-10">
             <span className="rounded-full bg-black/80 border border-input px-2.5 py-0.5 text-[10px] font-medium text-foreground/80 backdrop-blur-xs shadow-xs">
-              {isResolvingAddress ? "📍 Resolving address..." : "Pan or drag pin anywhere across India"}
+              {isResolvingAddress
+                ? "📍 Resolving address..."
+                : "Pan or drag pin anywhere across India"}
             </span>
           </div>
         </div>
@@ -1018,7 +1201,9 @@ export function MapPicker({
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <MapPin className={`size-4 shrink-0 ${isSelected ? "text-primary" : "text-primary/70"}`} />
+                    <MapPin
+                      className={`size-4 shrink-0 ${isSelected ? "text-primary" : "text-primary/70"}`}
+                    />
                     <div className="min-w-0">
                       <p className="text-xs truncate font-medium">{item.name}</p>
                       <p className="text-[10px] text-foreground/50">{item.city} · Pan-India Hub</p>
@@ -1045,7 +1230,9 @@ export function MapPicker({
             <Check className="size-3.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase font-bold tracking-wider text-primary">Selected {label}</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-primary">
+              Selected {label}
+            </p>
             <p className="font-semibold text-foreground truncate">{selectedLocation.name}</p>
           </div>
         </div>
@@ -1054,7 +1241,12 @@ export function MapPicker({
       {/* Actions */}
       <div className="flex items-center gap-2.5 sm:gap-3 pt-1 min-w-0 max-w-full">
         {onBack && (
-          <Button type="button" variant="ghost" className="flex-1 text-muted-foreground hover:text-foreground text-xs sm:text-sm" onClick={onBack}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="flex-1 text-muted-foreground hover:text-foreground text-xs sm:text-sm"
+            onClick={onBack}
+          >
             Back
           </Button>
         )}

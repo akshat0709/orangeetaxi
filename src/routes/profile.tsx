@@ -2,12 +2,39 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { User, MapPin, Navigation, Star, TrendingUp, Clock, Loader2, Save, Phone, Mail, Check, ShieldAlert, FileText, Calendar, X, Home, Briefcase, Map as MapIcon, Trash2, Sparkles } from "lucide-react";
+import {
+  User,
+  MapPin,
+  Navigation,
+  Star,
+  TrendingUp,
+  Clock,
+  Loader2,
+  Save,
+  Phone,
+  Mail,
+  Check,
+  ShieldAlert,
+  FileText,
+  Calendar,
+  X,
+  Home,
+  Briefcase,
+  Map as MapIcon,
+  Trash2,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -25,23 +52,54 @@ export const Route = createFileRoute("/profile")({
 });
 
 const STATUS_STYLES = {
-  scheduled:   { label: "Scheduled",   className: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-800" },
-  completed:   { label: "Completed",   className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" },
-  cancelled:   { label: "Cancelled",   className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
-  searching:   { label: "Searching",   className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400" },
-  accepted:    { label: "Accepted",    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" },
-  arrived:     { label: "Arrived",     className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400" },
-  in_progress: { label: "In Progress", className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" },
+  scheduled: {
+    label: "Scheduled",
+    className:
+      "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-800",
+  },
+  completed: {
+    label: "Completed",
+    className: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  },
+  cancelled: {
+    label: "Cancelled",
+    className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+  },
+  searching: {
+    label: "Searching",
+    className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+  },
+  accepted: {
+    label: "Accepted",
+    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  },
+  arrived: {
+    label: "Arrived",
+    className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+  },
+  in_progress: {
+    label: "In Progress",
+    className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
+  },
 };
 
 function getInitials(name) {
   if (!name?.trim()) return "?";
-  return name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .slice(0, 2)
+    .join("");
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function ProfilePage() {
@@ -78,14 +136,22 @@ function ProfilePage() {
         if (p.phone) setGuardianPhone(p.phone);
       }
 
-      const h = localStorage.getItem("@orange_user_home_address") || localStorage.getItem("orange_user_home_address");
+      const h =
+        localStorage.getItem("@orange_user_home_address") ||
+        localStorage.getItem("orange_user_home_address");
       if (h) setHomeAddress(h);
-      const hc = localStorage.getItem("@orange_user_home_coords") || localStorage.getItem("orange_user_home_coords");
+      const hc =
+        localStorage.getItem("@orange_user_home_coords") ||
+        localStorage.getItem("orange_user_home_coords");
       if (hc) setHomeCoords(JSON.parse(hc));
 
-      const w = localStorage.getItem("@orange_user_work_address") || localStorage.getItem("orange_user_work_address");
+      const w =
+        localStorage.getItem("@orange_user_work_address") ||
+        localStorage.getItem("orange_user_work_address");
       if (w) setWorkAddress(w);
-      const wc = localStorage.getItem("@orange_user_work_coords") || localStorage.getItem("orange_user_work_coords");
+      const wc =
+        localStorage.getItem("@orange_user_work_coords") ||
+        localStorage.getItem("orange_user_work_coords");
       if (wc) setWorkCoords(JSON.parse(wc));
     } catch (e) {}
 
@@ -187,25 +253,33 @@ function ProfilePage() {
     try {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
+        .select(
+          "id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)",
+        )
         .eq("customer_id", user.id)
         .order("created_at", { ascending: false });
 
-      let list = (data || []);
+      let list = data || [];
 
       // Also merge any bookings created in this browser stored in localStorage
       try {
-        const stored = localStorage.getItem("@orange_booking_history_ids") || localStorage.getItem("orange_booking_history_ids");
+        const stored =
+          localStorage.getItem("@orange_booking_history_ids") ||
+          localStorage.getItem("orange_booking_history_ids");
         const idList: string[] = stored ? JSON.parse(stored) : [];
-        const missingIds = idList.filter(id => !list.some(b => b.id === id));
+        const missingIds = idList.filter((id) => !list.some((b) => b.id === id));
         if (missingIds.length > 0) {
           const { data: extra } = await supabase
             .from("bookings")
-            .select("id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)")
+            .select(
+              "id, reference, status, pickup_area, drop_area, estimated_fare, final_fare, created_at, completed_at, scheduled_at, vehicle_name, payment_method, rating, driver_id, drivers(full_name, phone, vehicle_number)",
+            )
             .in("id", missingIds);
           if (extra && extra.length > 0) {
             list = [...list, ...extra];
-            list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            list.sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+            );
           }
         }
       } catch (err) {}
@@ -223,7 +297,11 @@ function ProfilePage() {
   }, [user]);
 
   async function handleCancelScheduledRide(booking: any) {
-    if (!confirm(`Are you sure you want to cancel scheduled ride #${booking.reference}? (Zero cancellation fee)`)) {
+    if (
+      !confirm(
+        `Are you sure you want to cancel scheduled ride #${booking.reference}? (Zero cancellation fee)`,
+      )
+    ) {
       return;
     }
     const { error } = await supabase
@@ -268,7 +346,10 @@ function ProfilePage() {
   if (!user) return null;
 
   const completedRides = bookings.filter((b) => b.status === "completed");
-  const totalSpent = completedRides.reduce((sum, b) => sum + (b.final_fare ?? b.estimated_fare ?? 0), 0);
+  const totalSpent = completedRides.reduce(
+    (sum, b) => sum + (b.final_fare ?? b.estimated_fare ?? 0),
+    0,
+  );
   const avgFare = completedRides.length > 0 ? totalSpent / completedRides.length : 0;
   const memberSince = user.created_at ? formatDate(user.created_at) : "—";
 
@@ -286,7 +367,6 @@ function ProfilePage() {
 
       <div className="section-shell py-10">
         <div className="grid gap-10 lg:grid-cols-[340px_1fr] lg:items-start">
-
           <div className="space-y-6">
             {/* Profile Card */}
             <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
@@ -308,7 +388,10 @@ function ProfilePage() {
 
                   <div className="mt-8 space-y-5">
                     <div>
-                      <Label htmlFor="fullName" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="fullName"
+                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         <User className="size-3" /> Full Name
                       </Label>
                       <Input
@@ -320,7 +403,10 @@ function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Label
+                        htmlFor="phone"
+                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      >
                         <Phone className="size-3" /> Phone
                       </Label>
                       <Input
@@ -335,15 +421,23 @@ function ProfilePage() {
                       <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         <Mail className="size-3" /> Email
                       </Label>
-                      <Input className="mt-1.5 cursor-not-allowed opacity-60" value={user.email ?? ""} readOnly />
+                      <Input
+                        className="mt-1.5 cursor-not-allowed opacity-60"
+                        value={user.email ?? ""}
+                        readOnly
+                      />
                     </div>
                     <Button className="w-full" onClick={handleSave} disabled={saving}>
                       {saving ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : savedOnce ? (
-                        <><Check className="size-4" /> Saved</>
+                        <>
+                          <Check className="size-4" /> Saved
+                        </>
                       ) : (
-                        <><Save className="size-4" /> Save Profile</>
+                        <>
+                          <Save className="size-4" /> Save Profile
+                        </>
                       )}
                     </Button>
                   </div>
@@ -358,14 +452,21 @@ function ProfilePage() {
                   <ShieldAlert className="size-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-foreground">Guardian Emergency Contact</p>
-                  <p className="text-[11px] text-muted-foreground">1-tap call & live tracking alerts during rides</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Guardian Emergency Contact
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    1-tap call & live tracking alerts during rides
+                  </p>
                 </div>
               </div>
 
               <div className="mt-4 space-y-3">
                 <div>
-                  <Label htmlFor="guardianName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="guardianName"
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     Guardian Name / Relationship
                   </Label>
                   <Input
@@ -378,7 +479,10 @@ function ProfilePage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="guardianPhone" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Label
+                    htmlFor="guardianPhone"
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     Guardian Phone Number
                   </Label>
                   <Input
@@ -395,7 +499,13 @@ function ProfilePage() {
                   className="w-full border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs font-bold mt-1"
                   onClick={handleSaveGuardian}
                 >
-                  {guardianSavedOnce ? <><Check className="size-3.5" /> Guardian Saved</> : "Save Guardian Contact"}
+                  {guardianSavedOnce ? (
+                    <>
+                      <Check className="size-3.5" /> Guardian Saved
+                    </>
+                  ) : (
+                    "Save Guardian Contact"
+                  )}
                 </Button>
               </div>
             </div>
@@ -408,8 +518,12 @@ function ProfilePage() {
                     <MapPin className="size-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-foreground">Saved Places</p>
-                    <p className="text-[11px] text-muted-foreground">Pin exact gate / curb on map for 1-click rides</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Saved Places
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Pin exact gate / curb on map for 1-click rides
+                    </p>
                   </div>
                 </div>
               </div>
@@ -443,7 +557,9 @@ function ProfilePage() {
                 </div>
 
                 <p className="mt-2 text-xs text-muted-foreground line-clamp-2 min-h-[1.5rem]">
-                  {homeAddress ? homeAddress : "No home address set yet. Tap Choose on Map to pinpoint your exact gate or flat."}
+                  {homeAddress
+                    ? homeAddress
+                    : "No home address set yet. Tap Choose on Map to pinpoint your exact gate or flat."}
                 </p>
 
                 <div className="mt-3 flex items-center gap-2">
@@ -489,7 +605,9 @@ function ProfilePage() {
                 </div>
 
                 <p className="mt-2 text-xs text-muted-foreground line-clamp-2 min-h-[1.5rem]">
-                  {workAddress ? workAddress : "No work address set yet. Tap Choose on Map to pinpoint your office or building."}
+                  {workAddress
+                    ? workAddress
+                    : "No work address set yet. Tap Choose on Map to pinpoint your office or building."}
                 </p>
 
                 <div className="mt-3 flex items-center gap-2">
@@ -511,21 +629,26 @@ function ProfilePage() {
           {/* Tabs */}
           <Tabs defaultValue="history">
             <TabsList className="w-full">
-              <TabsTrigger value="history" className="flex-1">Ride History</TabsTrigger>
-              <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
+              <TabsTrigger value="history" className="flex-1">
+                Ride History
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="flex-1">
+                Stats
+              </TabsTrigger>
             </TabsList>
 
             {/* Ride History */}
             <TabsContent value="history" className="mt-6">
               <div className="flex gap-2 flex-wrap">
                 {["all", "scheduled", "completed", "cancelled"].map((f) => {
-                  const count = f === "scheduled"
-                    ? bookings.filter((b) => b.status === "scheduled").length
-                    : f === "completed"
-                    ? bookings.filter((b) => b.status === "completed").length
-                    : f === "cancelled"
-                    ? bookings.filter((b) => b.status === "cancelled").length
-                    : bookings.length;
+                  const count =
+                    f === "scheduled"
+                      ? bookings.filter((b) => b.status === "scheduled").length
+                      : f === "completed"
+                        ? bookings.filter((b) => b.status === "completed").length
+                        : f === "cancelled"
+                          ? bookings.filter((b) => b.status === "cancelled").length
+                          : bookings.length;
                   return (
                     <button
                       key={f}
@@ -536,15 +659,21 @@ function ProfilePage() {
                           : "border border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground"
                       }`}
                     >
-                      <span>{f === "all" ? "All Trips" : f === "scheduled" ? "Scheduled & Upcoming" : f.charAt(0).toUpperCase() + f.slice(1)}</span>
+                      <span>
+                        {f === "all"
+                          ? "All Trips"
+                          : f === "scheduled"
+                            ? "Scheduled & Upcoming"
+                            : f.charAt(0).toUpperCase() + f.slice(1)}
+                      </span>
                       {count > 0 && (
                         <span
                           className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
                             filter === f
                               ? "bg-primary-foreground/20 text-primary-foreground"
                               : f === "scheduled"
-                              ? "bg-purple-600 text-white"
-                              : "bg-muted text-muted-foreground"
+                                ? "bg-purple-600 text-white"
+                                : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {count}
@@ -564,7 +693,8 @@ function ProfilePage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-purple-900 dark:text-purple-200">
-                        {bookings.filter((b) => b.status === "scheduled").length} Upcoming Scheduled Ride{bookings.filter((b) => b.status === "scheduled").length > 1 ? "s" : ""}
+                        {bookings.filter((b) => b.status === "scheduled").length} Upcoming Scheduled
+                        Ride{bookings.filter((b) => b.status === "scheduled").length > 1 ? "s" : ""}
                       </p>
                       <p className="text-[11px] text-purple-700 dark:text-purple-400">
                         Zero surge locked fare • Dedicated EV Chauffeur dispatch
@@ -592,7 +722,9 @@ function ProfilePage() {
                     <Clock className="size-10 text-muted-foreground/50" />
                     <p className="mt-4 font-semibold text-muted-foreground">No rides yet</p>
                     <p className="mt-1 text-sm text-muted-foreground/70">
-                      {filter === "all" ? "Your ride history will appear here." : `No ${filter} rides found.`}
+                      {filter === "all"
+                        ? "Your ride history will appear here."
+                        : `No ${filter} rides found.`}
                     </p>
                     <Button asChild className="mt-6" size="sm">
                       <Link to="/book">Book Your First Ride</Link>
@@ -613,7 +745,10 @@ function ProfilePage() {
                         })
                       : "Advance Booking";
 
-                    const style = STATUS_STYLES[booking.status] ?? { label: booking.status, className: "bg-muted text-muted-foreground" };
+                    const style = STATUS_STYLES[booking.status] ?? {
+                      label: booking.status,
+                      className: "bg-muted text-muted-foreground",
+                    };
                     const displayFare = booking.final_fare ?? booking.estimated_fare;
                     return (
                       <div
@@ -628,7 +763,9 @@ function ProfilePage() {
                           <div className="mb-3 flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-950/60 px-3 py-2 text-xs font-semibold text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
                             <div className="flex items-center gap-2">
                               <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
-                              <span>Scheduled Departure: <strong>{schedText}</strong></span>
+                              <span>
+                                Scheduled Departure: <strong>{schedText}</strong>
+                              </span>
                             </div>
                             <span className="rounded-full bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5">
                               Guaranteed
@@ -639,13 +776,18 @@ function ProfilePage() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-xs font-bold text-foreground">#{booking.reference}</span>
-                              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.className}`}>
+                              <span className="font-mono text-xs font-bold text-foreground">
+                                #{booking.reference}
+                              </span>
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.className}`}
+                              >
                                 {style.label}
                               </span>
                               {booking.rating && (
                                 <span className="flex items-center gap-0.5 text-xs text-yellow-500">
-                                  <Star className="size-3 fill-yellow-400" />{booking.rating}
+                                  <Star className="size-3 fill-yellow-400" />
+                                  {booking.rating}
                                 </span>
                               )}
                             </div>
@@ -664,9 +806,13 @@ function ProfilePage() {
                             </div>
                           </div>
                           <div className="shrink-0 text-right flex flex-col items-end">
-                            <p className="text-lg font-bold text-primary">₹{Math.round(displayFare ?? 0)}</p>
-                            {booking.final_fare == null && <p className="text-[10px] text-muted-foreground">est.</p>}
-                            
+                            <p className="text-lg font-bold text-primary">
+                              ₹{Math.round(displayFare ?? 0)}
+                            </p>
+                            {booking.final_fare == null && (
+                              <p className="text-[10px] text-muted-foreground">est.</p>
+                            )}
+
                             {isScheduled ? (
                               <div className="mt-2 flex items-center gap-2">
                                 <Button
@@ -703,17 +849,27 @@ function ProfilePage() {
                         </div>
 
                         {/* 7-Day Driver Contact for Lost Items (Clause 14.11 MV Aggregator Guidelines) */}
-                        {booking.status === "completed" && booking.drivers?.phone && (
+                        {booking.status === "completed" &&
+                          booking.drivers?.phone &&
                           (() => {
-                            const completedDate = booking.completed_at ? new Date(booking.completed_at).getTime() : new Date(booking.created_at).getTime();
-                            const isWithin7Days = (Date.now() - completedDate) <= 7 * 24 * 60 * 60 * 1000;
+                            const completedDate = booking.completed_at
+                              ? new Date(booking.completed_at).getTime()
+                              : new Date(booking.created_at).getTime();
+                            const isWithin7Days =
+                              Date.now() - completedDate <= 7 * 24 * 60 * 60 * 1000;
                             if (!isWithin7Days) return null;
                             const cleanPhone = booking.drivers.phone.replace(/[^0-9+]/g, "");
                             return (
                               <div className="mt-3.5 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2 text-xs">
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Phone className="size-3 text-primary" />
-                                  <span>Driver: <strong className="text-foreground">{booking.drivers.full_name}</strong> ({booking.drivers.phone})</span>
+                                  <span>
+                                    Driver:{" "}
+                                    <strong className="text-foreground">
+                                      {booking.drivers.full_name}
+                                    </strong>{" "}
+                                    ({booking.drivers.phone})
+                                  </span>
                                 </div>
                                 <a
                                   href={`tel:${cleanPhone}`}
@@ -723,8 +879,7 @@ function ProfilePage() {
                                 </a>
                               </div>
                             );
-                          })()
-                        )}
+                          })()}
                       </div>
                     );
                   })
@@ -735,20 +890,51 @@ function ProfilePage() {
             {/* Stats */}
             <TabsContent value="stats" className="mt-6">
               <div className="grid grid-cols-2 gap-4">
-                <StatCard icon={<TrendingUp className="size-5 text-primary" />} label="Total Rides" value={bookings.length.toString()} />
-                <StatCard icon={<Star className="size-5 text-primary" />} label="Total Spent" value={`₹${Math.round(totalSpent).toLocaleString("en-IN")}`} />
-                <StatCard icon={<Navigation className="size-5 text-primary" />} label="Avg Fare" value={completedRides.length > 0 ? `₹${Math.round(avgFare)}` : "—"} />
-                <StatCard icon={<Clock className="size-5 text-primary" />} label="Member Since" value={memberSince} />
+                <StatCard
+                  icon={<TrendingUp className="size-5 text-primary" />}
+                  label="Total Rides"
+                  value={bookings.length.toString()}
+                />
+                <StatCard
+                  icon={<Star className="size-5 text-primary" />}
+                  label="Total Spent"
+                  value={`₹${Math.round(totalSpent).toLocaleString("en-IN")}`}
+                />
+                <StatCard
+                  icon={<Navigation className="size-5 text-primary" />}
+                  label="Avg Fare"
+                  value={completedRides.length > 0 ? `₹${Math.round(avgFare)}` : "—"}
+                />
+                <StatCard
+                  icon={<Clock className="size-5 text-primary" />}
+                  label="Member Since"
+                  value={memberSince}
+                />
               </div>
 
               {completedRides.length > 0 && (
                 <div className="mt-6 rounded-xl border border-border bg-card p-5">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Quick Summary</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Quick Summary
+                  </p>
                   <div className="mt-4 space-y-3">
                     <SummaryRow label="Completed Rides" value={completedRides.length.toString()} />
-                    <SummaryRow label="Scheduled Rides" value={bookings.filter((b) => b.status === "scheduled").length.toString()} />
-                    <SummaryRow label="Cancelled Rides" value={bookings.filter((b) => b.status === "cancelled").length.toString()} />
-                    <SummaryRow label="Active In-Progress Rides" value={bookings.filter((b) => ["searching","accepted","arrived","in_progress"].includes(b.status)).length.toString()} />
+                    <SummaryRow
+                      label="Scheduled Rides"
+                      value={bookings.filter((b) => b.status === "scheduled").length.toString()}
+                    />
+                    <SummaryRow
+                      label="Cancelled Rides"
+                      value={bookings.filter((b) => b.status === "cancelled").length.toString()}
+                    />
+                    <SummaryRow
+                      label="Active In-Progress Rides"
+                      value={bookings
+                        .filter((b) =>
+                          ["searching", "accepted", "arrived", "in_progress"].includes(b.status),
+                        )
+                        .length.toString()}
+                    />
                   </div>
                 </div>
               )}
@@ -779,22 +965,27 @@ function ProfilePage() {
           <DialogHeader className="sr-only">
             <DialogTitle>Pick {mapPickerTarget === "home" ? "Home" : "Work"} Location</DialogTitle>
             <DialogDescription>
-              Select your exact {mapPickerTarget === "home" ? "home" : "work"} address on the interactive map
+              Select your exact {mapPickerTarget === "home" ? "home" : "work"} address on the
+              interactive map
             </DialogDescription>
           </DialogHeader>
 
           <div className="h-[80vh] max-h-[720px] w-full flex flex-col">
             <MapPicker
               label={mapPickerTarget === "home" ? "Pin Home Address" : "Pin Work Address"}
-              placeholder={mapPickerTarget === "home" ? "Search house, society, landmark, or drag map..." : "Search office, building, IT park, or drag map..."}
+              placeholder={
+                mapPickerTarget === "home"
+                  ? "Search house, society, landmark, or drag map..."
+                  : "Search office, building, IT park, or drag map..."
+              }
               areas={areas}
               apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}
               initialLocation={
                 mapPickerTarget === "home" && homeCoords
                   ? { name: homeAddress || "Home", lat: homeCoords.lat, lng: homeCoords.lng }
                   : mapPickerTarget === "work" && workCoords
-                  ? { name: workAddress || "Work", lat: workCoords.lat, lng: workCoords.lng }
-                  : null
+                    ? { name: workAddress || "Work", lat: workCoords.lat, lng: workCoords.lng }
+                    : null
               }
               onConfirm={handleSaveMapPlace}
               onBack={() => setMapPickerTarget(null)}

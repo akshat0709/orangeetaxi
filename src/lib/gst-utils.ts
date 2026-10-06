@@ -24,7 +24,8 @@ export const DEFAULT_COMPANY_PROFILE: CompanyGSTProfile = {
   cin: "U49224DL2026PLC461350",
   gstin: "07AAFCO0132P1ZD",
   incorporationDate: "08/01/2026",
-  address: "S-210, 2ND FLOOR, PANCHSHILA PARK, South Malviya Nagar, South Delhi, New Delhi, Delhi, India, 110017",
+  address:
+    "S-210, 2ND FLOOR, PANCHSHILA PARK, South Malviya Nagar, South Delhi, New Delhi, Delhi, India, 110017",
   state: "Delhi",
   stateCode: "07",
   sacCode: "996412", // Passenger transportation services by taxi
@@ -66,13 +67,40 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "29",
     state: "Karnataka",
     keywords: [
-      "bengaluru", "bangalore", "karnataka", "whitefield", "koramangala",
-      "indiranagar", "hsr layout", "hsr", "bellandur", "electronic city",
-      "kempegowda", "kia", "mg road", "hal airport", "marathahalli",
-      "jayanagar", "jp nagar", "rajajinagar", "malleshwaram", "hebbal",
-      "manyata", "mysuru", "mysore", "mangalore", "mangaluru", "ub city",
-      "orion mall", "ecoworld", "btm layout", "sarjapur", "yelahanka",
-      "bannerghatta", "cross road", "smvt"
+      "bengaluru",
+      "bangalore",
+      "karnataka",
+      "whitefield",
+      "koramangala",
+      "indiranagar",
+      "hsr layout",
+      "hsr",
+      "bellandur",
+      "electronic city",
+      "kempegowda",
+      "kia",
+      "mg road",
+      "hal airport",
+      "marathahalli",
+      "jayanagar",
+      "jp nagar",
+      "rajajinagar",
+      "malleshwaram",
+      "hebbal",
+      "manyata",
+      "mysuru",
+      "mysore",
+      "mangalore",
+      "mangaluru",
+      "ub city",
+      "orion mall",
+      "ecoworld",
+      "btm layout",
+      "sarjapur",
+      "yelahanka",
+      "bannerghatta",
+      "cross road",
+      "smvt",
     ],
   },
   // Maharashtra (Code 27) - Mumbai, Pune, Navi Mumbai, etc.
@@ -80,10 +108,28 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "27",
     state: "Maharashtra",
     keywords: [
-      "mumbai", "pune", "maharashtra", "navi mumbai", "thane", "bandra",
-      "andheri", "borivali", "bkc", "nariman point", "dadar", "powai",
-      "csia", "chhatrapati shivaji", "hinjewadi", "viman nagar", "kothrud",
-      "wakad", "hadapsar", "magarpatta", "nagpur", "nashik"
+      "mumbai",
+      "pune",
+      "maharashtra",
+      "navi mumbai",
+      "thane",
+      "bandra",
+      "andheri",
+      "borivali",
+      "bkc",
+      "nariman point",
+      "dadar",
+      "powai",
+      "csia",
+      "chhatrapati shivaji",
+      "hinjewadi",
+      "viman nagar",
+      "kothrud",
+      "wakad",
+      "hadapsar",
+      "magarpatta",
+      "nagpur",
+      "nashik",
     ],
   },
   // Telangana (Code 36) - Hyderabad, Secunderabad, etc.
@@ -91,9 +137,19 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "36",
     state: "Telangana",
     keywords: [
-      "hyderabad", "telangana", "secunderabad", "gachibowli", "hitec city",
-      "madhapur", "jubilee hills", "banjara hills", "kondapur", "rgia",
-      "shamshabad", "begumpet", "kukatpally"
+      "hyderabad",
+      "telangana",
+      "secunderabad",
+      "gachibowli",
+      "hitec city",
+      "madhapur",
+      "jubilee hills",
+      "banjara hills",
+      "kondapur",
+      "rgia",
+      "shamshabad",
+      "begumpet",
+      "kukatpally",
     ],
   },
   // Tamil Nadu (Code 33) - Chennai, Coimbatore, etc.
@@ -101,8 +157,16 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "33",
     state: "Tamil Nadu",
     keywords: [
-      "chennai", "tamil nadu", "coimbatore", "madurai", "omr", "guindy",
-      "t nagar", "velachery", "meenambakkam", "annanagar"
+      "chennai",
+      "tamil nadu",
+      "coimbatore",
+      "madurai",
+      "omr",
+      "guindy",
+      "t nagar",
+      "velachery",
+      "meenambakkam",
+      "annanagar",
     ],
   },
   // West Bengal (Code 19) - Kolkata, Howrah, etc.
@@ -110,33 +174,42 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "19",
     state: "West Bengal",
     keywords: [
-      "kolkata", "calcutta", "west bengal", "salt lake", "new town",
-      "howrah", "park street", "dum dum"
+      "kolkata",
+      "calcutta",
+      "west bengal",
+      "salt lake",
+      "new town",
+      "howrah",
+      "park street",
+      "dum dum",
     ],
   },
   // Gujarat (Code 24) - Ahmedabad, Surat, Gandhinagar, etc.
   {
     code: "24",
     state: "Gujarat",
-    keywords: [
-      "ahmedabad", "gujarat", "surat", "vadodara", "gandhinagar", "gift city"
-    ],
+    keywords: ["ahmedabad", "gujarat", "surat", "vadodara", "gandhinagar", "gift city"],
   },
   // Rajasthan (Code 08) - Jaipur, Udaipur, etc.
   {
     code: "08",
     state: "Rajasthan",
-    keywords: [
-      "jaipur", "rajasthan", "udaipur", "jodhpur", "kota"
-    ],
+    keywords: ["jaipur", "rajasthan", "udaipur", "jodhpur", "kota"],
   },
   // Haryana (Code 06) - Gurugram, Faridabad, etc.
   {
     code: "06",
     state: "Haryana",
     keywords: [
-      "gurugram", "gurgaon", "cyber city", "faridabad", "manesar",
-      "haryana", "panipat", "ambala", "rohtak"
+      "gurugram",
+      "gurgaon",
+      "cyber city",
+      "faridabad",
+      "manesar",
+      "haryana",
+      "panipat",
+      "ambala",
+      "rohtak",
     ],
   },
   // Uttar Pradesh (Code 09) - Noida, Greater Noida, Ghaziabad, Lucknow, etc.
@@ -144,42 +217,54 @@ export const INDIAN_STATE_GST_MAP: Array<{ code: string; state: string; keywords
     code: "09",
     state: "Uttar Pradesh",
     keywords: [
-      "noida", "greater noida", "ghaziabad", "uttar pradesh", "lucknow",
-      "kanpur", "agra", "varanasi"
+      "noida",
+      "greater noida",
+      "ghaziabad",
+      "uttar pradesh",
+      "lucknow",
+      "kanpur",
+      "agra",
+      "varanasi",
     ],
   },
   // Chandigarh (Code 04)
   {
     code: "04",
     state: "Chandigarh",
-    keywords: [
-      "chandigarh", "mohali", "panchkula"
-    ],
+    keywords: ["chandigarh", "mohali", "panchkula"],
   },
   // Kerala (Code 32)
   {
     code: "32",
     state: "Kerala",
-    keywords: [
-      "kochi", "cochin", "kerala", "thiruvananthapuram", "trivandrum", "kozhikode"
-    ],
+    keywords: ["kochi", "cochin", "kerala", "thiruvananthapuram", "trivandrum", "kozhikode"],
   },
   // Goa (Code 30)
   {
     code: "30",
     state: "Goa",
-    keywords: [
-      "goa", "panaji", "mopa", "dabolim"
-    ],
+    keywords: ["goa", "panaji", "mopa", "dabolim"],
   },
   // Delhi (Code 07)
   {
     code: "07",
     state: "Delhi",
     keywords: [
-      "delhi", "new delhi", "igi airport", "connaught place", "aerocity",
-      "malviya nagar", "saket", "dwarka", "rohini", "nehru place",
-      "karol bagh", "hauz khas", "vasant kunj", "lajpat nagar", "panchshila"
+      "delhi",
+      "new delhi",
+      "igi airport",
+      "connaught place",
+      "aerocity",
+      "malviya nagar",
+      "saket",
+      "dwarka",
+      "rohini",
+      "nehru place",
+      "karol bagh",
+      "hauz khas",
+      "vasant kunj",
+      "lajpat nagar",
+      "panchshila",
     ],
   },
 ];
@@ -251,7 +336,7 @@ export interface GSTBreakdown {
 export function calculateRideGST(
   totalFare: number,
   pickupArea?: string,
-  dropArea?: string
+  dropArea?: string,
 ): GSTBreakdown {
   const fare = Math.max(0, Number(totalFare) || 0);
   const pickupState = resolveStateFromLocation(pickupArea || "");
@@ -315,14 +400,21 @@ export function formatInvoiceNumber(reference?: string, dateStr?: string): strin
   const fyEnd = fyStart + 1;
   const fyStr = `${fyStart.toString().padStart(2, "0")}-${fyEnd.toString().padStart(2, "0")}`;
 
-  const cleanRef = (reference || "0000").replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase() || "0000";
+  const cleanRef =
+    (reference || "0000")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(-6)
+      .toUpperCase() || "0000";
   return `OT/${fyStr}/${cleanRef}`;
 }
 
 /**
  * Generates GSTR-1 Compliant CSV content ready for GST Portal offline tool / CA filing
  */
-export function generateGSTR1CSV(bookings: any[] = [], profile: CompanyGSTProfile = DEFAULT_COMPANY_PROFILE): string {
+export function generateGSTR1CSV(
+  bookings: any[] = [],
+  profile: CompanyGSTProfile = DEFAULT_COMPANY_PROFILE,
+): string {
   const headers = [
     "Invoice Number",
     "Invoice Date",
@@ -349,11 +441,13 @@ export function generateGSTR1CSV(bookings: any[] = [], profile: CompanyGSTProfil
     const fare = Number(b?.final_fare || b?.estimated_fare || 0);
     const rawDate = b?.completed_at || b?.created_at;
     const date = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
-    const dateFormatted = date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).replace(/\//g, "-");
+    const dateFormatted = date
+      .toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+      .replace(/\//g, "-");
 
     const invNum = formatInvoiceNumber(b?.reference, rawDate);
     const gst = calculateRideGST(fare, b?.pickup_area, b?.drop_area);
@@ -379,7 +473,7 @@ export function generateGSTR1CSV(bookings: any[] = [], profile: CompanyGSTProfil
       `"${b?.corporate_gstin || b?.customer_gstin || "URP"}"`, // URP = Unregistered Person
       `"${(b?.customer_name || "Passenger").replace(/"/g, '""')}"`,
       `"${getBookingVehiclePlate(b)}"`,
-      `"${(b?.pickup_area || "")} to ${(b?.drop_area || "")}"`,
+      `"${b?.pickup_area || ""} to ${b?.drop_area || ""}"`,
       `"${(b?.payment_method || "cash").toUpperCase()}"`,
     ].join(",");
   });

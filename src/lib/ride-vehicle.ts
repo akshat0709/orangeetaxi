@@ -49,7 +49,11 @@ export function extractPlateFromVehicleName(vehicleName?: string): string | null
   }
   if (vehicleName.includes("(") && vehicleName.includes(")")) {
     const match = vehicleName.match(/\((.*?)\)/);
-    if (match && match[1] && (match[1].startsWith("DL") || match[1].startsWith("HR") || match[1].startsWith("UP"))) {
+    if (
+      match &&
+      match[1] &&
+      (match[1].startsWith("DL") || match[1].startsWith("HR") || match[1].startsWith("UP"))
+    ) {
       return match[1].trim().toUpperCase();
     }
   }
@@ -72,7 +76,11 @@ export function formatVehicleNameWithPlate(baseName?: string, plate?: string): s
  */
 export function getBookingVehiclePlate(booking: any, driver?: any): string {
   // 1. Direct vehicle_number column if present and populated
-  if (booking?.vehicle_number && booking.vehicle_number !== "Unassigned" && booking.vehicle_number.trim()) {
+  if (
+    booking?.vehicle_number &&
+    booking.vehicle_number !== "Unassigned" &&
+    booking.vehicle_number.trim()
+  ) {
     return booking.vehicle_number.trim().toUpperCase();
   }
 
@@ -86,12 +94,20 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
   if (booking?.reference && registry[booking.reference]) return registry[booking.reference];
 
   // 4. Driver's vehicle_number from driver profile
-  if (driver?.vehicle_number && driver.vehicle_number !== "Unassigned" && driver.vehicle_number.trim()) {
+  if (
+    driver?.vehicle_number &&
+    driver.vehicle_number !== "Unassigned" &&
+    driver.vehicle_number.trim()
+  ) {
     return driver.vehicle_number.trim().toUpperCase();
   }
 
   // 5. Driver vehicle_code if encoded with ORANGE_META
-  if (driver?.vehicle_code && typeof driver.vehicle_code === "string" && driver.vehicle_code.startsWith("ORANGE_META:")) {
+  if (
+    driver?.vehicle_code &&
+    typeof driver.vehicle_code === "string" &&
+    driver.vehicle_code.startsWith("ORANGE_META:")
+  ) {
     try {
       const meta = JSON.parse(driver.vehicle_code.replace("ORANGE_META:", ""));
       if (meta.plate && meta.plate !== "Unassigned") return meta.plate.trim().toUpperCase();
@@ -102,10 +118,15 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
   if (typeof window !== "undefined" && driver) {
     try {
       const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
-      const matchedCar = pCars.find((pv: any) =>
-        (driver.phone && pv.owner_phone && pv.owner_phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
-        (driver.full_name && pv.owner_name && pv.owner_name.toLowerCase() === driver.full_name.toLowerCase()) ||
-        (driver.id && pv.driver_id === driver.id)
+      const matchedCar = pCars.find(
+        (pv: any) =>
+          (driver.phone &&
+            pv.owner_phone &&
+            pv.owner_phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
+          (driver.full_name &&
+            pv.owner_name &&
+            pv.owner_name.toLowerCase() === driver.full_name.toLowerCase()) ||
+          (driver.id && pv.driver_id === driver.id),
       );
       if (matchedCar?.plate_number) return matchedCar.plate_number.trim().toUpperCase();
     } catch (e) {}
@@ -113,9 +134,14 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
     try {
       const storedExt = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
       const extList = Array.isArray(storedExt) ? storedExt : Object.values(storedExt);
-      const matchedApp = extList.find((app: any) =>
-        (driver.phone && app.phone && app.phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
-        (driver.full_name && app.full_name && app.full_name.toLowerCase() === driver.full_name.toLowerCase())
+      const matchedApp = extList.find(
+        (app: any) =>
+          (driver.phone &&
+            app.phone &&
+            app.phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
+          (driver.full_name &&
+            app.full_name &&
+            app.full_name.toLowerCase() === driver.full_name.toLowerCase()),
       );
       if (matchedApp?.vehicle_number) return matchedApp.vehicle_number.trim().toUpperCase();
     } catch (e) {}
@@ -139,12 +165,17 @@ export function resolveDriverDetails(driver: any, booking?: any) {
   if (!driver) return null;
 
   let photoUrl = driver.photo_url || "";
-  let vehicleNumber = driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "";
+  let vehicleNumber =
+    driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "";
   let vehicleModel = driver.vehicle_model || "";
   let driverType = driver.driver_type || (driver.owns_vehicle ? "partner" : "");
 
   // 1. Check if vehicle_code has ORANGE_META: encoded payload (stored in Supabase drivers table)
-  if (driver.vehicle_code && typeof driver.vehicle_code === "string" && driver.vehicle_code.startsWith("ORANGE_META:")) {
+  if (
+    driver.vehicle_code &&
+    typeof driver.vehicle_code === "string" &&
+    driver.vehicle_code.startsWith("ORANGE_META:")
+  ) {
     try {
       const meta = JSON.parse(driver.vehicle_code.replace("ORANGE_META:", ""));
       if (!photoUrl && meta.photo) photoUrl = meta.photo;
@@ -164,7 +195,8 @@ export function resolveDriverDetails(driver: any, booking?: any) {
   if (!vehicleNumber && booking) {
     const registry = getStoredRidePlateRegistry();
     if (booking.id && registry[booking.id]) vehicleNumber = registry[booking.id];
-    else if (booking.reference && registry[booking.reference]) vehicleNumber = registry[booking.reference];
+    else if (booking.reference && registry[booking.reference])
+      vehicleNumber = registry[booking.reference];
   }
 
   // 4. Check client localStorage (by driver ID, phone, name, email, partner fleet, extended apps)
@@ -181,36 +213,52 @@ export function resolveDriverDetails(driver: any, booking?: any) {
       photoUrl = localStorage.getItem(`orange_driver_photo_by_phone_${cleanPhone}`) || "";
     }
     if (!photoUrl && driver.full_name) {
-      photoUrl = localStorage.getItem(`orange_driver_photo_by_name_${driver.full_name.trim().toLowerCase()}`) || "";
+      photoUrl =
+        localStorage.getItem(
+          `orange_driver_photo_by_name_${driver.full_name.trim().toLowerCase()}`,
+        ) || "";
     }
     if (!photoUrl && driver.email) {
-      photoUrl = localStorage.getItem(`orange_driver_photo_by_email_${driver.email.trim().toLowerCase()}`) || "";
+      photoUrl =
+        localStorage.getItem(`orange_driver_photo_by_email_${driver.email.trim().toLowerCase()}`) ||
+        "";
     }
 
     // Extended applications
     try {
       const storedExt = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
       const extList = Array.isArray(storedExt) ? storedExt : Object.values(storedExt);
-      const matchedApp = extList.find((app: any) =>
-        (driver.phone && app.phone && app.phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
-        (driver.full_name && app.full_name && app.full_name.toLowerCase() === driver.full_name.toLowerCase()) ||
-        (driver.email && app.email && app.email.toLowerCase() === driver.email.toLowerCase())
+      const matchedApp = extList.find(
+        (app: any) =>
+          (driver.phone &&
+            app.phone &&
+            app.phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
+          (driver.full_name &&
+            app.full_name &&
+            app.full_name.toLowerCase() === driver.full_name.toLowerCase()) ||
+          (driver.email && app.email && app.email.toLowerCase() === driver.email.toLowerCase()),
       );
       if (matchedApp) {
         if (!photoUrl && matchedApp.photo_url) photoUrl = matchedApp.photo_url;
         if (!vehicleNumber && matchedApp.vehicle_number) vehicleNumber = matchedApp.vehicle_number;
         if (!vehicleModel && matchedApp.vehicle_model) vehicleModel = matchedApp.vehicle_model;
-        if (!driverType) driverType = matchedApp.driver_type || (matchedApp.owns_vehicle ? "partner" : "company");
+        if (!driverType)
+          driverType = matchedApp.driver_type || (matchedApp.owns_vehicle ? "partner" : "company");
       }
     } catch (e) {}
 
     // Partner vehicles
     try {
       const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
-      const matchedCar = pCars.find((pv: any) =>
-        (driver.phone && pv.owner_phone && pv.owner_phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
-        (driver.full_name && pv.owner_name && pv.owner_name.toLowerCase() === driver.full_name.toLowerCase()) ||
-        (driver.id && pv.driver_id === driver.id)
+      const matchedCar = pCars.find(
+        (pv: any) =>
+          (driver.phone &&
+            pv.owner_phone &&
+            pv.owner_phone.replace(/[^0-9]/g, "") === driver.phone.replace(/[^0-9]/g, "")) ||
+          (driver.full_name &&
+            pv.owner_name &&
+            pv.owner_name.toLowerCase() === driver.full_name.toLowerCase()) ||
+          (driver.id && pv.driver_id === driver.id),
       );
       if (matchedCar) {
         if (!vehicleNumber) vehicleNumber = matchedCar.plate_number;
@@ -262,7 +310,7 @@ export async function lockBookingVehicle(
   bookingId: string,
   plate: string,
   currentVehicleName?: string,
-  reference?: string
+  reference?: string,
 ) {
   if (!bookingId || !plate || plate === "Unassigned") return;
   const cleanPlate = plate.trim().toUpperCase();
@@ -312,7 +360,7 @@ export async function lockBookingVehicle(
 export async function fetchAndHydrateDriverDetails(
   supabaseClient: any,
   driverId: string,
-  booking?: any
+  booking?: any,
 ) {
   if (!driverId) return null;
   try {
@@ -340,7 +388,11 @@ export async function fetchAndHydrateDriverDetails(
 
     // Decode existing vehicle_code if encoded with ORANGE_META
     let metaEncoded: any = {};
-    if (d.vehicle_code && typeof d.vehicle_code === "string" && d.vehicle_code.startsWith("ORANGE_META:")) {
+    if (
+      d.vehicle_code &&
+      typeof d.vehicle_code === "string" &&
+      d.vehicle_code.startsWith("ORANGE_META:")
+    ) {
       try {
         metaEncoded = JSON.parse(d.vehicle_code.replace("ORANGE_META:", ""));
       } catch (e) {}
@@ -386,24 +438,28 @@ export async function fetchAndHydrateDriverDetails(
 
     let parsedNotes: any = {};
     try {
-      if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+      if (
+        appData?.admin_notes &&
+        typeof appData.admin_notes === "string" &&
+        appData.admin_notes.trim().startsWith("{")
+      ) {
         parsedNotes = JSON.parse(appData.admin_notes);
       }
     } catch (e) {}
 
     let photoUrl =
-      d.photo_url ||
-      metaEncoded.photo ||
-      parsedNotes.photo_url ||
-      appData?.photo_url ||
-      "";
+      d.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";
 
     if (!photoUrl && typeof window !== "undefined") {
       photoUrl =
         localStorage.getItem(`orange_driver_photo_${d.id}`) ||
         (d.user_id ? localStorage.getItem(`orange_driver_photo_${d.user_id}`) : null) ||
-        (phone ? localStorage.getItem(`orange_driver_photo_by_phone_${phone.replace(/\D/g, "")}`) : null) ||
-        (d.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${d.full_name.trim().toLowerCase()}`) : null) ||
+        (phone
+          ? localStorage.getItem(`orange_driver_photo_by_phone_${phone.replace(/\D/g, "")}`)
+          : null) ||
+        (d.full_name
+          ? localStorage.getItem(`orange_driver_photo_by_name_${d.full_name.trim().toLowerCase()}`)
+          : null) ||
         "";
     }
 
@@ -412,18 +468,25 @@ export async function fetchAndHydrateDriverDetails(
       metaEncoded.type === "partner" ||
       appData?.owns_vehicle ||
       appData?.driver_type === "partner" ||
-      parsedNotes.driver_type === "partner"
+      parsedNotes.driver_type === "partner",
     );
 
-    let vehicleNumber = d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "";
+    let vehicleNumber =
+      d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "";
     if (!vehicleNumber) {
-      vehicleNumber = metaEncoded.plate && metaEncoded.plate !== "Unassigned" ? metaEncoded.plate : "";
+      vehicleNumber =
+        metaEncoded.plate && metaEncoded.plate !== "Unassigned" ? metaEncoded.plate : "";
     }
     if (!vehicleNumber) {
       vehicleNumber = appData?.vehicle_number || parsedNotes.vehicle_number || "";
     }
 
-    let vehicleModel = d.vehicle_model || metaEncoded.model || appData?.vehicle_model || parsedNotes.vehicle_model || "";
+    const vehicleModel =
+      d.vehicle_model ||
+      metaEncoded.model ||
+      appData?.vehicle_model ||
+      parsedNotes.vehicle_model ||
+      "";
 
     const rawDriver = {
       ...d,
@@ -437,7 +500,13 @@ export async function fetchAndHydrateDriverDetails(
     const resolved = resolveDriverDetails(rawDriver, booking);
 
     // If remote vehicle_code is not synced with ORANGE_META or plate is missing in drivers table, update in background
-    if (resolved && (!d.vehicle_code || !d.vehicle_code.startsWith("ORANGE_META:") || !d.vehicle_number || d.vehicle_number === "Unassigned")) {
+    if (
+      resolved &&
+      (!d.vehicle_code ||
+        !d.vehicle_code.startsWith("ORANGE_META:") ||
+        !d.vehicle_number ||
+        d.vehicle_number === "Unassigned")
+    ) {
       const metaObj = {
         photo: resolved.photo_url || "",
         plate: resolved.vehicle_number || "",
@@ -462,4 +531,3 @@ export async function fetchAndHydrateDriverDetails(
     return null;
   }
 }
-

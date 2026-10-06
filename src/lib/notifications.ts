@@ -63,7 +63,7 @@ export function playNotificationChime() {
     }
 
     const now = ctx.currentTime;
-    
+
     // Tone 1: E5 (659.25 Hz)
     const osc1 = ctx.createOscillator();
     const gain1 = ctx.createGain();
@@ -117,7 +117,15 @@ export async function sendRideNotification(payload: RideNotificationPayload): Pr
     triggerHapticVibration();
   }
 
-  const { title, body, url = "/book", tag = "orange-ride-status", icon = "/pwa-192x192.png", badge = "/favicon-32x32.png", data = {} } = payload;
+  const {
+    title,
+    body,
+    url = "/book",
+    tag = "orange-ride-status",
+    icon = "/pwa-192x192.png",
+    badge = "/favicon-32x32.png",
+    data = {},
+  } = payload;
 
   try {
     if ("serviceWorker" in navigator) {
@@ -172,7 +180,7 @@ export function getStatusNotificationContent(
   status: string,
   driverDetails?: { name?: string; plate?: string; vehicle?: string; otp?: string },
   reference?: string,
-  dropArea?: string
+  dropArea?: string,
 ): { title: string; body: string; tag: string } | null {
   const driverName = driverDetails?.name || "Your Chauffeur";
   const vehicle = driverDetails?.vehicle || "Mahindra BE.6";
@@ -195,13 +203,17 @@ export function getStatusNotificationContent(
     case "in_progress":
       return {
         title: "Ride in Progress ⚡",
-        body: dropArea ? `Heading to ${dropArea}. Relax in your 100% electric cabin.` : "Your ride is underway. Enjoy the quiet cabin experience.",
+        body: dropArea
+          ? `Heading to ${dropArea}. Relax in your 100% electric cabin.`
+          : "Your ride is underway. Enjoy the quiet cabin experience.",
         tag: `ride-inprogress-${reference || "active"}`,
       };
     case "completed":
       return {
         title: "Ride Completed — Thank You! ✨",
-        body: dropArea ? `You've arrived at ${dropArea}. Tap to rate and download your GST invoice.` : "You have arrived at your destination.",
+        body: dropArea
+          ? `You've arrived at ${dropArea}. Tap to rate and download your GST invoice.`
+          : "You have arrived at your destination.",
         tag: `ride-completed-${reference || "active"}`,
       };
     case "cancelled":

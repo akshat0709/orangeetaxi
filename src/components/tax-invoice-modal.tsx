@@ -1,6 +1,17 @@
 // @ts-nocheck
 import { useState } from "react";
-import { Check, Copy, Download, Mail, Printer, ShieldCheck, Sparkles, X, FileText, Building2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  Mail,
+  Printer,
+  ShieldCheck,
+  Sparkles,
+  X,
+  FileText,
+  Building2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,9 +36,26 @@ interface TaxInvoiceModalProps {
 
 function numberToWords(num: number): string {
   const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-    "Seventeen", "Eighteen", "Nineteen"
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
   ];
   const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
@@ -35,9 +63,22 @@ function numberToWords(num: number): string {
     if (n === 0) return "Zero";
     if (n < 20) return a[n];
     if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
-    if (n < 1000) return a[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + inWords(n % 100) : "");
-    if (n < 100000) return inWords(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + inWords(n % 1000) : "");
-    if (n < 10000000) return inWords(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + inWords(n % 100000) : "");
+    if (n < 1000)
+      return (
+        a[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + inWords(n % 100) : "")
+      );
+    if (n < 100000)
+      return (
+        inWords(Math.floor(n / 1000)) +
+        " Thousand" +
+        (n % 1000 !== 0 ? " " + inWords(n % 1000) : "")
+      );
+    if (n < 10000000)
+      return (
+        inWords(Math.floor(n / 100000)) +
+        " Lakh" +
+        (n % 100000 !== 0 ? " " + inWords(n % 100000) : "")
+      );
     return "Rupees " + n.toString();
   }
 
@@ -65,9 +106,7 @@ export function TaxInvoiceModal({
   const gst = calculateRideGST(fare, booking.pickup_area, booking.drop_area);
   const rawDate = booking.completed_at || booking.created_at;
   const invoiceNumber = formatInvoiceNumber(booking.reference, rawDate);
-  const rideDate = rawDate && !isNaN(new Date(rawDate).getTime())
-    ? new Date(rawDate)
-    : new Date();
+  const rideDate = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate) : new Date();
 
   const formattedDate = rideDate.toLocaleDateString("en-IN", {
     day: "numeric",
@@ -86,7 +125,8 @@ export function TaxInvoiceModal({
       toast.info("Generating PDF...");
       // Dynamically load html2pdf
       const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
       script.onload = () => {
         const payload: SendInvoicePayload = {
           to: customer?.email || booking.customer_email || "Customer",
@@ -111,24 +151,29 @@ export function TaxInvoiceModal({
           profile,
         };
         const htmlString = generateInvoiceHtml(payload);
-        
+
         // Create a temporary container
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = htmlString;
-        
+
         // html2pdf options
         const opt = {
-          margin:       0,
-          filename:     `Invoice_${invoiceNumber}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2 },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+          margin: 0,
+          filename: `Invoice_${invoiceNumber}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
         };
-        
+
         // @ts-ignore
-        window.html2pdf().set(opt).from(tempDiv).save().then(() => {
-          toast.success("PDF Downloaded!");
-        });
+        window
+          .html2pdf()
+          .set(opt)
+          .from(tempDiv)
+          .save()
+          .then(() => {
+            toast.success("PDF Downloaded!");
+          });
       };
       document.body.appendChild(script);
     } catch (e) {
@@ -185,7 +230,9 @@ export function TaxInvoiceModal({
         throw new Error(data.error || "Failed to send invoice");
       }
 
-      toast.success(`Tax invoice #${invoiceNumber} successfully sent to ${targetEmail} from billing@orange-taxi.com! ✉️`);
+      toast.success(
+        `Tax invoice #${invoiceNumber} successfully sent to ${targetEmail} from billing@orange-taxi.com! ✉️`,
+      );
     } catch (err: any) {
       console.error("Invoice email failed:", err);
       toast.error(`Email dispatch error: ${err.message || "Could not deliver invoice"}`);
@@ -209,7 +256,9 @@ export function TaxInvoiceModal({
               <FileText className="size-4" />
             </span>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">GST Tax Invoice</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                GST Tax Invoice
+              </p>
               <p className="text-sm font-mono font-bold text-foreground">{invoiceNumber}</p>
             </div>
           </div>
@@ -260,7 +309,7 @@ export function TaxInvoiceModal({
               <Printer className="size-3.5" />
               <span>Print</span>
             </Button>
-            
+
             <Button
               type="button"
               size="sm"
@@ -281,7 +330,9 @@ export function TaxInvoiceModal({
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <Label htmlFor="corpName" className="text-xs">Company / Business Name</Label>
+                <Label htmlFor="corpName" className="text-xs">
+                  Company / Business Name
+                </Label>
                 <Input
                   id="corpName"
                   placeholder="e.g. Acme Technologies India Pvt Ltd"
@@ -291,7 +342,9 @@ export function TaxInvoiceModal({
                 />
               </div>
               <div>
-                <Label htmlFor="corpGstin" className="text-xs">Company 15-Digit GSTIN</Label>
+                <Label htmlFor="corpGstin" className="text-xs">
+                  Company 15-Digit GSTIN
+                </Label>
                 <Input
                   id="corpGstin"
                   placeholder="e.g. 07AAACA1234A1Z5"
@@ -303,7 +356,8 @@ export function TaxInvoiceModal({
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              * The invoice below will automatically update with your company's GSTIN for GST ITC claiming.
+              * The invoice below will automatically update with your company's GSTIN for GST ITC
+              claiming.
             </p>
           </div>
         )}
@@ -311,7 +365,10 @@ export function TaxInvoiceModal({
         {/* ========================================================================= */}
         {/* OFFICIAL PRINT-READY A4 TAX INVOICE SHEET                                 */}
         {/* ========================================================================= */}
-        <div id="print-tax-invoice" className="p-8 font-sans text-foreground bg-white dark:bg-zinc-950 print:p-6 print:text-black">
+        <div
+          id="print-tax-invoice"
+          className="p-8 font-sans text-foreground bg-white dark:bg-zinc-950 print:p-6 print:text-black"
+        >
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b-2 border-primary">
             <div>
@@ -327,11 +384,25 @@ export function TaxInvoiceModal({
                 Public Limited Company · Registered at ROC Delhi
               </p>
               <div className="mt-2 space-y-0.5 text-xs text-muted-foreground max-w-sm leading-relaxed">
-                <p><strong>CIN:</strong> <span className="font-mono text-foreground font-semibold">{profile.cin}</span></p>
-                <p><strong>PAN:</strong> <span className="font-mono text-foreground font-semibold">{profile.pan}</span></p>
-                <p><strong>GSTIN:</strong> <span className="font-mono text-foreground font-semibold">{profile.gstin}</span></p>
-                <p><strong>Reg. Office:</strong> {profile.address}</p>
-                <p><strong>Corporate HQ:</strong> {profile.state} (State Code: <strong className="font-mono">{profile.stateCode}</strong>)</p>
+                <p>
+                  <strong>CIN:</strong>{" "}
+                  <span className="font-mono text-foreground font-semibold">{profile.cin}</span>
+                </p>
+                <p>
+                  <strong>PAN:</strong>{" "}
+                  <span className="font-mono text-foreground font-semibold">{profile.pan}</span>
+                </p>
+                <p>
+                  <strong>GSTIN:</strong>{" "}
+                  <span className="font-mono text-foreground font-semibold">{profile.gstin}</span>
+                </p>
+                <p>
+                  <strong>Reg. Office:</strong> {profile.address}
+                </p>
+                <p>
+                  <strong>Corporate HQ:</strong> {profile.state} (State Code:{" "}
+                  <strong className="font-mono">{profile.stateCode}</strong>)
+                </p>
               </div>
             </div>
 
@@ -349,7 +420,9 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Invoice Date: </span>
-                  <strong>{formattedDate} {formattedTime}</strong>
+                  <strong>
+                    {formattedDate} {formattedTime}
+                  </strong>
                 </p>
                 <p>
                   <span className="text-muted-foreground">SAC Code: </span>
@@ -357,7 +430,9 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Place of Supply (POS): </span>
-                  <strong className="text-primary font-bold">{gst.posCode} - {gst.placeOfSupply}</strong>
+                  <strong className="text-primary font-bold">
+                    {gst.posCode} - {gst.placeOfSupply}
+                  </strong>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Reverse Charge: </span>
@@ -376,12 +451,12 @@ export function TaxInvoiceModal({
               </p>
               <div className="space-y-1">
                 <p className="text-sm font-bold text-foreground">
-                  {corporateName.trim() ? corporateName : (customer?.fullName || booking.customer_name || "Guest Passenger")}
+                  {corporateName.trim()
+                    ? corporateName
+                    : customer?.fullName || booking.customer_name || "Guest Passenger"}
                 </p>
                 {corporateGSTIN.trim() && (
-                  <p className="font-mono text-primary font-bold">
-                    GSTIN: {corporateGSTIN.trim()}
-                  </p>
+                  <p className="font-mono text-primary font-bold">GSTIN: {corporateGSTIN.trim()}</p>
                 )}
                 <p className="text-muted-foreground">
                   Phone: {customer?.phone || booking.customer_phone || "+91 98100 12345"}
@@ -407,7 +482,11 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Vehicle: </span>
-                  <strong>{(booking.vehicle_name?.split("·")[0]?.trim()) || driver?.vehicle_model || "Mahindra BE.6 Electric"}</strong>
+                  <strong>
+                    {booking.vehicle_name?.split("·")[0]?.trim() ||
+                      driver?.vehicle_model ||
+                      "Mahindra BE.6 Electric"}
+                  </strong>
                 </p>
                 <p>
                   <span className="text-muted-foreground">Registration Plate: </span>
@@ -421,7 +500,9 @@ export function TaxInvoiceModal({
                 </p>
                 <p>
                   <span className="text-muted-foreground">Route: </span>
-                  <strong className="text-foreground">{booking.pickup_area} → {booking.drop_area}</strong>
+                  <strong className="text-foreground">
+                    {booking.pickup_area} → {booking.drop_area}
+                  </strong>
                 </p>
               </div>
             </div>
@@ -451,22 +532,33 @@ export function TaxInvoiceModal({
                 <tr>
                   <td className="px-4 py-3 font-mono text-muted-foreground">1</td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-foreground">Passenger Transportation by Motor Cab</p>
+                    <p className="font-bold text-foreground">
+                      Passenger Transportation by Motor Cab
+                    </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Point-to-point journey: {booking.pickup_area} to {booking.drop_area} ({booking.distance_km || 15} km)
+                      Point-to-point journey: {booking.pickup_area} to {booking.drop_area} (
+                      {booking.distance_km || 15} km)
                     </p>
                   </td>
                   <td className="px-4 py-3 font-mono font-semibold">{profile.sacCode}</td>
-                  <td className="px-4 py-3 text-right font-mono font-bold">₹{gst.taxableValue.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-mono font-bold">
+                    ₹{gst.taxableValue.toFixed(2)}
+                  </td>
                   {!gst.isInterState ? (
                     <>
-                      <td className="px-4 py-3 text-right font-mono">₹{gst.cgstAmount.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right font-mono">₹{gst.sgstAmount.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        ₹{gst.cgstAmount.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono">
+                        ₹{gst.sgstAmount.toFixed(2)}
+                      </td>
                     </>
                   ) : (
                     <td className="px-4 py-3 text-right font-mono">₹{gst.igstAmount.toFixed(2)}</td>
                   )}
-                  <td className="px-4 py-3 text-right font-mono font-bold text-primary">₹{fare.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-mono font-bold text-primary">
+                    ₹{fare.toFixed(2)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -480,11 +572,15 @@ export function TaxInvoiceModal({
                 <strong className="text-foreground italic">{numberToWords(fare)}</strong>
               </p>
               <p className="text-[11px] text-muted-foreground pt-1">
-                Payment Mode: <strong className="uppercase font-mono">{(booking.payment_method || "cash")}</strong>
+                Payment Mode:{" "}
+                <strong className="uppercase font-mono">{booking.payment_method || "cash"}</strong>
               </p>
               <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
                 <ShieldCheck className="size-4 shrink-0" />
-                <span>GST paid under Reverse Charge: <strong>No</strong> (Payable by Orange Taxi Limited as E-Commerce Operator under Section 9(5) CGST Act).</span>
+                <span>
+                  GST paid under Reverse Charge: <strong>No</strong> (Payable by Orange Taxi Limited
+                  as E-Commerce Operator under Section 9(5) CGST Act).
+                </span>
               </div>
             </div>
 
@@ -500,7 +596,9 @@ export function TaxInvoiceModal({
                     <span className="font-mono">₹{gst.cgstAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-border/50">
-                    <span className="text-muted-foreground">SGST @ 2.5% ({gst.placeOfSupply}):</span>
+                    <span className="text-muted-foreground">
+                      SGST @ 2.5% ({gst.placeOfSupply}):
+                    </span>
                     <span className="font-mono">₹{gst.sgstAmount.toFixed(2)}</span>
                   </div>
                 </>
@@ -520,10 +618,19 @@ export function TaxInvoiceModal({
           {/* Statutory Footer */}
           <div className="mt-8 pt-6 border-t border-border text-[11px] text-muted-foreground space-y-1">
             <p className="font-semibold text-foreground">Terms & Conditions / Declarations:</p>
-            <p>1. This is a computer-generated tax invoice issued by <strong>ORANGE TAXI LIMITED</strong> pursuant to Rule 46 of the Central Goods and Services Tax Rules, 2017 and does not require a physical signature.</p>
-            <p>2. For queries or corporate invoicing support, please email <strong>{profile.supportEmail}</strong> or call <strong>{profile.supportPhone}</strong>.</p>
+            <p>
+              1. This is a computer-generated tax invoice issued by{" "}
+              <strong>ORANGE TAXI LIMITED</strong> pursuant to Rule 46 of the Central Goods and
+              Services Tax Rules, 2017 and does not require a physical signature.
+            </p>
+            <p>
+              2. For queries or corporate invoicing support, please email{" "}
+              <strong>{profile.supportEmail}</strong> or call{" "}
+              <strong>{profile.supportPhone}</strong>.
+            </p>
             <p className="pt-2 text-center text-[10px] text-muted-foreground/80 font-mono">
-              ORANGE TAXI LIMITED · CIN: {profile.cin} · PAN: {profile.pan} · S-210, Panchshila Park, New Delhi 110017
+              ORANGE TAXI LIMITED · CIN: {profile.cin} · PAN: {profile.pan} · S-210, Panchshila
+              Park, New Delhi 110017
             </p>
           </div>
         </div>

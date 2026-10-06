@@ -28,8 +28,16 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveRideMap } from "@/components/live-ride-map";
-import { getBookingVehiclePlate, resolveDriverDetails, fetchAndHydrateDriverDetails } from "@/lib/ride-vehicle";
-import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/lib/ride-preferences";
+import {
+  getBookingVehiclePlate,
+  resolveDriverDetails,
+  fetchAndHydrateDriverDetails,
+} from "@/lib/ride-vehicle";
+import {
+  parseCleanCoords,
+  parseRidePreferences,
+  getCabinClimateBadge,
+} from "@/lib/ride-preferences";
 import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
@@ -42,7 +50,8 @@ export const Route = createFileRoute("/track")({
       { title: "Live Ride Tracking — Orange Taxi" },
       {
         name: "description",
-        content: "Track live ride status, driver location, vehicle details, and estimated arrival for Orange Electric Taxi.",
+        content:
+          "Track live ride status, driver location, vehicle details, and estimated arrival for Orange Electric Taxi.",
       },
     ],
   }),
@@ -52,7 +61,8 @@ export const Route = createFileRoute("/track")({
 const STATUS_LABELS: Record<string, { label: string; color: string; desc: string }> = {
   scheduled: {
     label: "Advance Booking Confirmed",
-    color: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+    color:
+      "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
     desc: "Your advance ride is guaranteed. Dedicated chauffeur dispatch activates 15–30 minutes before departure.",
   },
   searching: {
@@ -67,12 +77,14 @@ const STATUS_LABELS: Record<string, { label: string; color: string; desc: string
   },
   arrived: {
     label: "Driver Arrived",
-    color: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+    color:
+      "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
     desc: "Vehicle has reached the pickup location.",
   },
   in_progress: {
     label: "Ride in Progress",
-    color: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300",
+    color:
+      "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300",
     desc: "Traveling safely towards the destination.",
   },
   completed: {
@@ -98,7 +110,11 @@ function TrackPage() {
   const lastNotifiedStatusRef = useRef<string>("");
   const isFirstLoadRef = useRef<boolean>(true);
 
-  const triggerRideNotification = (newStatus: string, currentBookingData: any, currentDriver: any) => {
+  const triggerRideNotification = (
+    newStatus: string,
+    currentBookingData: any,
+    currentDriver: any,
+  ) => {
     if (!newStatus || lastNotifiedStatusRef.current === newStatus) return;
     if (newStatus === "searching") return;
     lastNotifiedStatusRef.current = newStatus;
@@ -112,7 +128,7 @@ function TrackPage() {
         otp: currentBookingData?.ride_otp,
       },
       currentBookingData?.reference,
-      currentBookingData?.drop_area
+      currentBookingData?.drop_area,
     );
 
     if (content) {
@@ -192,7 +208,7 @@ function TrackPage() {
                   const updated = prev ? { ...prev, ...payload.new } : (payload.new as any);
                   return resolveDriverDetails(updated, bData);
                 });
-              }
+              },
             )
             .subscribe();
         }
@@ -234,7 +250,7 @@ function TrackPage() {
               if (updated.status) {
                 triggerRideNotification(updated.status, updated, latestDriver);
               }
-            }
+            },
           )
           .subscribe();
       } catch (err) {
@@ -262,11 +278,14 @@ function TrackPage() {
 
   const handleShare = () => {
     const url = typeof window !== "undefined" ? window.location.href : "";
-    navigator.clipboard?.writeText(url).then(() => {
-      toast.success("Link copied! Anyone can track this ride");
-    }).catch(() => {
-      toast.success("Link copied! Anyone can track this ride");
-    });
+    navigator.clipboard
+      ?.writeText(url)
+      .then(() => {
+        toast.success("Link copied! Anyone can track this ride");
+      })
+      .catch(() => {
+        toast.success("Link copied! Anyone can track this ride");
+      });
   };
 
   // Coordinates parsing
@@ -278,7 +297,10 @@ function TrackPage() {
 
   const pickupCoords = parseCoords(booking?.pickup_address, 12.9716, 77.5946);
   const dropCoords = parseCoords(booking?.drop_address, 13.1986, 77.7066);
-  const ridePrefs = parseRidePreferences(booking?.pickup_address, booking?.id || booking?.reference);
+  const ridePrefs = parseRidePreferences(
+    booking?.pickup_address,
+    booking?.id || booking?.reference,
+  );
 
   const statusInfo = STATUS_LABELS[booking?.status || "searching"] || STATUS_LABELS.searching;
 
@@ -333,7 +355,9 @@ function TrackPage() {
         {loading ? (
           <div className="py-24 text-center space-y-3">
             <div className="inline-block size-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-            <p className="text-sm font-semibold text-muted-foreground">Connecting to vehicle telemetry...</p>
+            <p className="text-sm font-semibold text-muted-foreground">
+              Connecting to vehicle telemetry...
+            </p>
           </div>
         ) : notFound || !booking ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/40 p-10 text-center space-y-4">
@@ -343,12 +367,14 @@ function TrackPage() {
             <div>
               <h2 className="text-lg font-bold">Track Any Orange Electric Ride</h2>
               <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                Enter your booking reference above to view live vehicle location, chauffeur details, and route progress.
+                Enter your booking reference above to view live vehicle location, chauffeur details,
+                and route progress.
               </p>
             </div>
             {notFound && (
               <p className="text-xs font-semibold text-rose-500">
-                No active booking found with reference "{activeRef}". Please check the 8-character reference code.
+                No active booking found with reference "{activeRef}". Please check the 8-character
+                reference code.
               </p>
             )}
           </div>
@@ -363,7 +389,9 @@ function TrackPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold text-primary">#{booking.reference}</span>
+                      <span className="font-mono text-sm font-bold text-primary">
+                        #{booking.reference}
+                      </span>
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${statusInfo.color}`}
                       >
@@ -396,7 +424,9 @@ function TrackPage() {
                     <span className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
                       Pickup Location
                     </span>
-                    <p className="font-bold text-foreground text-sm mt-0.5">{booking.pickup_area}</p>
+                    <p className="font-bold text-foreground text-sm mt-0.5">
+                      {booking.pickup_area}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5 rounded-xl bg-muted/40 p-3 border border-border/60">
@@ -413,15 +443,18 @@ function TrackPage() {
               {/* Passenger Comfort Preferences (AC & Quiet Mode) */}
               {(ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pickupPillar) && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
-                  {ridePrefs.cabinClimate && (() => {
-                    const b = getCabinClimateBadge(ridePrefs.cabinClimate);
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}>
-                        <Snowflake className="size-3" />
-                        <span>{b.label}</span>
-                      </span>
-                    );
-                  })()}
+                  {ridePrefs.cabinClimate &&
+                    (() => {
+                      const b = getCabinClimateBadge(ridePrefs.cabinClimate);
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}
+                        >
+                          <Snowflake className="size-3" />
+                          <span>{b.label}</span>
+                        </span>
+                      );
+                    })()}
                   {ridePrefs.quietRide && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
                       <VolumeX className="size-3" />
@@ -471,8 +504,16 @@ function TrackPage() {
                       size="sm"
                       variant="outline"
                       onClick={async () => {
-                        if (!confirm(`Are you sure you want to cancel this scheduled ride #${booking.reference}? (Zero cancellation fee)`)) return;
-                        const { error } = await supabase.from("bookings").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", booking.id);
+                        if (
+                          !confirm(
+                            `Are you sure you want to cancel this scheduled ride #${booking.reference}? (Zero cancellation fee)`,
+                          )
+                        )
+                          return;
+                        const { error } = await supabase
+                          .from("bookings")
+                          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+                          .eq("id", booking.id);
                         if (!error) {
                           toast.success("Scheduled ride cancelled. Zero cancellation fee applied.");
                           setBooking((b: any) => ({ ...b, status: "cancelled" }));
@@ -489,19 +530,29 @@ function TrackPage() {
 
                 <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-purple-200/50 dark:border-purple-800/40">
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Locked Fare</span>
-                    <p className="font-mono text-base font-bold text-primary">₹{Math.round(booking.estimated_fare || 0)}</p>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Locked Fare
+                    </span>
+                    <p className="font-mono text-base font-bold text-primary">
+                      ₹{Math.round(booking.estimated_fare || 0)}
+                    </p>
                     <span className="text-[10px] text-muted-foreground">Zero surge guarantee</span>
                   </div>
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Chauffeur Dispatch</span>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Chauffeur Dispatch
+                    </span>
                     <p className="font-semibold text-foreground">Starts 15–30m prior</p>
                     <span className="text-[10px] text-muted-foreground">Nearest verified EV</span>
                   </div>
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground">Pre-Cooling SLA</span>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                      Pre-Cooling SLA
+                    </span>
                     <p className="font-semibold text-foreground">Dual-Zone 22°C</p>
-                    <span className="text-[10px] text-muted-foreground">Arrives 5–10 mins prior</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Arrives 5–10 mins prior
+                    </span>
                   </div>
                 </div>
               </div>
@@ -545,18 +596,27 @@ function TrackPage() {
                           {driver.full_name?.charAt(0) || "D"}
                         </div>
                       )}
-                      <span className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-emerald-500 border-2 border-card" title="Active Chauffeur" />
+                      <span
+                        className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-emerald-500 border-2 border-card"
+                        title="Active Chauffeur"
+                      />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Assigned EV Chauffeur
                         </span>
-                        <span className="text-xs font-bold text-amber-500">★ {driver.rating || "4.9"}</span>
+                        <span className="text-xs font-bold text-amber-500">
+                          ★ {driver.rating || "4.9"}
+                        </span>
                       </div>
-                      <h3 className="font-bold text-base text-foreground mt-0.5">{driver.full_name}</h3>
+                      <h3 className="font-bold text-base text-foreground mt-0.5">
+                        {driver.full_name}
+                      </h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                        <span className="font-medium text-foreground">{driver.vehicle_model || booking.vehicle_name}</span>
+                        <span className="font-medium text-foreground">
+                          {driver.vehicle_model || booking.vehicle_name}
+                        </span>
                         <span>•</span>
                         <span className="font-mono font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded text-[11px]">
                           {getBookingVehiclePlate(booking, driver)}
@@ -590,7 +650,8 @@ function TrackPage() {
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Safety Assistance & SOS</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Ride monitored by Orange Command Center. In an emergency, dial 112 or contact our helpline.
+                    Ride monitored by Orange Command Center. In an emergency, dial 112 or contact
+                    our helpline.
                   </p>
                 </div>
               </div>

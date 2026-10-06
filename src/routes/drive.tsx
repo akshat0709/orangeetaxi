@@ -1,6 +1,28 @@
 // @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeIndianRupee, Camera, Car, Check, CheckCircle, ClipboardCheck, Gauge, GraduationCap, HandHeart, HeartPulse, Info, Loader2, ShieldCheck, Snowflake, Sparkles, TrendingUp, Trophy, Upload, User, X } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeIndianRupee,
+  Camera,
+  Car,
+  Check,
+  CheckCircle,
+  ClipboardCheck,
+  Gauge,
+  GraduationCap,
+  HandHeart,
+  HeartPulse,
+  Info,
+  Loader2,
+  ShieldCheck,
+  Snowflake,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  Upload,
+  User,
+  X,
+} from "lucide-react";
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,36 +32,95 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import driverAppImage from "@/assets/orange-taxi-driver-app.jpg";
 import driverImage from "@/assets/orange-taxi-driver.jpg";
 
 export const Route = createFileRoute("/drive")({
-  head: () => ({ meta: [
-    { title: "Drive With Orange — Orange Taxi" },
-    { name: "description", content: "A fair, professional driving career with Orange Taxi: fixed salary, performance rewards, training and respect. Applications open soon." },
-    { property: "og:title", content: "Drive With Orange — Orange Taxi" },
-    { property: "og:description", content: "Fixed salary, milestone rewards and a professional driving career — built on respect." },
-    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" },
-  ]}), component: DriverPage,
+  head: () => ({
+    meta: [
+      { title: "Drive With Orange — Orange Taxi" },
+      {
+        name: "description",
+        content:
+          "A fair, professional driving career with Orange Taxi: fixed salary, performance rewards, training and respect. Applications open soon.",
+      },
+      { property: "og:title", content: "Drive With Orange — Orange Taxi" },
+      {
+        property: "og:description",
+        content:
+          "Fixed salary, milestone rewards and a professional driving career — built on respect.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: DriverPage,
 });
 
 const benefits = [
-  { icon: BadgeIndianRupee, title: "Fixed Salary", text: "A dependable income you can plan your life around — not a gamble on every trip." },
-  { icon: TrendingUp, title: "Performance Incentives", text: "Great service is rewarded with performance-based incentives on top of your salary." },
-  { icon: Trophy, title: "Milestone Rewards", text: "Consistent excellence is celebrated with milestone bonuses as you grow with Orange." },
-  { icon: GraduationCap, title: "Professional Training", text: "Structured training in hospitality, safe driving and the Orange service standard." },
-  { icon: HeartPulse, title: "Respect & Wellbeing", text: "Humane schedules and a team that treats you as a professional, not a number." },
-  { icon: ShieldCheck, title: "A Safer Workplace", text: "Well-maintained electric vehicles and safety standards that protect you too." },
+  {
+    icon: BadgeIndianRupee,
+    title: "Fixed Salary",
+    text: "A dependable income you can plan your life around — not a gamble on every trip.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Performance Incentives",
+    text: "Great service is rewarded with performance-based incentives on top of your salary.",
+  },
+  {
+    icon: Trophy,
+    title: "Milestone Rewards",
+    text: "Consistent excellence is celebrated with milestone bonuses as you grow with Orange.",
+  },
+  {
+    icon: GraduationCap,
+    title: "Professional Training",
+    text: "Structured training in hospitality, safe driving and the Orange service standard.",
+  },
+  {
+    icon: HeartPulse,
+    title: "Respect & Wellbeing",
+    text: "Humane schedules and a team that treats you as a professional, not a number.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "A Safer Workplace",
+    text: "Well-maintained electric vehicles and safety standards that protect you too.",
+  },
 ];
 
 const journey = [
-  ["01", "Register your interest", "Tell us you'd like to drive with Orange when applications open in your city."],
-  ["02", "Meet & verify", "A friendly conversation, document verification and a driving assessment."],
-  ["03", "Train with Orange", "Learn the Orange service standard — hospitality, safety and vehicle care."],
-  ["04", "Start earning", "Begin with a fixed salary and grow through performance and milestone rewards."],
+  [
+    "01",
+    "Register your interest",
+    "Tell us you'd like to drive with Orange when applications open in your city.",
+  ],
+  [
+    "02",
+    "Meet & verify",
+    "A friendly conversation, document verification and a driving assessment.",
+  ],
+  [
+    "03",
+    "Train with Orange",
+    "Learn the Orange service standard — hospitality, safety and vehicle care.",
+  ],
+  [
+    "04",
+    "Start earning",
+    "Begin with a fixed salary and grow through performance and milestone rewards.",
+  ],
 ];
 
 const requirements = [
@@ -50,172 +131,361 @@ const requirements = [
 ];
 
 function DriverPage() {
-  return <>
-    <section className="relative overflow-hidden bg-night text-white">
-      <img src={driverAppImage} alt="A professional Orange Taxi driver standing beside his orange electric car" width={1408} height={1056} fetchPriority="high" className="absolute inset-0 size-full object-cover object-[68%_center]" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
-      <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
-        <div className="max-w-2xl animate-gentle-rise">
-          <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">For drivers</p>
-          <h1 className="display-serif text-[clamp(2.85rem,7vw,6.2rem)] leading-[0.92] text-white">Drive with dignity.<br/><span className="text-primary">Earn with stability.</span></h1>
-          <p className="mt-7 max-w-xl text-base leading-7 text-white/75 md:text-lg">A professional driving career built on a fixed salary, performance rewards and genuine respect — not per-trip commissions and endless uncertainty.</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg"><a href="#join">Join Orange <ArrowRight /></a></Button>
-            <Button asChild size="lg" variant="light"><a href="#earnings">How earning works</a></Button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="earnings" className="py-24 md:py-32"><div className="section-shell">
-      <Intro eyebrow="The Orange earning model" title="Stability first. Rewards always." copy="Orange drivers are professionals with a dependable income — and great service is always rewarded on top." />
-      <div className="mt-14 grid gap-4 lg:grid-cols-3">
-        <article className="flex min-h-72 flex-col rounded-lg border border-primary bg-primary p-7 text-primary-foreground shadow-brand-lg">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-70">The foundation</p>
-          <h3 className="display-serif mt-3 text-3xl">Fixed Salary</h3>
-          <p className="mt-4 text-sm leading-6 text-primary-foreground/85">A predictable monthly income that doesn't depend on luck, surge pricing or chasing trips across the city.</p>
-          <p className="mt-auto pt-8 text-xs text-primary-foreground/60">Salary details will be shared when applications open in your city.</p>
-        </article>
-        <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">For great service</p>
-          <h3 className="display-serif mt-3 text-3xl">Performance Incentives</h3>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">Ratings, punctuality and service quality translate into regular performance incentives — the better you serve, the more you earn.</p>
-          <p className="mt-auto pt-8 text-xs text-muted-foreground">Incentive structure to be announced.</p>
-        </article>
-        <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">For consistency</p>
-          <h3 className="display-serif mt-3 text-3xl">Milestone Rewards</h3>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">Reaching service milestones with Orange unlocks bonuses that recognise your loyalty and craft over time.</p>
-          <p className="mt-auto pt-8 text-xs text-muted-foreground">Milestone program to be announced.</p>
-        </article>
-      </div>
-    </div></section>
-
-    <section className="bg-warm py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-      <div>
-        <Intro eyebrow="Why drivers choose Orange" title="A career, not a hustle." copy="We believe great rides start with drivers who are rested, respected and fairly paid." />
-        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
-          {benefits.map(({ icon: Icon, title, text }) => <article key={title} className="bg-warm p-6">
-            <span className="grid size-10 place-items-center rounded-full bg-background text-primary"><Icon className="size-4" /></span>
-            <h3 className="mt-6 text-base font-bold">{title}</h3>
-            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{text}</p>
-          </article>)}
-        </div>
-      </div>
-      <figure className="overflow-hidden rounded-[var(--radius-xl)] shadow-soft"><img src={driverImage} alt="Professional Orange Taxi driver beside an orange electric car" width={1408} height={1600} loading="lazy" className="aspect-[4/5] size-full object-cover" /></figure>
-    </div></section>
-
-    <section className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">
-      <Intro eyebrow="The driver journey" title="From interest to income." copy="A clear, respectful path into the Orange team." />
-      <ol className="border-t border-border">
-        {journey.map(([n, title, text]) => <li key={n} className="grid gap-2 border-b border-border py-7 sm:grid-cols-[5rem_1fr] sm:gap-6">
-          <span className="display-serif text-4xl text-primary">{n}</span>
-          <div><h3 className="text-lg font-bold">{title}</h3><p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{text}</p></div>
-        </li>)}
-      </ol>
-    </div></section>
-
-    <section className="bg-night py-24 text-white md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Your driver app</p>
-        <h2 className="display-serif mt-4 text-5xl leading-none text-white md:text-6xl">Everything you need, in one place.</h2>
-        <p className="mt-6 max-w-lg leading-7 text-white/65">The Orange driver app is being designed around clarity: your schedule, your earnings and your progress — always visible, never confusing.</p>
-        <ul className="mt-8 space-y-4 text-sm text-white/70">
-          {["Daily schedule and ride assignments","Earnings and incentives at a glance","Milestone progress towards rewards","Training and service feedback"].map((x) => <li key={x} className="flex items-center gap-3"><Gauge className="size-4 text-primary" />{x}</li>)}
-        </ul>
-      </div>
-      <div className="rounded-xl border border-white/15 bg-white/5 p-7 md:p-9">
-        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">Concept preview</p><span className="rounded-full border border-primary/40 px-3 py-1 text-xs font-bold text-primary">Illustrative only</span></div>
-        <div className="mt-6 space-y-3">
-          {[["This week's earnings","—"],["Performance incentives","—"],["Next milestone","—"],["Service rating","—"]].map(([label]) => <div key={label} className="flex items-center justify-between rounded-lg border border-white/10 bg-neutral-900/60 px-5 py-4"><span className="text-sm text-white/70">{label}</span><span className="text-sm font-bold text-white/40">—</span></div>)}
-        </div>
-        <p className="mt-5 text-xs leading-5 text-white/45">A design concept for the future driver dashboard. Figures will appear once the driver app launches.</p>
-      </div>
-    </div></section>
-
-    <section id="join" className="py-24 md:py-32"><div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
-      <div>
-        <Intro eyebrow="Who we're looking for" title="Could you be an Orange driver?" copy="If you take pride in your driving and in how you treat people, we'd love to hear from you." />
-        <ul className="mt-8 space-y-4 text-sm font-semibold">
-          {requirements.map((x) => <li key={x} className="flex items-center gap-3"><Check className="size-4 text-primary" />{x}</li>)}
-        </ul>
-      </div>
-      <DriverApplicationForm />
-    </div></section>
-
-    {/* Statutory Driver Onboarding Terms & Conditions (Clause 11.1(ix) & Clause 14.10) */}
-    <section className="border-t border-border bg-card py-20 md:py-28">
-      <div className="section-shell max-w-5xl">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-          <ShieldCheck className="size-4" /> Regulatory Disclosures (Clause 11.1 & 14.10)
-        </div>
-        <h2 className="display-serif mt-3 text-3xl md:text-4xl">
-          Standard Driver Terms & Operating Code / चालक ऑनबोर्डिंग नियम
-        </h2>
-        <p className="mt-3 text-sm text-muted-foreground">
-          In compliance with Clause 11.1(ix) of the Motor Vehicle Aggregator Guidelines, 2025, the terms governing driver-partner onboarding, fixed earnings, conduct, and vehicle operations are published below in English and Hindi.
-        </p>
-
-        <div className="mt-10 grid gap-8 md:grid-cols-2">
-          {/* English Column */}
-          <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
-            <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
-              <span>English — Operating Agreement</span>
-              <span className="text-[10px] uppercase font-bold text-primary">Official Terms</span>
-            </h3>
-            <div>
-              <p className="font-semibold text-foreground">1. Eligibility & Police Verification (Clause 15.4)</p>
-              <p className="mt-1">Every driver must possess a valid Commercial / Transport Driving Licence, minimum 2 years driving experience, and clean police verification records before being activated.</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">2. Fixed Salary & Fair Incentives (Clause 14.6)</p>
-              <p className="mt-1">Orange Taxi provides dependable monthly fixed salaries + performance rewards. Drivers are not subject to arbitrary surge commissions or unfair trip deductions.</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">3. Zero-Tolerance Alcohol & Drug Policy (Clause 14.10)</p>
-              <p className="mt-1">Operating any Orange Taxi under the influence of alcohol, narcotics, or intoxicating substances is strictly prohibited. Immediate suspension and permanent blacklisting apply upon violation.</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">4. Vehicle Standards & Service Quality</p>
-              <p className="mt-1">All electric cabs must be kept spotless, air-conditioned throughout the journey, and operated with professional courtesy at all times.</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">5. Fair Inquiry & Grievance (Section 8 SLA)</p>
-              <p className="mt-1">Any passenger complaint against a driver requires a mandatory 3-working-day fair inquiry before final disciplinary action is determined.</p>
-            </div>
-          </div>
-
-          {/* Hindi Column */}
-          <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
-            <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
-              <span>हिंदी — चालक नियम एवं शर्तें</span>
-              <span className="text-[10px] uppercase font-bold text-primary">आधिकारिक नियम</span>
-            </h3>
-            <div>
-              <p className="font-semibold text-foreground">1. पात्रता एवं पुलिस सत्यापन (खंड 15.4)</p>
-              <p className="mt-1">सभी चालकों के पास वैध कमर्शियल ड्राइविंग लाइसेंस, न्यूनतम 2 वर्ष का अनुभव और पुलिस सत्यापन प्रमाणपत्र होना अनिवार्य है।</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">2. निश्चित मासिक वेतन एवं प्रोत्साहन (खंड 14.6)</p>
-              <p className="mt-1">ऑरेंज टैक्सी निश्चित मासिक वेतन और बेहतरीन सेवा के लिए अतिरिक्त बोनस प्रदान करती है। कोई अनुचित कमीशन कटौती नहीं की जाती।</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">3. नशा निषेध नीति - जीरो टॉलरेंस (खंड 14.10)</p>
-              <p className="mt-1">शराब, ड्रग्स या किसी भी प्रकार के नशे की हालत में वाहन चलाना सख्त वर्जित है। उल्लंघन करने पर चालक को तुरंत बर्खास्त और ब्लैकलिस्ट किया जाएगा।</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">4. वाहन स्वच्छता एवं एसी मानक</p>
-              <p className="mt-1">सभी इलेक्ट्रिक वाहन साफ-सुथरे रहने चाहिए, यात्रा के दौरान एसी चालू रहना चाहिए और यात्रियों के साथ आदरपूर्वक व्यवहार आवश्यक है।</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">5. निष्पक्ष जांच का अधिकार (3 दिन की जांच)</p>
-              <p className="mt-1">किसी भी शिकायत की स्थिति में चालक को पक्ष रखने का पूरा अवसर दिया जाएगा और 3 कार्यदिवसों में निष्पक्ष जांच पूरी की जाएगी।</p>
+  return (
+    <>
+      <section className="relative overflow-hidden bg-night text-white">
+        <img
+          src={driverAppImage}
+          alt="A professional Orange Taxi driver standing beside his orange electric car"
+          width={1408}
+          height={1056}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover object-[68%_center]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
+        <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
+          <div className="max-w-2xl animate-gentle-rise">
+            <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+              For drivers
+            </p>
+            <h1 className="display-serif text-[clamp(2.85rem,7vw,6.2rem)] leading-[0.92] text-white">
+              Drive with dignity.
+              <br />
+              <span className="text-primary">Earn with stability.</span>
+            </h1>
+            <p className="mt-7 max-w-xl text-base leading-7 text-white/75 md:text-lg">
+              A professional driving career built on a fixed salary, performance rewards and genuine
+              respect — not per-trip commissions and endless uncertainty.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg">
+                <a href="#join">
+                  Join Orange <ArrowRight />
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="light">
+                <a href="#earnings">How earning works</a>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  </>;
+      </section>
+
+      <section id="earnings" className="py-24 md:py-32">
+        <div className="section-shell">
+          <Intro
+            eyebrow="The Orange earning model"
+            title="Stability first. Rewards always."
+            copy="Orange drivers are professionals with a dependable income — and great service is always rewarded on top."
+          />
+          <div className="mt-14 grid gap-4 lg:grid-cols-3">
+            <article className="flex min-h-72 flex-col rounded-lg border border-primary bg-primary p-7 text-primary-foreground shadow-brand-lg">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-70">
+                The foundation
+              </p>
+              <h3 className="display-serif mt-3 text-3xl">Fixed Salary</h3>
+              <p className="mt-4 text-sm leading-6 text-primary-foreground/85">
+                A predictable monthly income that doesn't depend on luck, surge pricing or chasing
+                trips across the city.
+              </p>
+              <p className="mt-auto pt-8 text-xs text-primary-foreground/60">
+                Salary details will be shared when applications open in your city.
+              </p>
+            </article>
+            <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                For great service
+              </p>
+              <h3 className="display-serif mt-3 text-3xl">Performance Incentives</h3>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                Ratings, punctuality and service quality translate into regular performance
+                incentives — the better you serve, the more you earn.
+              </p>
+              <p className="mt-auto pt-8 text-xs text-muted-foreground">
+                Incentive structure to be announced.
+              </p>
+            </article>
+            <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                For consistency
+              </p>
+              <h3 className="display-serif mt-3 text-3xl">Milestone Rewards</h3>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                Reaching service milestones with Orange unlocks bonuses that recognise your loyalty
+                and craft over time.
+              </p>
+              <p className="mt-auto pt-8 text-xs text-muted-foreground">
+                Milestone program to be announced.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-warm py-24 md:py-32">
+        <div className="section-shell grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div>
+            <Intro
+              eyebrow="Why drivers choose Orange"
+              title="A career, not a hustle."
+              copy="We believe great rides start with drivers who are rested, respected and fairly paid."
+            />
+            <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
+              {benefits.map(({ icon: Icon, title, text }) => (
+                <article key={title} className="bg-warm p-6">
+                  <span className="grid size-10 place-items-center rounded-full bg-background text-primary">
+                    <Icon className="size-4" />
+                  </span>
+                  <h3 className="mt-6 text-base font-bold">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+          <figure className="overflow-hidden rounded-[var(--radius-xl)] shadow-soft">
+            <img
+              src={driverImage}
+              alt="Professional Orange Taxi driver beside an orange electric car"
+              width={1408}
+              height={1600}
+              loading="lazy"
+              className="aspect-[4/5] size-full object-cover"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <section className="py-24 md:py-32">
+        <div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">
+          <Intro
+            eyebrow="The driver journey"
+            title="From interest to income."
+            copy="A clear, respectful path into the Orange team."
+          />
+          <ol className="border-t border-border">
+            {journey.map(([n, title, text]) => (
+              <li
+                key={n}
+                className="grid gap-2 border-b border-border py-7 sm:grid-cols-[5rem_1fr] sm:gap-6"
+              >
+                <span className="display-serif text-4xl text-primary">{n}</span>
+                <div>
+                  <h3 className="text-lg font-bold">{title}</h3>
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="bg-night py-24 text-white md:py-32">
+        <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              Your driver app
+            </p>
+            <h2 className="display-serif mt-4 text-5xl leading-none text-white md:text-6xl">
+              Everything you need, in one place.
+            </h2>
+            <p className="mt-6 max-w-lg leading-7 text-white/65">
+              The Orange driver app is being designed around clarity: your schedule, your earnings
+              and your progress — always visible, never confusing.
+            </p>
+            <ul className="mt-8 space-y-4 text-sm text-white/70">
+              {[
+                "Daily schedule and ride assignments",
+                "Earnings and incentives at a glance",
+                "Milestone progress towards rewards",
+                "Training and service feedback",
+              ].map((x) => (
+                <li key={x} className="flex items-center gap-3">
+                  <Gauge className="size-4 text-primary" />
+                  {x}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-white/15 bg-white/5 p-7 md:p-9">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">
+                Concept preview
+              </p>
+              <span className="rounded-full border border-primary/40 px-3 py-1 text-xs font-bold text-primary">
+                Illustrative only
+              </span>
+            </div>
+            <div className="mt-6 space-y-3">
+              {[
+                ["This week's earnings", "—"],
+                ["Performance incentives", "—"],
+                ["Next milestone", "—"],
+                ["Service rating", "—"],
+              ].map(([label]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-neutral-900/60 px-5 py-4"
+                >
+                  <span className="text-sm text-white/70">{label}</span>
+                  <span className="text-sm font-bold text-white/40">—</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-xs leading-5 text-white/45">
+              A design concept for the future driver dashboard. Figures will appear once the driver
+              app launches.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="join" className="py-24 md:py-32">
+        <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <Intro
+              eyebrow="Who we're looking for"
+              title="Could you be an Orange driver?"
+              copy="If you take pride in your driving and in how you treat people, we'd love to hear from you."
+            />
+            <ul className="mt-8 space-y-4 text-sm font-semibold">
+              {requirements.map((x) => (
+                <li key={x} className="flex items-center gap-3">
+                  <Check className="size-4 text-primary" />
+                  {x}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DriverApplicationForm />
+        </div>
+      </section>
+
+      {/* Statutory Driver Onboarding Terms & Conditions (Clause 11.1(ix) & Clause 14.10) */}
+      <section className="border-t border-border bg-card py-20 md:py-28">
+        <div className="section-shell max-w-5xl">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+            <ShieldCheck className="size-4" /> Regulatory Disclosures (Clause 11.1 & 14.10)
+          </div>
+          <h2 className="display-serif mt-3 text-3xl md:text-4xl">
+            Standard Driver Terms & Operating Code / चालक ऑनबोर्डिंग नियम
+          </h2>
+          <p className="mt-3 text-sm text-muted-foreground">
+            In compliance with Clause 11.1(ix) of the Motor Vehicle Aggregator Guidelines, 2025, the
+            terms governing driver-partner onboarding, fixed earnings, conduct, and vehicle
+            operations are published below in English and Hindi.
+          </p>
+
+          <div className="mt-10 grid gap-8 md:grid-cols-2">
+            {/* English Column */}
+            <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
+              <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+                <span>English — Operating Agreement</span>
+                <span className="text-[10px] uppercase font-bold text-primary">Official Terms</span>
+              </h3>
+              <div>
+                <p className="font-semibold text-foreground">
+                  1. Eligibility & Police Verification (Clause 15.4)
+                </p>
+                <p className="mt-1">
+                  Every driver must possess a valid Commercial / Transport Driving Licence, minimum
+                  2 years driving experience, and clean police verification records before being
+                  activated.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  2. Fixed Salary & Fair Incentives (Clause 14.6)
+                </p>
+                <p className="mt-1">
+                  Orange Taxi provides dependable monthly fixed salaries + performance rewards.
+                  Drivers are not subject to arbitrary surge commissions or unfair trip deductions.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  3. Zero-Tolerance Alcohol & Drug Policy (Clause 14.10)
+                </p>
+                <p className="mt-1">
+                  Operating any Orange Taxi under the influence of alcohol, narcotics, or
+                  intoxicating substances is strictly prohibited. Immediate suspension and permanent
+                  blacklisting apply upon violation.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  4. Vehicle Standards & Service Quality
+                </p>
+                <p className="mt-1">
+                  All electric cabs must be kept spotless, air-conditioned throughout the journey,
+                  and operated with professional courtesy at all times.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  5. Fair Inquiry & Grievance (Section 8 SLA)
+                </p>
+                <p className="mt-1">
+                  Any passenger complaint against a driver requires a mandatory 3-working-day fair
+                  inquiry before final disciplinary action is determined.
+                </p>
+              </div>
+            </div>
+
+            {/* Hindi Column */}
+            <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
+              <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+                <span>हिंदी — चालक नियम एवं शर्तें</span>
+                <span className="text-[10px] uppercase font-bold text-primary">आधिकारिक नियम</span>
+              </h3>
+              <div>
+                <p className="font-semibold text-foreground">
+                  1. पात्रता एवं पुलिस सत्यापन (खंड 15.4)
+                </p>
+                <p className="mt-1">
+                  सभी चालकों के पास वैध कमर्शियल ड्राइविंग लाइसेंस, न्यूनतम 2 वर्ष का अनुभव और पुलिस
+                  सत्यापन प्रमाणपत्र होना अनिवार्य है।
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  2. निश्चित मासिक वेतन एवं प्रोत्साहन (खंड 14.6)
+                </p>
+                <p className="mt-1">
+                  ऑरेंज टैक्सी निश्चित मासिक वेतन और बेहतरीन सेवा के लिए अतिरिक्त बोनस प्रदान करती
+                  है। कोई अनुचित कमीशन कटौती नहीं की जाती।
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  3. नशा निषेध नीति - जीरो टॉलरेंस (खंड 14.10)
+                </p>
+                <p className="mt-1">
+                  शराब, ड्रग्स या किसी भी प्रकार के नशे की हालत में वाहन चलाना सख्त वर्जित है।
+                  उल्लंघन करने पर चालक को तुरंत बर्खास्त और ब्लैकलिस्ट किया जाएगा।
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">4. वाहन स्वच्छता एवं एसी मानक</p>
+                <p className="mt-1">
+                  सभी इलेक्ट्रिक वाहन साफ-सुथरे रहने चाहिए, यात्रा के दौरान एसी चालू रहना चाहिए और
+                  यात्रियों के साथ आदरपूर्वक व्यवहार आवश्यक है।
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">
+                  5. निष्पक्ष जांच का अधिकार (3 दिन की जांच)
+                </p>
+                <p className="mt-1">
+                  किसी भी शिकायत की स्थिति में चालक को पक्ष रखने का पूरा अवसर दिया जाएगा और 3
+                  कार्यदिवसों में निष्पक्ष जांच पूरी की जाएगी।
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
 }
 
 const appSchema = z.object({
@@ -360,7 +630,9 @@ function DriverApplicationForm() {
     const metaData = {
       photo_url: photoDataUrl,
       driver_type: values.owns_vehicle ? "partner" : "company",
-      vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
+      vehicle_model: values.owns_vehicle
+        ? values.vehicle_model || "Mahindra BE.6"
+        : "Mahindra BE.6",
       vehicle_number: values.owns_vehicle ? (values.vehicle_number || "").trim().toUpperCase() : "",
       chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
       vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
@@ -382,7 +654,9 @@ function DriverApplicationForm() {
       photo_url: photoDataUrl,
       dl_url: dlDataUrl,
       driver_type: values.owns_vehicle ? "partner" : "company",
-      vehicle_model: values.owns_vehicle ? (values.vehicle_model || "Mahindra BE.6") : "Mahindra BE.6",
+      vehicle_model: values.owns_vehicle
+        ? values.vehicle_model || "Mahindra BE.6"
+        : "Mahindra BE.6",
       vehicle_number: values.owns_vehicle ? values.vehicle_number.trim().toUpperCase() : "",
       chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
       vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
@@ -396,9 +670,12 @@ function DriverApplicationForm() {
       if (photoDataUrl) {
         localStorage.setItem(`orange_driver_photo_by_email_${emailKey}`, photoDataUrl);
         localStorage.setItem(`orange_driver_photo_by_phone_${phoneKey}`, photoDataUrl);
-        localStorage.setItem(`orange_driver_photo_by_name_${values.full_name.trim().toLowerCase()}`, photoDataUrl);
+        localStorage.setItem(
+          `orange_driver_photo_by_name_${values.full_name.trim().toLowerCase()}`,
+          photoDataUrl,
+        );
       }
-      
+
       const existingApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
       const appArray = Array.isArray(existingApps) ? existingApps : Object.values(existingApps);
       appArray.unshift({ ...payload, email: emailKey });
@@ -420,7 +697,7 @@ function DriverApplicationForm() {
             owner_email: emailKey,
             status: "pending_inspection",
             is_ev: true,
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
           });
           localStorage.setItem("orange_partner_vehicles", JSON.stringify(existingCars));
         }
@@ -428,7 +705,7 @@ function DriverApplicationForm() {
     } catch {}
 
     // Primary database insert (fallback to basePayload with admin_notes JSON if custom columns not in table yet)
-    let { error } = await supabase.from("driver_applications").insert(payload);
+    const { error } = await supabase.from("driver_applications").insert(payload);
     if (error) {
       console.warn("Retrying with base schema and admin_notes JSON metadata:", error);
       const basePayload = {
@@ -459,30 +736,63 @@ function DriverApplicationForm() {
   if (submitted) {
     return (
       <div className="flex flex-col items-center rounded-xl border border-border bg-warm p-9 text-center">
-        <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><CheckCircle className="size-7" /></span>
+        <span className="grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+          <CheckCircle className="size-7" />
+        </span>
         <h3 className="display-serif mt-6 text-3xl">Application received.</h3>
         <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
-          Thank you for applying to drive with Orange. Your photo, driving licence, and vehicle details will be reviewed by our fleet operations desk. For queries or onboarding assistance, email us at <a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline font-medium">drive@orange-taxi.com</a>.
+          Thank you for applying to drive with Orange. Your photo, driving licence, and vehicle
+          details will be reviewed by our fleet operations desk. For queries or onboarding
+          assistance, email us at{" "}
+          <a
+            href="mailto:drive@orange-taxi.com"
+            className="text-primary hover:underline font-medium"
+          >
+            drive@orange-taxi.com
+          </a>
+          .
         </p>
-        <Button asChild size="lg" variant="charcoal" className="mt-8"><Link to="/about"><HandHeart className="size-4" />About Orange</Link></Button>
+        <Button asChild size="lg" variant="charcoal" className="mt-8">
+          <Link to="/about">
+            <HandHeart className="size-4" />
+            About Orange
+          </Link>
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="rounded-xl border border-border bg-warm p-7 md:p-9 shadow-sm">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="rounded-xl border border-border bg-warm p-7 md:p-9 shadow-sm"
+      >
         <ClipboardCheck className="size-7 text-primary" />
         <h3 className="display-serif mt-5 text-3xl">Apply to drive.</h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">Join as a Salaried Fleet Driver or Partner Owner-Operator. Questions? Email <a href="mailto:drive@orange-taxi.com" className="text-primary hover:underline font-medium">drive@orange-taxi.com</a></p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Join as a Salaried Fleet Driver or Partner Owner-Operator. Questions? Email{" "}
+          <a
+            href="mailto:drive@orange-taxi.com"
+            className="text-primary hover:underline font-medium"
+          >
+            drive@orange-taxi.com
+          </a>
+        </p>
 
         <div className="mt-7 space-y-5">
           {/* MANDATORY DRIVER PHOTO UPLOAD */}
-          <div className={`rounded-xl border-2 p-4 transition-all ${photoError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}>
+          <div
+            className={`rounded-xl border-2 p-4 transition-all ${photoError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}
+          >
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative size-20 shrink-0 rounded-full border-2 border-primary/40 bg-primary/10 overflow-hidden flex items-center justify-center shadow-inner">
                 {photoDataUrl ? (
-                  <img src={photoDataUrl} alt="Driver Portrait Preview" className="size-full object-cover" />
+                  <img
+                    src={photoDataUrl}
+                    alt="Driver Portrait Preview"
+                    className="size-full object-cover"
+                  />
                 ) : (
                   <User className="size-9 text-primary/60" />
                 )}
@@ -500,16 +810,22 @@ function DriverApplicationForm() {
 
               <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Label htmlFor="driver-photo-input" className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5">
+                  <Label
+                    htmlFor="driver-photo-input"
+                    className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+                  >
                     <Camera className="size-4 text-primary" />
-                    <span>Upload Driver Photo <span className="text-destructive font-bold">*</span></span>
+                    <span>
+                      Upload Driver Photo <span className="text-destructive font-bold">*</span>
+                    </span>
                   </Label>
                   <span className="rounded bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
                     Mandatory
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Clear front-facing portrait. Displayed to passengers on ride confirmation and live tracking.
+                  Clear front-facing portrait. Displayed to passengers on ride confirmation and live
+                  tracking.
                 </p>
                 <div className="pt-1">
                   <input
@@ -536,19 +852,24 @@ function DriverApplicationForm() {
             </div>
             {photoError && (
               <p className="mt-2 text-xs font-semibold text-destructive flex items-center gap-1">
-                <Info className="size-3.5" /> Please upload your photo before submitting the application.
+                <Info className="size-3.5" /> Please upload your photo before submitting the
+                application.
               </p>
             )}
           </div>
 
           {/* DRIVING LICENCE UPLOAD */}
-          <div className={`rounded-xl border-2 p-4 transition-all ${dlError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}>
+          <div
+            className={`rounded-xl border-2 p-4 transition-all ${dlError ? "border-destructive bg-destructive/5" : "border-dashed border-border bg-background/60"}`}
+          >
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <div className="relative size-20 shrink-0 rounded-lg border-2 border-primary/40 bg-primary/10 overflow-hidden flex items-center justify-center shadow-inner">
                 {dlDataUrl ? (
                   <div className="flex flex-col items-center justify-center text-primary text-[10px] font-bold text-center">
                     <CheckCircle className="size-6 mb-1" />
-                    Doc<br/>Uploaded
+                    Doc
+                    <br />
+                    Uploaded
                   </div>
                 ) : (
                   <ClipboardCheck className="size-9 text-primary/60" />
@@ -567,9 +888,14 @@ function DriverApplicationForm() {
 
               <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Label htmlFor="dl-upload-input" className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5">
+                  <Label
+                    htmlFor="dl-upload-input"
+                    className="text-sm font-bold text-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+                  >
                     <Upload className="size-4 text-primary" />
-                    <span>Upload Driving Licence <span className="text-destructive font-bold">*</span></span>
+                    <span>
+                      Upload Driving Licence <span className="text-destructive font-bold">*</span>
+                    </span>
                   </Label>
                   <span className="rounded bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">
                     Mandatory
@@ -611,37 +937,101 @@ function DriverApplicationForm() {
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="da-name">Full Name</Label>
-              <Input id="da-name" placeholder="Rajesh Kumar" className="mt-1.5 bg-background" {...form.register("full_name")} />
-              {form.formState.errors.full_name && <p className="mt-1 text-xs text-destructive">{form.formState.errors.full_name.message}</p>}
+              <Input
+                id="da-name"
+                placeholder="Rajesh Kumar"
+                className="mt-1.5 bg-background"
+                {...form.register("full_name")}
+              />
+              {form.formState.errors.full_name && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.full_name.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="da-email">Email</Label>
-              <Input id="da-email" type="email" placeholder="you@example.com" className="mt-1.5 bg-background" {...form.register("email")} />
-              {form.formState.errors.email && <p className="mt-1 text-xs text-destructive">{form.formState.errors.email.message}</p>}
+              <Input
+                id="da-email"
+                type="email"
+                placeholder="you@example.com"
+                className="mt-1.5 bg-background"
+                {...form.register("email")}
+              />
+              {form.formState.errors.email && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.email.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="da-phone">Phone</Label>
-              <Input id="da-phone" type="tel" placeholder="+91 98765 43210" className="mt-1.5 bg-background" {...form.register("phone")} />
-              {form.formState.errors.phone && <p className="mt-1 text-xs text-destructive">{form.formState.errors.phone.message}</p>}
+              <Input
+                id="da-phone"
+                type="tel"
+                placeholder="+91 98765 43210"
+                className="mt-1.5 bg-background"
+                {...form.register("phone")}
+              />
+              {form.formState.errors.phone && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.phone.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="da-city">City</Label>
-              <Input id="da-city" placeholder="Delhi" className="mt-1.5 bg-background" {...form.register("city")} />
-              {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
+              <Input
+                id="da-city"
+                placeholder="Delhi"
+                className="mt-1.5 bg-background"
+                {...form.register("city")}
+              />
+              {form.formState.errors.city && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.city.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="da-aadhaar">Aadhaar Number</Label>
-              <Input id="da-aadhaar" placeholder="1234 5678 9012" className="mt-1.5 bg-background" {...form.register("aadhaar_number")} />
-              {form.formState.errors.aadhaar_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.aadhaar_number.message}</p>}
+              <Input
+                id="da-aadhaar"
+                placeholder="1234 5678 9012"
+                className="mt-1.5 bg-background"
+                {...form.register("aadhaar_number")}
+              />
+              {form.formState.errors.aadhaar_number && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.aadhaar_number.message}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="da-exp">Years Driving</Label>
-              <Input id="da-exp" type="number" min={0} max={50} placeholder="3" className="mt-1.5 bg-background" {...form.register("experience_years")} />
+              <Input
+                id="da-exp"
+                type="number"
+                min={0}
+                max={50}
+                placeholder="3"
+                className="mt-1.5 bg-background"
+                {...form.register("experience_years")}
+              />
             </div>
             <div className="col-span-2">
               <Label htmlFor="da-licence">Commercial Licence Number</Label>
-              <Input id="da-licence" placeholder="DL-1420100012345" className="mt-1.5 bg-background" {...form.register("licence_number")} />
-              {form.formState.errors.licence_number && <p className="mt-1 text-xs text-destructive">{form.formState.errors.licence_number.message}</p>}
+              <Input
+                id="da-licence"
+                placeholder="DL-1420100012345"
+                className="mt-1.5 bg-background"
+                {...form.register("licence_number")}
+              />
+              {form.formState.errors.licence_number && (
+                <p className="mt-1 text-xs text-destructive">
+                  {form.formState.errors.licence_number.message}
+                </p>
+              )}
             </div>
 
             {/* DRIVER MODEL SELECTION & "ORANGE STANDARD CAR" CHECKBOX */}
@@ -661,12 +1051,16 @@ function DriverApplicationForm() {
                   className="mt-1"
                 />
                 <div className="flex-1">
-                  <Label htmlFor="da-vehicle" className="cursor-pointer font-bold text-sm text-foreground">
+                  <Label
+                    htmlFor="da-vehicle"
+                    className="cursor-pointer font-bold text-sm text-foreground"
+                  >
                     I bring my own "Orange Standard" Electric Car (Partner Driver)
                   </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Unchecked = <strong>Company Fleet Driver</strong> (drive company Mahindra BE.6 on fixed monthly salary).
-                    Checked = <strong>Partner Driver</strong> (commission model, keep 85% of trip fares).
+                    Unchecked = <strong>Company Fleet Driver</strong> (drive company Mahindra BE.6
+                    on fixed monthly salary). Checked = <strong>Partner Driver</strong> (commission
+                    model, keep 85% of trip fares).
                   </p>
                   <button
                     type="button"
@@ -690,7 +1084,9 @@ function DriverApplicationForm() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="da-vmodel" className="text-xs">EV Model & Make</Label>
+                      <Label htmlFor="da-vmodel" className="text-xs">
+                        EV Model & Make
+                      </Label>
                       <Input
                         id="da-vmodel"
                         placeholder="e.g. Mahindra BE.6 / Tata Curvv EV"
@@ -699,7 +1095,9 @@ function DriverApplicationForm() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="da-vyear" className="text-xs">Manufacturing Year</Label>
+                      <Label htmlFor="da-vyear" className="text-xs">
+                        Manufacturing Year
+                      </Label>
                       <Input
                         id="da-vyear"
                         placeholder="2024 / 2025"
@@ -708,7 +1106,9 @@ function DriverApplicationForm() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="da-vnum" className="text-xs">Vehicle Registration No. (Plate) *</Label>
+                      <Label htmlFor="da-vnum" className="text-xs">
+                        Vehicle Registration No. (Plate) *
+                      </Label>
                       <Input
                         id="da-vnum"
                         placeholder="e.g. DL 01 EV 1234"
@@ -717,7 +1117,9 @@ function DriverApplicationForm() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="da-vchassis" className="text-xs">Chassis Number (VIN) *</Label>
+                      <Label htmlFor="da-vchassis" className="text-xs">
+                        Chassis Number (VIN) *
+                      </Label>
                       <Input
                         id="da-vchassis"
                         placeholder="e.g. MA3EHB6S7P..."
@@ -731,20 +1133,38 @@ function DriverApplicationForm() {
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="da-msg">Anything else you'd like us to know? <span className="text-muted-foreground">(optional)</span></Label>
-              <Textarea id="da-msg" rows={2} placeholder="Experience details or vehicle details..." className="mt-1.5 resize-none bg-background text-sm" {...form.register("message")} />
+              <Label htmlFor="da-msg">
+                Anything else you'd like us to know?{" "}
+                <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Textarea
+                id="da-msg"
+                rows={2}
+                placeholder="Experience details or vehicle details..."
+                className="mt-1.5 resize-none bg-background text-sm"
+                {...form.register("message")}
+              />
             </div>
 
             {/* DPDP Data Collection Notice */}
             <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground leading-relaxed">
               <p>
-                <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By submitting, you consent to Orange Taxi Limited processing your photo, driving licence, and vehicle records for verification and onboarding under our Privacy Policy.
+                <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By
+                submitting, you consent to Orange Taxi Limited processing your photo, driving
+                licence, and vehicle records for verification and onboarding under our Privacy
+                Policy.
               </p>
             </div>
           </div>
 
           <Button type="submit" size="lg" className="w-full" disabled={submitting}>
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : <>Submit Driver Application <ArrowRight className="size-4" /></>}
+            {submitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                Submit Driver Application <ArrowRight className="size-4" />
+              </>
+            )}
           </Button>
         </div>
       </form>
@@ -760,7 +1180,8 @@ function DriverApplicationForm() {
               What Defines an "Orange Standard Cab"?
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Partner drivers bringing their own vehicle must satisfy all three core standards before onboarding.
+              Partner drivers bringing their own vehicle must satisfy all three core standards
+              before onboarding.
             </DialogDescription>
           </DialogHeader>
 
@@ -773,10 +1194,14 @@ function DriverApplicationForm() {
               <div className="space-y-1 flex-1">
                 <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
                   <span>100% Electric Vehicle (EV)</span>
-                  <span className="rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-1.5 py-0.5">Zero Emissions</span>
+                  <span className="rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-1.5 py-0.5">
+                    Zero Emissions
+                  </span>
                 </p>
                 <p className="text-muted-foreground">
-                  The vehicle must strictly be a Battery Electric Vehicle (BEV) such as Mahindra BE.6, Tata Curvv EV, MG ZS EV, or Nexon EV. Hybrid, Petrol, Diesel, or CNG cars are strictly excluded.
+                  The vehicle must strictly be a Battery Electric Vehicle (BEV) such as Mahindra
+                  BE.6, Tata Curvv EV, MG ZS EV, or Nexon EV. Hybrid, Petrol, Diesel, or CNG cars
+                  are strictly excluded.
                 </p>
               </div>
             </div>
@@ -789,10 +1214,14 @@ function DriverApplicationForm() {
               <div className="space-y-1 flex-1">
                 <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
                   <span>Signature Orange Exterior Color</span>
-                  <span className="rounded bg-orange-500/20 text-primary text-[10px] font-bold px-1.5 py-0.5">Brand Identity</span>
+                  <span className="rounded bg-orange-500/20 text-primary text-[10px] font-bold px-1.5 py-0.5">
+                    Brand Identity
+                  </span>
                 </p>
                 <p className="text-muted-foreground">
-                  Vehicle exterior body must be factory paint or professionally wrapped in official Deep Sunset Orange, with zero visible scratches or dents, and commercial transport registration plates.
+                  Vehicle exterior body must be factory paint or professionally wrapped in official
+                  Deep Sunset Orange, with zero visible scratches or dents, and commercial transport
+                  registration plates.
                 </p>
               </div>
             </div>
@@ -805,10 +1234,14 @@ function DriverApplicationForm() {
               <div className="space-y-1 flex-1">
                 <p className="font-bold text-sm text-foreground flex items-center gap-1.5">
                   <span>Spotless Interior & Pre-Cooled AC</span>
-                  <span className="rounded bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5">Passenger Comfort</span>
+                  <span className="rounded bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-1.5 py-0.5">
+                    Passenger Comfort
+                  </span>
                 </p>
                 <p className="text-muted-foreground">
-                  Cabin must be cleaned daily, completely odor-free, with working air conditioning switched on before passenger pickup, complimentary water bottle holder, and quiet electric ride.
+                  Cabin must be cleaned daily, completely odor-free, with working air conditioning
+                  switched on before passenger pickup, complimentary water bottle holder, and quiet
+                  electric ride.
                 </p>
               </div>
             </div>
@@ -819,9 +1252,17 @@ function DriverApplicationForm() {
                 <BadgeIndianRupee className="size-4" /> Partner Driver Commission Agreement
               </p>
               <ul className="space-y-1 text-muted-foreground text-[11px] list-disc list-inside">
-                <li>Partner drivers retain <strong>85%</strong> of all ride fares collected.</li>
-                <li>A fixed <strong>15% platform commission</strong> is payable to Orange Taxi Limited.</li>
-                <li>Partner drivers manage their own vehicle maintenance and charging, and are segregated from the company depot cash settlement ledger.</li>
+                <li>
+                  Partner drivers retain <strong>85%</strong> of all ride fares collected.
+                </li>
+                <li>
+                  A fixed <strong>15% platform commission</strong> is payable to Orange Taxi
+                  Limited.
+                </li>
+                <li>
+                  Partner drivers manage their own vehicle maintenance and charging, and are
+                  segregated from the company depot cash settlement ledger.
+                </li>
               </ul>
             </div>
           </div>
@@ -838,6 +1279,11 @@ function DriverApplicationForm() {
 }
 
 function Intro({ eyebrow, title, copy }: { eyebrow: string; title: string; copy?: string }) {
-  return <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p><h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{title}</h2>{copy && <p className="mt-5 max-w-xl leading-7 text-muted-foreground">{copy}</p>}</div>;
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+      <h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{title}</h2>
+      {copy && <p className="mt-5 max-w-xl leading-7 text-muted-foreground">{copy}</p>}
+    </div>
+  );
 }
-

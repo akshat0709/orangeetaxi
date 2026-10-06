@@ -47,7 +47,13 @@ const STAR_LABELS: Record<number, string> = {
 
 const TIP_OPTIONS = [0, 20, 50, 100];
 
-export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }: RatingModalProps) {
+export function RatingModal({
+  open,
+  onOpenChange,
+  booking,
+  driver,
+  onSubmitted,
+}: RatingModalProps) {
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [selectedCompliments, setSelectedCompliments] = useState<string[]>([]);
@@ -60,7 +66,7 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
 
   function toggleCompliment(label: string) {
     setSelectedCompliments((prev) =>
-      prev.includes(label) ? prev.filter((c) => c !== label) : [...prev, label]
+      prev.includes(label) ? prev.filter((c) => c !== label) : [...prev, label],
     );
   }
 
@@ -70,10 +76,7 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
 
     try {
       // 1. Update the booking with rating and review
-      const fullReview = [
-        ...selectedCompliments,
-        comment.trim(),
-      ].filter(Boolean).join(" · ");
+      const fullReview = [...selectedCompliments, comment.trim()].filter(Boolean).join(" · ");
 
       const { error: bookingErr } = await supabase
         .from("bookings")
@@ -110,14 +113,17 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
           otherRatings.push(rating);
 
           const newAvg = Number(
-            (otherRatings.reduce((a, b) => a + b, 0) / otherRatings.length).toFixed(1)
+            (otherRatings.reduce((a, b) => a + b, 0) / otherRatings.length).toFixed(1),
           );
           const totalRides = Math.max(completedCount || 0, otherRatings.length, 1);
 
-          await supabase.from("drivers").update({
-            rating: newAvg,
-            total_rides: totalRides,
-          }).eq("id", driverId);
+          await supabase
+            .from("drivers")
+            .update({
+              rating: newAvg,
+              total_rides: totalRides,
+            })
+            .eq("id", driverId);
         } catch (e) {
           console.warn("Driver rating aggregate notice:", e);
         }
@@ -167,7 +173,8 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
             </div>
             <h3 className="text-xl font-bold font-serif">Thank You!</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Your feedback directly supports our drivers and ensures an exceptional Orange experience.
+              Your feedback directly supports our drivers and ensures an exceptional Orange
+              experience.
             </p>
           </div>
         ) : (
@@ -178,7 +185,8 @@ export function RatingModal({ open, onOpenChange, booking, driver, onSubmitted }
               </div>
               <DialogTitle className="text-xl font-bold font-serif">Ride Completed</DialogTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                How was your experience with <strong className="text-foreground">{driver?.full_name || "your driver"}</strong>?
+                How was your experience with{" "}
+                <strong className="text-foreground">{driver?.full_name || "your driver"}</strong>?
               </p>
               {driver?.vehicle_number && driver.vehicle_number !== "Unassigned" && (
                 <div className="mt-1">

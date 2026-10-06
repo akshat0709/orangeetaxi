@@ -18,7 +18,9 @@ export function CookieBanner() {
       <div className="mx-auto max-w-4xl rounded-2xl bg-foreground text-background shadow-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pointer-events-auto border border-white/10 dark:border-white/5 animate-in slide-in-from-bottom-10 fade-in duration-500">
         <div className="flex-1 text-sm leading-relaxed text-background/90">
           <p>
-            <strong>We value your privacy.</strong> We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies.
+            <strong>We value your privacy.</strong> We use cookies to enhance your browsing
+            experience, serve personalized ads or content, and analyze our traffic. By clicking
+            "Accept All", you consent to our use of cookies.
           </p>
         </div>
         <div className="flex w-full sm:w-auto items-center gap-3 shrink-0">

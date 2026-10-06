@@ -1,5 +1,15 @@
 import { useEffect, useState, useRef } from "react";
-import { MessageSquare, Send, Phone, X, Car, User, CheckCheck, MapPin, Navigation } from "lucide-react";
+import {
+  MessageSquare,
+  Send,
+  Phone,
+  X,
+  Car,
+  User,
+  CheckCheck,
+  MapPin,
+  Navigation,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,7 +121,7 @@ export function RideChatSheet({
       if (brandNew.length === 0) return prev;
 
       const merged = [...prev, ...brandNew].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
       );
 
       try {
@@ -167,7 +177,7 @@ export function RideChatSheet({
         toast.error("Could not obtain GPS. Please verify location permissions.");
         setSharingLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
 
@@ -200,7 +210,7 @@ export function RideChatSheet({
             const brandNew = parsed.filter((m) => m && m.id && !existingIds.has(m.id));
             if (brandNew.length === 0) return prev;
             return [...prev, ...brandNew].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
             );
           });
         }
@@ -208,11 +218,13 @@ export function RideChatSheet({
 
       // Broadcast history request so the other party sends any messages we might have missed
       if (channelRef.current) {
-        channelRef.current.send({
-          type: "broadcast",
-          event: "request_chat_history",
-          payload: { requester: currentUserTypeRef.current },
-        }).catch(() => {});
+        channelRef.current
+          .send({
+            type: "broadcast",
+            event: "request_chat_history",
+            payload: { requester: currentUserTypeRef.current },
+          })
+          .catch(() => {});
       }
     }
   }, [isOpen, storageKey]);
@@ -245,11 +257,13 @@ export function RideChatSheet({
       .on("broadcast", { event: "request_chat_history" }, () => {
         // If other peer requested chat history, send our current messages list
         if (messagesRef.current.length > 0 && channelRef.current) {
-          channelRef.current.send({
-            type: "broadcast",
-            event: "sync_chat_history",
-            payload: { messages: messagesRef.current },
-          }).catch(() => {});
+          channelRef.current
+            .send({
+              type: "broadcast",
+              event: "sync_chat_history",
+              payload: { messages: messagesRef.current },
+            })
+            .catch(() => {});
         }
       })
       .on("broadcast", { event: "sync_chat_history" }, (payload: any) => {
@@ -308,7 +322,9 @@ export function RideChatSheet({
     const newMsg: ChatMessage = {
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       sender: currentUserTypeRef.current,
-      senderName: currentUserNameRef.current || (currentUserTypeRef.current === "driver" ? "Driver" : "Passenger"),
+      senderName:
+        currentUserNameRef.current ||
+        (currentUserTypeRef.current === "driver" ? "Driver" : "Passenger"),
       text,
       timestamp: new Date().toISOString(),
     };
@@ -329,7 +345,7 @@ export function RideChatSheet({
       window.dispatchEvent(
         new CustomEvent("orange_chat_local_event", {
           detail: { bookingId, message: newMsg },
-        })
+        }),
       );
     } catch {}
 
@@ -436,10 +452,7 @@ export function RideChatSheet({
                 : "";
 
               return (
-                <div
-                  key={m.id}
-                  className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
-                >
+                <div key={m.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                   <div
                     className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
                       isMe

@@ -2,20 +2,74 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Award, Banknote, BatteryCharging, Bell, BellOff, Calendar, Car, Check, CheckCircle, Clock, Copy, Heart, Loader2, MapPin, MessageSquare, Navigation, Phone, PhoneCall, Power, Snowflake, Sparkles, Star, TrendingUp, User, Volume2, VolumeX, Wallet, X, Map, Building2, Handshake, Percent, ShieldCheck, Smartphone, QrCode, AlertTriangle } from "lucide-react";
+import {
+  ArrowRight,
+  Award,
+  Banknote,
+  BatteryCharging,
+  Bell,
+  BellOff,
+  Calendar,
+  Car,
+  Check,
+  CheckCircle,
+  Clock,
+  Copy,
+  Heart,
+  Loader2,
+  MapPin,
+  MessageSquare,
+  Navigation,
+  Phone,
+  PhoneCall,
+  Power,
+  Snowflake,
+  Sparkles,
+  Star,
+  TrendingUp,
+  User,
+  Volume2,
+  VolumeX,
+  Wallet,
+  X,
+  Map,
+  Building2,
+  Handshake,
+  Percent,
+  ShieldCheck,
+  Smartphone,
+  QrCode,
+  AlertTriangle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { getBookingVehiclePlate, lockBookingVehicle, saveRideVehiclePlate, formatVehicleNameWithPlate, resolveDriverDetails } from "@/lib/ride-vehicle";
-import { parseCleanCoords, parseRidePreferences, getCabinClimateBadge } from "@/lib/ride-preferences";
+import {
+  getBookingVehiclePlate,
+  lockBookingVehicle,
+  saveRideVehiclePlate,
+  formatVehicleNameWithPlate,
+  resolveDriverDetails,
+} from "@/lib/ride-vehicle";
+import {
+  parseCleanCoords,
+  parseRidePreferences,
+  getCabinClimateBadge,
+} from "@/lib/ride-preferences";
 import { PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
@@ -28,20 +82,41 @@ export const Route = createFileRoute("/driver-console")({
 });
 
 interface Booking {
-  id: string; reference: string; status: string;
-  pickup_area: string; drop_area: string;
-  pickup_address?: string; drop_address?: string;
-  estimated_fare: number; final_fare: number | null;
-  vehicle_name: string; payment_method: string; payment_status?: string;
-  created_at: string; accepted_at?: string; arrived_at?: string | null; started_at?: string; completed_at: string | null;
-  distance_km: number; rating: number | null;
-  customer_id?: string; driver_id?: string;
-  notes?: string; ride_otp?: string;
+  id: string;
+  reference: string;
+  status: string;
+  pickup_area: string;
+  drop_area: string;
+  pickup_address?: string;
+  drop_address?: string;
+  estimated_fare: number;
+  final_fare: number | null;
+  vehicle_name: string;
+  payment_method: string;
+  payment_status?: string;
+  created_at: string;
+  accepted_at?: string;
+  arrived_at?: string | null;
+  started_at?: string;
+  completed_at: string | null;
+  distance_km: number;
+  rating: number | null;
+  customer_id?: string;
+  driver_id?: string;
+  notes?: string;
+  ride_otp?: string;
   scheduled_at?: string | null;
 }
 
 function formatScheduledDeparture(isoString?: string | null) {
-  if (!isoString) return { fullText: "Advance Booking", countdown: "Scheduled", isUrgent: false, isNearDispatch: false, diffMin: 999 };
+  if (!isoString)
+    return {
+      fullText: "Advance Booking",
+      countdown: "Scheduled",
+      isUrgent: false,
+      isNearDispatch: false,
+      diffMin: 999,
+    };
   const target = new Date(isoString);
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
@@ -49,8 +124,16 @@ function formatScheduledDeparture(isoString?: string | null) {
   const diffHrs = Math.round(diffMs / (60000 * 60));
   const diffDays = Math.round(diffMs / (60000 * 60 * 24));
 
-  const timeStr = target.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
-  const dateStr = target.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+  const timeStr = target.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const dateStr = target.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 
   let countdown = "";
   if (diffMin <= 0) {
@@ -69,14 +152,25 @@ function formatScheduledDeparture(isoString?: string | null) {
   return { fullText: `${dateStr} at ${timeStr}`, countdown, isUrgent, isNearDispatch, diffMin };
 }
 interface DriverProfile {
-  id: string; user_id: string; full_name: string; is_online: boolean;
-  rating: number; total_rides: number; city: string;
-  phone?: string; vehicle_model?: string; vehicle_number?: string;
+  id: string;
+  user_id: string;
+  full_name: string;
+  is_online: boolean;
+  rating: number;
+  total_rides: number;
+  city: string;
+  phone?: string;
+  vehicle_model?: string;
+  vehicle_number?: string;
   vehicle_code?: string;
-  driver_type?: string; photo_url?: string; chassis_number?: string;
+  driver_type?: string;
+  photo_url?: string;
+  chassis_number?: string;
 }
 interface ServiceArea {
-  name: string; lat: number; lng: number;
+  name: string;
+  lat: number;
+  lng: number;
 }
 
 const STATUS_FLOW: Record<string, { label: string; next: string; nextLabel: string } | null> = {
@@ -87,12 +181,18 @@ const STATUS_FLOW: Record<string, { label: string; next: string; nextLabel: stri
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  searching: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40",
-  accepted: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/40",
-  arrived: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/60 dark:text-violet-300 dark:border-violet-800/40",
-  in_progress: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800/40",
-  completed: "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/60 dark:text-green-300 dark:border-green-800/40",
-  cancelled: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/40",
+  searching:
+    "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40",
+  accepted:
+    "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/40",
+  arrived:
+    "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-950/60 dark:text-violet-300 dark:border-violet-800/40",
+  in_progress:
+    "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800/40",
+  completed:
+    "bg-green-100 text-green-700 border-green-200 dark:bg-green-950/60 dark:text-green-300 dark:border-green-800/40",
+  cancelled:
+    "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/40",
 };
 
 function playRideRequestChime() {
@@ -163,7 +263,9 @@ function DriverConsolePage() {
   const [recentRides, setRecentRides] = useState<Booking[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
   const [commissionSettlements, setCommissionSettlements] = useState<any[]>([]);
-  const [customerProfiles, setCustomerProfiles] = useState<Record<string, { full_name: string; phone: string }>>({});
+  const [customerProfiles, setCustomerProfiles] = useState<
+    Record<string, { full_name: string; phone: string }>
+  >({});
   const [activeChatRide, setActiveChatRide] = useState<Booking | null>(null);
   const [unreadChats, setUnreadChats] = useState<Record<string, number>>({});
   const [driverReviews, setDriverReviews] = useState<any[]>([]);
@@ -210,7 +312,10 @@ function DriverConsolePage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user) { navigate({ to: "/login", search: { redirect: "/driver-console" } }); return; }
+      if (!user) {
+        navigate({ to: "/login", search: { redirect: "/driver-console" } });
+        return;
+      }
       if (role && role !== "driver" && role !== "admin") {
         toast.error("Driver access required.");
         navigate({ to: "/" });
@@ -221,55 +326,68 @@ function DriverConsolePage() {
   useEffect(() => {
     if (!user) return;
     loadData();
-    const channel = supabase.channel("driver-bookings")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, (payload) => {
-        if (payload.new?.status === "searching" && !payload.new?.driver_id) {
-          if (soundEnabled) {
-            playRideRequestChime();
+    const channel = supabase
+      .channel("driver-bookings")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "bookings" },
+        (payload) => {
+          if (payload.new?.status === "searching" && !payload.new?.driver_id) {
+            if (soundEnabled) {
+              playRideRequestChime();
+            }
+            toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+            sendRideNotification({
+              title: "New Ride Request Nearby! ⚡",
+              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              url: "/driver-console",
+              tag: `driver-req-${payload.new?.id || Date.now()}`,
+            });
+          } else if (payload.new?.status === "scheduled" && !payload.new?.driver_id) {
+            if (soundEnabled) {
+              playRideRequestChime();
+            }
+            toast.info("📅 New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
+            sendRideNotification({
+              title: "New Scheduled Booking Available! 📅",
+              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              url: "/driver-console",
+              tag: `driver-sched-${payload.new?.id || Date.now()}`,
+            });
           }
-          toast.info("🔔 New ride request available nearby!", { duration: 4000 });
-          sendRideNotification({
-            title: "New Ride Request Nearby! ⚡",
-            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
-            url: "/driver-console",
-            tag: `driver-req-${payload.new?.id || Date.now()}`,
-          });
-        } else if (payload.new?.status === "scheduled" && !payload.new?.driver_id) {
-          if (soundEnabled) {
-            playRideRequestChime();
+          loadData();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings" },
+        (payload) => {
+          if (payload.new?.status === "searching" && payload.old?.status !== "searching") {
+            if (soundEnabled) {
+              playRideRequestChime();
+            }
+            toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+            sendRideNotification({
+              title: "New Ride Request Nearby! ⚡",
+              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              url: "/driver-console",
+              tag: `driver-req-${payload.new?.id || Date.now()}`,
+            });
+          } else if (payload.new?.status === "scheduled" && payload.old?.status !== "scheduled") {
+            if (soundEnabled) {
+              playRideRequestChime();
+            }
+            toast.info("📅 Advance Scheduled Booking Available in Fleet Pool!", { duration: 4000 });
           }
-          toast.info("📅 New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
-          sendRideNotification({
-            title: "New Scheduled Booking Available! 📅",
-            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
-            url: "/driver-console",
-            tag: `driver-sched-${payload.new?.id || Date.now()}`,
-          });
-        }
-        loadData();
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bookings" }, (payload) => {
-        if (payload.new?.status === "searching" && payload.old?.status !== "searching") {
-          if (soundEnabled) {
-            playRideRequestChime();
-          }
-          toast.info("🔔 New ride request available nearby!", { duration: 4000 });
-          sendRideNotification({
-            title: "New Ride Request Nearby! ⚡",
-            body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
-            url: "/driver-console",
-            tag: `driver-req-${payload.new?.id || Date.now()}`,
-          });
-        } else if (payload.new?.status === "scheduled" && payload.old?.status !== "scheduled") {
-          if (soundEnabled) {
-            playRideRequestChime();
-          }
-          toast.info("📅 Advance Scheduled Booking Available in Fleet Pool!", { duration: 4000 });
-        }
-        loadData();
-      })
+          loadData();
+        },
+      )
       .on("postgres_changes", { event: "*", schema: "public", table: "drivers" }, () => loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "driver_cash_settlements" }, () => loadData())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "driver_cash_settlements" },
+        () => loadData(),
+      )
       .subscribe();
 
     const handleStorageUpdate = () => loadData();
@@ -285,39 +403,53 @@ function DriverConsolePage() {
     };
   }, [user, soundEnabled]);
 
-
   // Live location sharing
   useEffect(() => {
     if (!driver || !driver.is_online) return;
     const watchId = navigator.geolocation.watchPosition(
       async (pos) => {
-        await supabase.from("drivers").update({
-          current_lat: pos.coords.latitude,
-          current_lng: pos.coords.longitude,
-          location_updated_at: new Date().toISOString()
-        }).eq("id", driver.id);
+        await supabase
+          .from("drivers")
+          .update({
+            current_lat: pos.coords.latitude,
+            current_lng: pos.coords.longitude,
+            location_updated_at: new Date().toISOString(),
+          })
+          .eq("id", driver.id);
       },
       (err) => console.warn("Location sharing error:", err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [driver?.is_online, driver?.id]);
 
   async function loadData() {
     if (!user) return;
-    let { data: driverData } = await supabase.from("drivers").select("*").eq("user_id", user.id).maybeSingle();
-    
+    let { data: driverData } = await supabase
+      .from("drivers")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
     // Resolve login phone from auth user_metadata, user.phone, profiles, or driver_applications
     let loginPhone = (user.user_metadata?.phone || user.phone || "").trim();
     if (!loginPhone) {
       try {
-        const { data: prof } = await supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle();
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", user.id)
+          .maybeSingle();
         if (prof?.phone && prof.phone.trim()) loginPhone = prof.phone.trim();
       } catch (e) {}
     }
     if (!loginPhone) {
       try {
-        const { data: appData } = await supabase.from("driver_applications").select("phone").eq("email", user.email).maybeSingle();
+        const { data: appData } = await supabase
+          .from("driver_applications")
+          .select("phone")
+          .eq("email", user.email)
+          .maybeSingle();
         if (appData?.phone && appData.phone.trim()) loginPhone = appData.phone.trim();
       } catch (e) {}
     }
@@ -364,14 +496,28 @@ function DriverConsolePage() {
 
       let parsedNotes: any = {};
       try {
-        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+        if (
+          appData?.admin_notes &&
+          typeof appData.admin_notes === "string" &&
+          appData.admin_notes.trim().startsWith("{")
+        ) {
           parsedNotes = JSON.parse(appData.admin_notes);
         }
       } catch (e) {}
 
-      const isPartner = Boolean(appData?.owns_vehicle || appData?.driver_type === "partner" || parsedNotes?.driver_type === "partner");
-      const plate = appData?.vehicle_number || parsedNotes?.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
-      const model = appData?.vehicle_model || parsedNotes?.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+      const isPartner = Boolean(
+        appData?.owns_vehicle ||
+        appData?.driver_type === "partner" ||
+        parsedNotes?.driver_type === "partner",
+      );
+      const plate =
+        appData?.vehicle_number ||
+        parsedNotes?.vehicle_number ||
+        (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+      const model =
+        appData?.vehicle_model ||
+        parsedNotes?.vehicle_model ||
+        (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
       const photo = appData?.photo_url || parsedNotes?.photo_url || "";
 
       const metaObj = {
@@ -381,15 +527,22 @@ function DriverConsolePage() {
         type: isPartner ? "partner" : "company",
       };
 
-      const { data: newDriver } = await supabase.from("drivers").insert({
-        user_id: user.id,
-        full_name: appData?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "New Driver",
-        city: appData?.city || "Bengaluru",
-        phone: loginPhone,
-        vehicle_model: model,
-        vehicle_number: plate,
-        
-      }).select().single();
+      const { data: newDriver } = await supabase
+        .from("drivers")
+        .insert({
+          user_id: user.id,
+          full_name:
+            appData?.full_name ||
+            user.user_metadata?.full_name ||
+            user.email?.split("@")[0] ||
+            "New Driver",
+          city: appData?.city || "Bengaluru",
+          phone: loginPhone,
+          vehicle_model: model,
+          vehicle_number: plate,
+        })
+        .select()
+        .single();
       driverData = newDriver;
     } else if (driverData && loginPhone) {
       // Sync driver phone if missing or if login phone was updated
@@ -399,7 +552,10 @@ function DriverConsolePage() {
       }
     }
 
-    if (!driverData) { setLoading(false); return; }
+    if (!driverData) {
+      setLoading(false);
+      return;
+    }
 
     // Resolve driver photo, operating model, and partner vehicle details from application
     try {
@@ -407,14 +563,20 @@ function DriverConsolePage() {
 
       let parsedNotes: any = {};
       try {
-        if (appData?.admin_notes && typeof appData.admin_notes === "string" && appData.admin_notes.trim().startsWith("{")) {
+        if (
+          appData?.admin_notes &&
+          typeof appData.admin_notes === "string" &&
+          appData.admin_notes.trim().startsWith("{")
+        ) {
           parsedNotes = JSON.parse(appData.admin_notes);
         }
       } catch (e) {}
 
       let storedMeta: any = {};
       try {
-        storedMeta = JSON.parse(localStorage.getItem(`orange_app_meta_${user.email?.toLowerCase()}`) || "{}");
+        storedMeta = JSON.parse(
+          localStorage.getItem(`orange_app_meta_${user.email?.toLowerCase()}`) || "{}",
+        );
       } catch (e) {}
 
       const isPartner = Boolean(
@@ -422,27 +584,46 @@ function DriverConsolePage() {
         appData?.owns_vehicle ||
         appData?.driver_type === "partner" ||
         parsedNotes?.driver_type === "partner" ||
-        storedMeta?.driver_type === "partner"
+        storedMeta?.driver_type === "partner",
       );
 
-      const resolvedPlate = appData?.vehicle_number || parsedNotes?.vehicle_number || storedMeta?.vehicle_number ||
-        (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned" ? driverData.vehicle_number : "") ||
+      const resolvedPlate =
+        appData?.vehicle_number ||
+        parsedNotes?.vehicle_number ||
+        storedMeta?.vehicle_number ||
+        (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned"
+          ? driverData.vehicle_number
+          : "") ||
         (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
 
-      const resolvedModel = appData?.vehicle_model || parsedNotes?.vehicle_model || storedMeta?.vehicle_model ||
-        driverData.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+      const resolvedModel =
+        appData?.vehicle_model ||
+        parsedNotes?.vehicle_model ||
+        storedMeta?.vehicle_model ||
+        driverData.vehicle_model ||
+        (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
 
-      const resolvedPhoto = appData?.photo_url || parsedNotes?.photo_url || storedMeta?.photo_url || driverData.photo_url || "";
+      const resolvedPhoto =
+        appData?.photo_url ||
+        parsedNotes?.photo_url ||
+        storedMeta?.photo_url ||
+        driverData.photo_url ||
+        "";
 
       // Decode existing vehicle_code if encoded with ORANGE_META
-      if (driverData.vehicle_code && typeof driverData.vehicle_code === "string" && driverData.vehicle_code.startsWith("ORANGE_META:")) {
+      if (
+        driverData.vehicle_code &&
+        typeof driverData.vehicle_code === "string" &&
+        driverData.vehicle_code.startsWith("ORANGE_META:")
+      ) {
         try {
           const metaDecoded = JSON.parse(driverData.vehicle_code.replace("ORANGE_META:", ""));
           if (!driverData.photo_url && metaDecoded.photo) driverData.photo_url = metaDecoded.photo;
         } catch (e) {}
       }
 
-      const needsPlateSync = !driverData.vehicle_number || driverData.vehicle_number === "Unassigned";
+      const needsPlateSync =
+        !driverData.vehicle_number || driverData.vehicle_number === "Unassigned";
       const needsCodeSync = false;
       const needsModelSync = !driverData.vehicle_model;
 
@@ -456,7 +637,6 @@ function DriverConsolePage() {
         const dbUpdates: any = {
           vehicle_number: resolvedPlate,
           vehicle_model: resolvedModel,
-          
         };
         try {
           await supabase.from("drivers").update(dbUpdates).eq("id", driverData.id);
@@ -473,8 +653,16 @@ function DriverConsolePage() {
         try {
           localStorage.setItem(`orange_driver_photo_${driverData.id}`, resolvedPhoto);
           if (user.id) localStorage.setItem(`orange_driver_photo_${user.id}`, resolvedPhoto);
-          if (user.email) localStorage.setItem(`orange_driver_photo_by_email_${user.email.toLowerCase()}`, resolvedPhoto);
-          if (loginPhone) localStorage.setItem(`orange_driver_photo_by_phone_${loginPhone.replace(/\D/g, "")}`, resolvedPhoto);
+          if (user.email)
+            localStorage.setItem(
+              `orange_driver_photo_by_email_${user.email.toLowerCase()}`,
+              resolvedPhoto,
+            );
+          if (loginPhone)
+            localStorage.setItem(
+              `orange_driver_photo_by_phone_${loginPhone.replace(/\D/g, "")}`,
+              resolvedPhoto,
+            );
         } catch (e) {}
       }
 
@@ -494,18 +682,44 @@ function DriverConsolePage() {
       { data: requests },
       { data: schedData },
       { data: recent },
-      { data: settleData }
+      { data: settleData },
     ] = await Promise.all([
       supabase.from("service_areas").select("*"),
-      supabase.from("bookings").select("*").eq("driver_id", driverData.id).in("status", ["accepted", "arrived", "in_progress"]).order("created_at", { ascending: false }),
-      supabase.from("bookings").select("*").eq("status", "searching").is("driver_id", null).order("created_at", { ascending: false }).limit(20),
-      supabase.from("bookings").select("*").eq("status", "scheduled").order("scheduled_at", { ascending: true }).limit(30),
-      supabase.from("bookings").select("*").eq("driver_id", driverData.id).eq("status", "completed").order("completed_at", { ascending: false }).limit(100),
-      supabase.from("driver_cash_settlements").select("*").eq("driver_id", driverData.id).order("created_at", { ascending: false })
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("driver_id", driverData.id)
+        .in("status", ["accepted", "arrived", "in_progress"])
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("status", "searching")
+        .is("driver_id", null)
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("status", "scheduled")
+        .order("scheduled_at", { ascending: true })
+        .limit(30),
+      supabase
+        .from("bookings")
+        .select("*")
+        .eq("driver_id", driverData.id)
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from("driver_cash_settlements")
+        .select("*")
+        .eq("driver_id", driverData.id)
+        .order("created_at", { ascending: false }),
     ]);
 
     const areaMap: Record<string, ServiceArea> = {};
-    (areaData || []).forEach((a: any) => areaMap[a.name] = a);
+    (areaData || []).forEach((a: any) => (areaMap[a.name] = a));
     setAreas(areaMap);
 
     const activeList = (active as Booking[]) ?? [];
@@ -514,41 +728,57 @@ function DriverConsolePage() {
     const rawReqList = (requests as Booking[]) ?? [];
     const now = Date.now();
     const declines = JSON.parse(localStorage.getItem("orange_declines") || "{}");
-    
+
     let reqList: any[] = [];
     if (driverData.is_online) {
-      reqList = rawReqList.filter(r => {
-        if (driverData.current_lat && driverData.current_lng && r.pickup_lat && r.pickup_lng) {
-          const d = getDistanceInKm(driverData.current_lat, driverData.current_lng, r.pickup_lat, r.pickup_lng);
-          if (d > 5) return false;
-        }
-        const dec = declines[r.id];
-        if (dec) {
-          if (dec.count >= 2) return false;
-          if (dec.count === 1 && (now - dec.lastDeclinedAt < 30000)) return false;
-        }
-        return true;
-      }).slice(0, 5);
+      reqList = rawReqList
+        .filter((r) => {
+          if (driverData.current_lat && driverData.current_lng && r.pickup_lat && r.pickup_lng) {
+            const d = getDistanceInKm(
+              driverData.current_lat,
+              driverData.current_lng,
+              r.pickup_lat,
+              r.pickup_lng,
+            );
+            if (d > 5) return false;
+          }
+          const dec = declines[r.id];
+          if (dec) {
+            if (dec.count >= 2) return false;
+            if (dec.count === 1 && now - dec.lastDeclinedAt < 30000) return false;
+          }
+          return true;
+        })
+        .slice(0, 5);
     }
     setNewRequests(reqList);
 
     const rawSchedList = (schedData as Booking[]) ?? [];
-    const schedList = rawSchedList.filter(b => !b.driver_id || b.driver_id === driverData.id);
+    const schedList = rawSchedList.filter((b) => !b.driver_id || b.driver_id === driverData.id);
     setScheduledBookings(schedList);
 
-    const allCustIds = Array.from(new Set([
-      ...activeList.map(b => b.customer_id),
-      ...reqList.map(b => b.customer_id),
-      ...schedList.map(b => b.customer_id),
-    ].filter(Boolean)));
+    const allCustIds = Array.from(
+      new Set(
+        [
+          ...activeList.map((b) => b.customer_id),
+          ...reqList.map((b) => b.customer_id),
+          ...schedList.map((b) => b.customer_id),
+        ].filter(Boolean),
+      ),
+    );
 
     if (allCustIds.length > 0) {
       try {
-        const { data: profs } = await supabase.from("profiles").select("id, full_name, phone").in("id", allCustIds);
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, phone")
+          .in("id", allCustIds);
         if (profs) {
           const map: Record<string, { full_name: string; phone: string }> = {};
-          profs.forEach((p: any) => { map[p.id] = { full_name: p.full_name || "Passenger", phone: p.phone || "" }; });
-          setCustomerProfiles(prev => ({ ...prev, ...map }));
+          profs.forEach((p: any) => {
+            map[p.id] = { full_name: p.full_name || "Passenger", phone: p.phone || "" };
+          });
+          setCustomerProfiles((prev) => ({ ...prev, ...map }));
         }
       } catch (e) {}
     }
@@ -563,23 +793,36 @@ function DriverConsolePage() {
 
     const recentList = (recent as Booking[]) ?? [];
     if (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned") {
-      recentList.forEach(r => saveRideVehiclePlate(r.id, driverData.vehicle_number, r.reference));
+      recentList.forEach((r) => saveRideVehiclePlate(r.id, driverData.vehicle_number, r.reference));
     }
     setRecentRides(recentList);
 
     const totalCompleted = recentList.length;
-    const ratedRides = recentList.filter(r => r.rating);
-    const calculatedAvgRating = ratedRides.length > 0
-      ? Number((ratedRides.reduce((s, r) => s + Number(r.rating || 0), 0) / ratedRides.length).toFixed(1))
-      : driverData.rating || 5.0;
+    const ratedRides = recentList.filter((r) => r.rating);
+    const calculatedAvgRating =
+      ratedRides.length > 0
+        ? Number(
+            (ratedRides.reduce((s, r) => s + Number(r.rating || 0), 0) / ratedRides.length).toFixed(
+              1,
+            ),
+          )
+        : driverData.rating || 5.0;
 
-    if (totalCompleted > (driverData.total_rides || 0) || (ratedRides.length > 0 && Math.abs((driverData.rating || 0) - calculatedAvgRating) > 0.05)) {
+    if (
+      totalCompleted > (driverData.total_rides || 0) ||
+      (ratedRides.length > 0 && Math.abs((driverData.rating || 0) - calculatedAvgRating) > 0.05)
+    ) {
       try {
         const nextRides = Math.max(driverData.total_rides || 0, totalCompleted);
-        await supabase.from("drivers").update({ total_rides: nextRides, rating: calculatedAvgRating }).eq("id", driverData.id);
+        await supabase
+          .from("drivers")
+          .update({ total_rides: nextRides, rating: calculatedAvgRating })
+          .eq("id", driverData.id);
         driverData.total_rides = nextRides;
         driverData.rating = calculatedAvgRating;
-        setDriver(prev => prev ? { ...prev, total_rides: nextRides, rating: calculatedAvgRating } : prev);
+        setDriver((prev) =>
+          prev ? { ...prev, total_rides: nextRides, rating: calculatedAvgRating } : prev,
+        );
       } catch (e) {}
     }
 
@@ -607,14 +850,24 @@ function DriverConsolePage() {
       const storedComm = localStorage.getItem("orange_commission_settlements");
       if (storedComm) {
         const allComm = JSON.parse(storedComm);
-        setCommissionSettlements(allComm.filter((c: any) => c.driver_id === driverData.id || (driverData.full_name && c.driver_name?.toLowerCase() === driverData.full_name?.toLowerCase())));
+        setCommissionSettlements(
+          allComm.filter(
+            (c: any) =>
+              c.driver_id === driverData.id ||
+              (driverData.full_name &&
+                c.driver_name?.toLowerCase() === driverData.full_name?.toLowerCase()),
+          ),
+        );
       }
     } catch (e) {}
 
     try {
       const storedReviews = JSON.parse(localStorage.getItem("orange_driver_reviews") || "[]");
       if (driverData) {
-        const matched = storedReviews.filter((r: any) => !r.driver_id || r.driver_id === driverData.id || r.driver_name === driverData.full_name);
+        const matched = storedReviews.filter(
+          (r: any) =>
+            !r.driver_id || r.driver_id === driverData.id || r.driver_name === driverData.full_name,
+        );
         setDriverReviews(matched.length > 0 ? matched : storedReviews);
       } else {
         setDriverReviews(storedReviews);
@@ -622,16 +875,18 @@ function DriverConsolePage() {
     } catch (e) {}
 
     setLoading(false);
-
   }
 
   async function toggleOnline() {
     if (!driver) return;
     setToggling(true);
     const newStatus = !driver.is_online;
-    const { error } = await supabase.from("drivers").update({ is_online: newStatus }).eq("id", driver.id);
+    const { error } = await supabase
+      .from("drivers")
+      .update({ is_online: newStatus })
+      .eq("id", driver.id);
     if (!error) {
-      setDriver(prev => prev ? { ...prev, is_online: newStatus } : prev);
+      setDriver((prev) => (prev ? { ...prev, is_online: newStatus } : prev));
       toast.success(newStatus ? "You're now online — ready for rides!" : "You're now offline");
     } else {
       toast.error("Could not update status: " + error.message);
@@ -648,7 +903,7 @@ function DriverConsolePage() {
       decs[bookingId].lastDeclinedAt = now;
     }
     localStorage.setItem("orange_declines", JSON.stringify(decs));
-    setNewRequests(p => p.filter(r => r.id !== bookingId));
+    setNewRequests((p) => p.filter((r) => r.id !== bookingId));
   }
 
   async function acceptRide(bookingId: string) {
@@ -659,19 +914,39 @@ function DriverConsolePage() {
       return;
     }
     const resolvedDr = resolveDriverDetails(driver);
-    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
-    const activeBooking = newRequests.find(b => b.id === bookingId);
-    const updatedVehicleName = formatVehicleNameWithPlate(activeBooking?.vehicle_name || "Orange Signature", resolvedPlate);
+    const resolvedPlate =
+      resolvedDr?.vehicle_number ||
+      (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
+        ? driver.vehicle_number
+        : "KA 01 EV 4421");
+    const activeBooking = newRequests.find((b) => b.id === bookingId);
+    const updatedVehicleName = formatVehicleNameWithPlate(
+      activeBooking?.vehicle_name || "Orange Signature",
+      resolvedPlate,
+    );
 
-    const { error } = await supabase.from("bookings").update({
-      driver_id: driver.id,
-      status: "accepted",
-      accepted_at: new Date().toISOString(),
-      vehicle_name: updatedVehicleName,
-    }).eq("id", bookingId).eq("status", "searching");
-    if (error) { toast.error("Could not accept ride — it may have been taken by another driver."); return; }
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        driver_id: driver.id,
+        status: "accepted",
+        accepted_at: new Date().toISOString(),
+        vehicle_name: updatedVehicleName,
+      })
+      .eq("id", bookingId)
+      .eq("status", "searching");
+    if (error) {
+      toast.error("Could not accept ride — it may have been taken by another driver.");
+      return;
+    }
 
-    await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, activeBooking?.reference);
+    await lockBookingVehicle(
+      supabase,
+      bookingId,
+      resolvedPlate,
+      updatedVehicleName,
+      activeBooking?.reference,
+    );
 
     toast.success("Ride accepted!");
     setActiveTab("rides");
@@ -681,24 +956,45 @@ function DriverConsolePage() {
   async function preAcceptScheduledRide(bookingId: string) {
     if (!driver) return;
     const resolvedDr = resolveDriverDetails(driver);
-    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
-    const schedBooking = scheduledBookings.find(b => b.id === bookingId);
-    const updatedVehicleName = formatVehicleNameWithPlate(schedBooking?.vehicle_name || "Orange Signature", resolvedPlate);
+    const resolvedPlate =
+      resolvedDr?.vehicle_number ||
+      (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
+        ? driver.vehicle_number
+        : "KA 01 EV 4421");
+    const schedBooking = scheduledBookings.find((b) => b.id === bookingId);
+    const updatedVehicleName = formatVehicleNameWithPlate(
+      schedBooking?.vehicle_name || "Orange Signature",
+      resolvedPlate,
+    );
 
-    const { error } = await supabase.from("bookings").update({
-      driver_id: driver.id,
-      vehicle_name: updatedVehicleName,
-    }).eq("id", bookingId).eq("status", "scheduled").is("driver_id", null);
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        driver_id: driver.id,
+        vehicle_name: updatedVehicleName,
+      })
+      .eq("id", bookingId)
+      .eq("status", "scheduled")
+      .is("driver_id", null);
 
     if (error) {
-      toast.error("Could not claim scheduled booking — it may have already been claimed by another chauffeur.");
+      toast.error(
+        "Could not claim scheduled booking — it may have already been claimed by another chauffeur.",
+      );
       return;
     }
 
-    await lockBookingVehicle(supabase, bookingId, resolvedPlate, updatedVehicleName, schedBooking?.reference);
+    await lockBookingVehicle(
+      supabase,
+      bookingId,
+      resolvedPlate,
+      updatedVehicleName,
+      schedBooking?.reference,
+    );
 
     toast.success("Scheduled Pre-Booking Confirmed! 🎯", {
-      description: "You are the assigned chauffeur. Please be online and arrive at least 10 minutes before pickup.",
+      description:
+        "You are the assigned chauffeur. Please be online and arrive at least 10 minutes before pickup.",
     });
     loadData();
   }
@@ -706,19 +1002,31 @@ function DriverConsolePage() {
   async function startScheduledRideDispatch(booking: Booking) {
     if (!driver) return;
     if (activeRides.length > 0) {
-      toast.error("You already have an active ride in progress. Complete it before starting dispatch.");
+      toast.error(
+        "You already have an active ride in progress. Complete it before starting dispatch.",
+      );
       return;
     }
     const resolvedDr = resolveDriverDetails(driver);
-    const resolvedPlate = resolvedDr?.vehicle_number || (driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "KA 01 EV 4421");
-    const updatedVehicleName = formatVehicleNameWithPlate(booking.vehicle_name || "Orange Signature", resolvedPlate);
+    const resolvedPlate =
+      resolvedDr?.vehicle_number ||
+      (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
+        ? driver.vehicle_number
+        : "KA 01 EV 4421");
+    const updatedVehicleName = formatVehicleNameWithPlate(
+      booking.vehicle_name || "Orange Signature",
+      resolvedPlate,
+    );
 
-    const { error } = await supabase.from("bookings").update({
-      status: "accepted",
-      accepted_at: new Date().toISOString(),
-      driver_id: driver.id,
-      vehicle_name: updatedVehicleName,
-    }).eq("id", booking.id);
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        status: "accepted",
+        accepted_at: new Date().toISOString(),
+        driver_id: driver.id,
+        vehicle_name: updatedVehicleName,
+      })
+      .eq("id", booking.id);
 
     if (error) {
       toast.error("Could not activate dispatch for scheduled ride: " + error.message);
@@ -730,9 +1038,13 @@ function DriverConsolePage() {
   }
 
   async function releaseScheduledRide(bookingId: string) {
-    const { error } = await supabase.from("bookings").update({
-      driver_id: null,
-    }).eq("id", bookingId).eq("status", "scheduled");
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        driver_id: null,
+      })
+      .eq("id", bookingId)
+      .eq("status", "scheduled");
 
     if (error) {
       toast.error("Failed to release ride: " + error.message);
@@ -745,7 +1057,7 @@ function DriverConsolePage() {
   async function advanceStatus(booking: Booking) {
     const flow = STATUS_FLOW[booking.status];
     if (!flow) return;
-    
+
     // OTP Check if trying to start ride
     if (flow.next === "in_progress") {
       const enteredOtp = otpInputs[booking.id];
@@ -763,20 +1075,29 @@ function DriverConsolePage() {
       updates.final_fare = Math.round(Number(booking.estimated_fare || 0));
       updates.payment_status = "paid";
       if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
-        updates.vehicle_name = formatVehicleNameWithPlate(booking.vehicle_name, driver.vehicle_number);
+        updates.vehicle_name = formatVehicleNameWithPlate(
+          booking.vehicle_name,
+          driver.vehicle_number,
+        );
         saveRideVehiclePlate(booking.id, driver.vehicle_number, booking.reference);
       }
     }
     const { error } = await supabase.from("bookings").update(updates).eq("id", booking.id);
-    if (error) { toast.error("Update failed"); return; }
+    if (error) {
+      toast.error("Update failed");
+      return;
+    }
 
     if (flow.next === "completed") {
       try {
         const nextTotal = (driver.total_rides || 0) + 1;
-        await supabase.from("drivers").update({
-          total_rides: nextTotal,
-        }).eq("id", driver.id);
-        setDriver(prev => prev ? { ...prev, total_rides: nextTotal } : prev);
+        await supabase
+          .from("drivers")
+          .update({
+            total_rides: nextTotal,
+          })
+          .eq("id", driver.id);
+        setDriver((prev) => (prev ? { ...prev, total_rides: nextTotal } : prev));
       } catch (e) {
         console.warn("Could not update driver total_rides:", e);
       }
@@ -807,7 +1128,9 @@ function DriverConsolePage() {
 
     // 3. Exact or case-insensitive match from service_areas DB
     if (areaName) {
-      const foundInAreas = areas[areaName] || Object.values(areas).find(a => a.name.toLowerCase() === areaName.toLowerCase());
+      const foundInAreas =
+        areas[areaName] ||
+        Object.values(areas).find((a) => a.name.toLowerCase() === areaName.toLowerCase());
       if (foundInAreas?.lat && foundInAreas?.lng) {
         return `https://www.google.com/maps/dir/?api=1&destination=${foundInAreas.lat},${foundInAreas.lng}&travelmode=driving`;
       }
@@ -815,8 +1138,11 @@ function DriverConsolePage() {
 
     // 4. Match against PAN_INDIA_PRESETS (Airports, Railway stations, Metros across India)
     if (areaName && Array.isArray(PAN_INDIA_PRESETS)) {
-      const cleanTarget = areaName.toLowerCase().replace(/^(near|at|to|from)\s+/i, "").trim();
-      const preset = PAN_INDIA_PRESETS.find(p => {
+      const cleanTarget = areaName
+        .toLowerCase()
+        .replace(/^(near|at|to|from)\s+/i, "")
+        .trim();
+      const preset = PAN_INDIA_PRESETS.find((p) => {
         const pName = p.name.toLowerCase();
         return pName === cleanTarget || cleanTarget.includes(pName) || pName.includes(cleanTarget);
       });
@@ -830,53 +1156,94 @@ function DriverConsolePage() {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(areaName.trim())}&travelmode=driving`;
   }
 
-  if (authLoading || loading) return <div className="flex min-h-screen items-center justify-center"><Loader2 className="size-8 animate-spin text-primary" /></div>;
+  if (authLoading || loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
 
   if (!driver) {
     return (
       <section className="min-h-screen py-24">
         <div className="section-shell text-center">
           <h1 className="display-serif text-5xl">Driver profile not found</h1>
-          <p className="mt-4 text-muted-foreground">Your account hasn't been set up as a driver yet.</p>
-          <Button asChild className="mt-8"><Link to="/drive">Apply to Drive <ArrowRight /></Link></Button>
+          <p className="mt-4 text-muted-foreground">
+            Your account hasn't been set up as a driver yet.
+          </p>
+          <Button asChild className="mt-8">
+            <Link to="/drive">
+              Apply to Drive <ArrowRight />
+            </Link>
+          </Button>
         </div>
       </section>
     );
   }
 
   // Earnings calculations — daily, weekly, monthly split by payment method
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayRides   = recentRides.filter(r => new Date(r.completed_at ?? "") >= today);
-  const todayTotal   = todayRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const todayUPI     = todayRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const todayCash    = todayRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const weekStart    = new Date(Date.now() - 7 * 24 * 3600000);
-  const weeklyRides  = recentRides.filter(r => new Date(r.completed_at ?? "") >= weekStart);
-  const weeklyEarnings = weeklyRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const weekUPI      = weeklyRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const weekCash     = weeklyRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const monthlyEarnings = recentRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const monthUPI     = recentRides.filter(r => r.payment_method === "upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const monthCash    = recentRides.filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi").reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
-  const avgRating    = recentRides.filter(r => r.rating).reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayRides = recentRides.filter((r) => new Date(r.completed_at ?? "") >= today);
+  const todayTotal = todayRides.reduce(
+    (s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)),
+    0,
+  );
+  const todayUPI = todayRides
+    .filter((r) => r.payment_method === "upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const todayCash = todayRides
+    .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const weekStart = new Date(Date.now() - 7 * 24 * 3600000);
+  const weeklyRides = recentRides.filter((r) => new Date(r.completed_at ?? "") >= weekStart);
+  const weeklyEarnings = weeklyRides.reduce(
+    (s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)),
+    0,
+  );
+  const weekUPI = weeklyRides
+    .filter((r) => r.payment_method === "upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const weekCash = weeklyRides
+    .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthlyEarnings = recentRides.reduce(
+    (s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)),
+    0,
+  );
+  const monthUPI = recentRides
+    .filter((r) => r.payment_method === "upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const monthCash = recentRides
+    .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
+    .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const avgRating =
+    recentRides
+      .filter((r) => r.rating)
+      .reduce((sum, r, _, arr) => sum + (r.rating ?? 0) / arr.length, 0) || driver.rating;
 
   // Operating model
   const isPartnerDriver = driver.driver_type === "partner" || Boolean((driver as any).owns_vehicle);
 
   // Partner commission calculations (15% platform commission model)
-  const allTimeFares = recentRides.reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
+  const allTimeFares = recentRides.reduce(
+    (s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)),
+    0,
+  );
   const partnerCommissionPayable = Math.round(allTimeFares * 0.15);
-  const partnerCommissionPaid = commissionSettlements.reduce((s, c) => s + Math.round(Number(c.amount || 0)), 0);
+  const partnerCommissionPaid = commissionSettlements.reduce(
+    (s, c) => s + Math.round(Number(c.amount || 0)),
+    0,
+  );
   const partnerCommissionDue = Math.max(0, partnerCommissionPayable - partnerCommissionPaid);
   const partnerNetEarnings = Math.max(0, allTimeFares - partnerCommissionPayable);
 
   // Cash calculations & Admin settlement balance (Strict whole rupees)
   const totalCashCollected = recentRides
-    .filter(r => r.payment_method === "cash" || r.payment_method === "driver_upi")
+    .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
     .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
 
-  const totalCashSubmitted = settlements
-    .reduce((s, x) => s + Math.round(Number(x.amount || 0)), 0);
+  const totalCashSubmitted = settlements.reduce((s, x) => s + Math.round(Number(x.amount || 0)), 0);
 
   const currentCashHolding = Math.max(0, totalCashCollected - totalCashSubmitted);
 
@@ -907,12 +1274,16 @@ function DriverConsolePage() {
     };
 
     try {
-      const { data, error } = await supabase.from("driver_cash_settlements").insert({
-        driver_id: driver.id,
-        amount: Math.round(amt),
-        collected_by: "UPI Auto-Remit",
-        notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
-      }).select().single();
+      const { data, error } = await supabase
+        .from("driver_cash_settlements")
+        .insert({
+          driver_id: driver.id,
+          amount: Math.round(amt),
+          collected_by: "UPI Auto-Remit",
+          notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+        })
+        .select()
+        .single();
 
       if (data) {
         newRecord.id = data.id;
@@ -993,7 +1364,7 @@ function DriverConsolePage() {
       localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
     } catch (e) {}
 
-    setCommissionSettlements(prev => [newRecord, ...prev]);
+    setCommissionSettlements((prev) => [newRecord, ...prev]);
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("storage"));
@@ -1027,70 +1398,95 @@ function DriverConsolePage() {
             )}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Driver Console</p>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                  isPartnerDriver 
-                    ? "bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
-                    : "bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800"
-                }`}>
-                  {isPartnerDriver ? "⚡ Partner Owner-Operator (15% Comm.)" : "🏢 Company Fleet (Fixed Salary)"}
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                  Driver Console
+                </p>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    isPartnerDriver
+                      ? "bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
+                      : "bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800"
+                  }`}
+                >
+                  {isPartnerDriver
+                    ? "⚡ Partner Owner-Operator (15% Comm.)"
+                    : "🏢 Company Fleet (Fixed Salary)"}
                 </span>
               </div>
-              <h1 className="display-serif mt-1 text-3xl sm:text-4xl">Welcome, {driver.full_name.split(" ")[0]}.</h1>
+              <h1 className="display-serif mt-1 text-3xl sm:text-4xl">
+                Welcome, {driver.full_name.split(" ")[0]}.
+              </h1>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-muted-foreground">{driver.city}</span>
                 <span className="text-muted-foreground text-xs">·</span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   <Car className="size-3.5" />
-                  <span>{driver.vehicle_model || (isPartnerDriver ? "Private EV" : "Mahindra BE.6")}</span>
+                  <span>
+                    {driver.vehicle_model || (isPartnerDriver ? "Private EV" : "Mahindra BE.6")}
+                  </span>
                   <span className="font-mono font-bold">
-                    {driver.vehicle_number && driver.vehicle_number !== "Unassigned" ? driver.vehicle_number : "No car assigned today"}
+                    {driver.vehicle_number && driver.vehicle_number !== "Unassigned"
+                      ? driver.vehicle_number
+                      : "No car assigned today"}
                   </span>
                 </span>
                 <span className="text-muted-foreground text-xs">·</span>
                 {isPartnerDriver ? (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    partnerCommissionDue > 0
-                      ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  }`}>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                      partnerCommissionDue > 0
+                        ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+                        : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    }`}
+                  >
                     <Percent className="size-3.5" />
-                    <span>Comm. Due: <strong className="font-mono">₹{partnerCommissionDue}</strong></span>
+                    <span>
+                      Comm. Due: <strong className="font-mono">₹{partnerCommissionDue}</strong>
+                    </span>
                   </span>
                 ) : (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    currentCashHolding > 0
-                      ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
-                      : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  }`}>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+                      currentCashHolding > 0
+                        ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+                        : "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    }`}
+                  >
                     <Banknote className="size-3.5" />
-                    <span>Cash in Hand: <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong></span>
+                    <span>
+                      Cash in Hand:{" "}
+                      <strong className="font-mono">₹{Math.round(currentCashHolding)}</strong>
+                    </span>
                   </span>
                 )}
                 <span className="text-muted-foreground text-xs">·</span>
                 <button
-                type="button"
-                onClick={async () => {
-                  const newPhone = prompt("Update your contact phone number (used for passenger calls):", driver.phone || "");
-                  if (newPhone !== null && newPhone.trim()) {
-                    const p = newPhone.trim();
-                    await supabase.from("drivers").update({ phone: p }).eq("id", driver.id);
-                    await supabase.from("profiles").update({ phone: p }).eq("id", user.id);
-                    await supabase.auth.updateUser({ data: { phone: p } });
-                    setDriver({ ...driver, phone: p });
-                    toast.success("Phone number updated successfully!");
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors cursor-pointer"
-                title="Click to update phone number"
-              >
-                <Phone className="size-3.5" />
-                <span>Phone: <strong className="font-mono">{driver.phone || "Add Phone ✏️"}</strong></span>
-              </button>
+                  type="button"
+                  onClick={async () => {
+                    const newPhone = prompt(
+                      "Update your contact phone number (used for passenger calls):",
+                      driver.phone || "",
+                    );
+                    if (newPhone !== null && newPhone.trim()) {
+                      const p = newPhone.trim();
+                      await supabase.from("drivers").update({ phone: p }).eq("id", driver.id);
+                      await supabase.from("profiles").update({ phone: p }).eq("id", user.id);
+                      await supabase.auth.updateUser({ data: { phone: p } });
+                      setDriver({ ...driver, phone: p });
+                      toast.success("Phone number updated successfully!");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                  title="Click to update phone number"
+                >
+                  <Phone className="size-3.5" />
+                  <span>
+                    Phone: <strong className="font-mono">{driver.phone || "Add Phone ✏️"}</strong>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Sound Alert Toggle */}
@@ -1114,7 +1510,11 @@ function DriverConsolePage() {
               }`}
               title={soundEnabled ? "Mute ride alerts" : "Enable ride alerts"}
             >
-              {soundEnabled ? <Bell className="size-3.5 text-primary" /> : <BellOff className="size-3.5" />}
+              {soundEnabled ? (
+                <Bell className="size-3.5 text-primary" />
+              ) : (
+                <BellOff className="size-3.5" />
+              )}
               <span>{soundEnabled ? "Chime ON" : "Chime Muted"}</span>
             </button>
 
@@ -1132,9 +1532,16 @@ function DriverConsolePage() {
               <span>Test</span>
             </button>
 
-            <button onClick={toggleOnline} disabled={toggling}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}>
-              {toggling ? <Loader2 className="size-4 animate-spin" /> : <Power className="size-4" />}
+            <button
+              onClick={toggleOnline}
+              disabled={toggling}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${driver.is_online ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100" : "border-border bg-background text-muted-foreground hover:bg-accent"}`}
+            >
+              {toggling ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Power className="size-4" />
+              )}
               {driver.is_online ? "Online" : "Go Online"}
             </button>
           </div>
@@ -1149,7 +1556,8 @@ function DriverConsolePage() {
                   <span className="flex size-3 rounded-full bg-amber-500 animate-ping" />
                   <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                     <Bell className="size-4 text-amber-500 animate-bounce" />
-                    {newRequests.length} New Ride Request{newRequests.length > 1 ? "s" : ""} Available!
+                    {newRequests.length} New Ride Request{newRequests.length > 1 ? "s" : ""}{" "}
+                    Available!
                   </span>
                   <span className="font-mono font-bold text-lg text-primary">
                     ₹{Math.round(newRequests[0].estimated_fare)}
@@ -1167,19 +1575,26 @@ function DriverConsolePage() {
 
                 {/* Comfort preference preview on top banner */}
                 {(() => {
-                  const reqPref = parseRidePreferences(newRequests[0].pickup_address, newRequests[0].id || newRequests[0].reference);
-                  if (!reqPref.cabinClimate && !reqPref.quietRide && !reqPref.pickupPillar) return null;
+                  const reqPref = parseRidePreferences(
+                    newRequests[0].pickup_address,
+                    newRequests[0].id || newRequests[0].reference,
+                  );
+                  if (!reqPref.cabinClimate && !reqPref.quietRide && !reqPref.pickupPillar)
+                    return null;
                   return (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      {reqPref.cabinClimate && (() => {
-                        const b = getCabinClimateBadge(reqPref.cabinClimate);
-                        return (
-                          <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}>
-                            <span>{b.icon}</span>
-                            <span>{b.label}</span>
-                          </span>
-                        );
-                      })()}
+                      {reqPref.cabinClimate &&
+                        (() => {
+                          const b = getCabinClimateBadge(reqPref.cabinClimate);
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}
+                            >
+                              <span>{b.icon}</span>
+                              <span>{b.label}</span>
+                            </span>
+                          );
+                        })()}
                       {reqPref.quietRide && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
                           <VolumeX className="size-3" />
@@ -1211,7 +1626,11 @@ function DriverConsolePage() {
                   }}
                   className="text-xs h-9 border-border bg-background"
                 >
-                  {soundEnabled ? <VolumeX className="mr-1.5 size-3.5 text-muted-foreground" /> : <Bell className="mr-1.5 size-3.5 text-primary" />}
+                  {soundEnabled ? (
+                    <VolumeX className="mr-1.5 size-3.5 text-muted-foreground" />
+                  ) : (
+                    <Bell className="mr-1.5 size-3.5 text-primary" />
+                  )}
                   <span>{soundEnabled ? "Mute Sound" : "Unmute"}</span>
                 </Button>
 
@@ -1231,7 +1650,7 @@ function DriverConsolePage() {
 
         {/* Urgent Scheduled Ride Priority Dispatch Alert Banner */}
         {(() => {
-          const urgentSched = scheduledBookings.filter(b => {
+          const urgentSched = scheduledBookings.filter((b) => {
             if (b.driver_id) return false;
             if (!b.scheduled_at) return false;
             const diffMs = new Date(b.scheduled_at).getTime() - Date.now();
@@ -1239,7 +1658,10 @@ function DriverConsolePage() {
           });
           if (!driver?.is_online || urgentSched.length === 0) return null;
           const target = urgentSched[0];
-          const diffMin = Math.max(1, Math.round((new Date(target.scheduled_at!).getTime() - Date.now()) / 60000));
+          const diffMin = Math.max(
+            1,
+            Math.round((new Date(target.scheduled_at!).getTime() - Date.now()) / 60000),
+          );
           return (
             <div className="mt-4 rounded-2xl border-2 border-purple-500 bg-gradient-to-r from-purple-500/15 via-primary/10 to-purple-500/15 p-4 sm:p-5 shadow-lg shadow-purple-500/10">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1247,8 +1669,8 @@ function DriverConsolePage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="flex size-3 rounded-full bg-purple-500 animate-ping" />
                     <span className="text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
-                      <Calendar className="size-4 text-purple-500" />
-                      ⚡ Urgent Advance Booking • Pickup in {diffMin} Mins!
+                      <Calendar className="size-4 text-purple-500" />⚡ Urgent Advance Booking •
+                      Pickup in {diffMin} Mins!
                     </span>
                     <span className="font-mono font-bold text-lg text-primary">
                       ₹{Math.round(target.estimated_fare)}
@@ -1283,8 +1705,8 @@ function DriverConsolePage() {
 
         {/* Available Scheduled Pre-Bookings Fleet Banner */}
         {(() => {
-          const unclaimed = scheduledBookings.filter(b => !b.driver_id);
-          const urgentSched = scheduledBookings.filter(b => {
+          const unclaimed = scheduledBookings.filter((b) => !b.driver_id);
+          const urgentSched = scheduledBookings.filter((b) => {
             if (b.driver_id) return false;
             if (!b.scheduled_at) return false;
             const diffMs = new Date(b.scheduled_at).getTime() - Date.now();
@@ -1303,13 +1725,19 @@ function DriverConsolePage() {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
-                        📅 {unclaimed.length} Advance Scheduled {unclaimed.length === 1 ? "Trip" : "Trips"} in Fleet Pool
+                        📅 {unclaimed.length} Advance Scheduled{" "}
+                        {unclaimed.length === 1 ? "Trip" : "Trips"} in Fleet Pool
                       </span>
-                      <span className="text-xs text-muted-foreground">• Pickup {schedule.countdown}</span>
-                      <span className="font-mono font-bold text-sm text-primary">₹{Math.round(target.estimated_fare)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        • Pickup {schedule.countdown}
+                      </span>
+                      <span className="font-mono font-bold text-sm text-primary">
+                        ₹{Math.round(target.estimated_fare)}
+                      </span>
                     </div>
                     <p className="text-xs font-medium text-foreground mt-0.5">
-                      {target.pickup_area} → {target.drop_area} ({Math.round(target.distance_km)} km • {target.vehicle_name})
+                      {target.pickup_area} → {target.drop_area} ({Math.round(target.distance_km)} km
+                      • {target.vehicle_name})
                     </p>
                   </div>
                 </div>
@@ -1331,21 +1759,45 @@ function DriverConsolePage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-10">
           <TabsList className="mb-6">
-            <TabsTrigger value="rides">Active Rides {activeRides.length > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{activeRides.length}</span>}</TabsTrigger>
-            <TabsTrigger value="requests">New Requests {newRequests.length > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{newRequests.length}</span>}</TabsTrigger>
+            <TabsTrigger value="rides">
+              Active Rides{" "}
+              {activeRides.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                  {activeRides.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="requests">
+              New Requests{" "}
+              {newRequests.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {newRequests.length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="scheduled">
-              Scheduled Pre-Bookings {scheduledBookings.length > 0 && <span className="ml-1.5 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{scheduledBookings.length}</span>}
+              Scheduled Pre-Bookings{" "}
+              {scheduledBookings.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {scheduledBookings.length}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="praise">
-              Customer Praise & Tips {driverReviews.length > 0 && <span className="ml-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{driverReviews.length}</span>}
+              Customer Praise & Tips{" "}
+              {driverReviews.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {driverReviews.length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="rides">
             {/* Pre-assigned Scheduled Duties for this Chauffeur */}
             {(() => {
-              const myScheduled = scheduledBookings.filter(b => b.driver_id === driver?.id);
+              const myScheduled = scheduledBookings.filter((b) => b.driver_id === driver?.id);
               if (myScheduled.length === 0) return null;
               return (
                 <div className="mb-6 space-y-3">
@@ -1389,28 +1841,43 @@ function DriverConsolePage() {
 
                               <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 px-3 py-1.5 rounded-lg">
                                 <Calendar className="size-3.5 text-purple-600 shrink-0" />
-                                <span>Departure: <strong>{schedule.fullText}</strong></span>
+                                <span>
+                                  Departure: <strong>{schedule.fullText}</strong>
+                                </span>
                               </div>
 
                               <div className="flex items-center gap-2 text-sm font-bold">
                                 <MapPin className="size-4 text-primary shrink-0" />
-                                <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                <a
+                                  href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline hover:text-primary"
+                                >
                                   {ride.pickup_area}
                                 </a>
                                 <span>→</span>
                                 <Navigation className="size-4 text-primary shrink-0" />
-                                <a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                <a
+                                  href={getNavUrl(ride.drop_area, ride.drop_address)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline hover:text-primary"
+                                >
                                   {ride.drop_area}
                                 </a>
                               </div>
 
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                                <span className="font-mono font-bold text-primary text-sm">
+                                  ₹{Math.round(ride.estimated_fare)}
+                                </span>
                                 <span>{Math.round(ride.distance_km)} km</span>
                                 <span>{ride.vehicle_name}</span>
                                 {customer && (
                                   <span className="flex items-center gap-1 text-foreground font-medium">
-                                    <User className="size-3 text-muted-foreground" /> {customer.full_name} ({customer.phone || "No phone"})
+                                    <User className="size-3 text-muted-foreground" />{" "}
+                                    {customer.full_name} ({customer.phone || "No phone"})
                                   </span>
                                 )}
                               </div>
@@ -1444,28 +1911,37 @@ function DriverConsolePage() {
             })()}
 
             {activeRides.length === 0 ? (
-              scheduledBookings.filter(b => b.driver_id === driver?.id).length === 0 && (
-                <EmptyState icon={Navigation} title="No active rides" text="Accept a ride request to get started." />
+              scheduledBookings.filter((b) => b.driver_id === driver?.id).length === 0 && (
+                <EmptyState
+                  icon={Navigation}
+                  title="No active rides"
+                  text="Accept a ride request to get started."
+                />
               )
             ) : (
               <div className="space-y-4">
-                {activeRides.map(ride => {
+                {activeRides.map((ride) => {
                   const flow = STATUS_FLOW[ride.status];
                   return (
-                    <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
+                    <div
+                      key={ride.id}
+                      className="rounded-xl border border-border bg-background p-6"
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold">{ride.reference}</span>
-                            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[ride.status] ?? ""}`}>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_COLOR[ride.status] ?? ""}`}
+                            >
                               {STATUS_FLOW[ride.status]?.label ?? ride.status.replace("_", " ")}
                             </span>
                           </div>
                           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="size-4 text-primary shrink-0" />
-                            <a 
-                              href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
-                              target="_blank" 
+                            <a
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                              target="_blank"
                               rel="noreferrer"
                               className="text-foreground hover:underline hover:text-primary transition-colors"
                               title="Open Pickup in Google Maps"
@@ -1474,9 +1950,9 @@ function DriverConsolePage() {
                             </a>
                             <span className="text-border">→</span>
                             <Navigation className="size-4 text-primary shrink-0" />
-                            <a 
-                              href={getNavUrl(ride.drop_area, ride.drop_address)} 
-                              target="_blank" 
+                            <a
+                              href={getNavUrl(ride.drop_area, ride.drop_address)}
+                              target="_blank"
                               rel="noreferrer"
                               className="text-foreground hover:underline hover:text-primary transition-colors"
                               title="Open Drop-off in Google Maps"
@@ -1489,8 +1965,12 @@ function DriverConsolePage() {
 
                       {/* Passenger Ride Preferences (Cabin Climate, Quiet Mode, Hub/Pillar) */}
                       {(() => {
-                        const ridePrefs = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
-                        const hasPrefs = ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pickupPillar;
+                        const ridePrefs = parseRidePreferences(
+                          ride.pickup_address,
+                          ride.id || ride.reference,
+                        );
+                        const hasPrefs =
+                          ridePrefs.cabinClimate || ridePrefs.quietRide || ridePrefs.pickupPillar;
                         if (!hasPrefs) return null;
 
                         return (
@@ -1506,16 +1986,21 @@ function DriverConsolePage() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 pt-1">
-                              {ridePrefs.cabinClimate && (() => {
-                                const b = getCabinClimateBadge(ridePrefs.cabinClimate);
-                                return (
-                                  <span className={`inline-flex items-center gap-1.5 rounded-lg border ${b.borderClass} ${b.bgClass} px-3 py-1.5 text-xs font-bold ${b.textClass}`}>
-                                    <Snowflake className="size-3.5" />
-                                    <span>{b.label}</span>
-                                    <span className="text-[10px] font-normal opacity-80">(Keep cabin pre-cooled)</span>
-                                  </span>
-                                );
-                              })()}
+                              {ridePrefs.cabinClimate &&
+                                (() => {
+                                  const b = getCabinClimateBadge(ridePrefs.cabinClimate);
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 rounded-lg border ${b.borderClass} ${b.bgClass} px-3 py-1.5 text-xs font-bold ${b.textClass}`}
+                                    >
+                                      <Snowflake className="size-3.5" />
+                                      <span>{b.label}</span>
+                                      <span className="text-[10px] font-normal opacity-80">
+                                        (Keep cabin pre-cooled)
+                                      </span>
+                                    </span>
+                                  );
+                                })()}
                               {ridePrefs.quietRide && (
                                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
                                   <VolumeX className="size-3.5" />
@@ -1535,7 +2020,8 @@ function DriverConsolePage() {
 
                       {/* Customer Contact & In-Ride Communication Card */}
                       {(() => {
-                        const customerInfo = (ride.customer_id && customerProfiles[ride.customer_id]) || {
+                        const customerInfo = (ride.customer_id &&
+                          customerProfiles[ride.customer_id]) || {
                           full_name: "Passenger",
                           phone: "",
                         };
@@ -1550,17 +2036,25 @@ function DriverConsolePage() {
                                 </div>
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Passenger Details</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                      Passenger Details
+                                    </span>
                                   </div>
-                                  <p className="font-bold text-sm text-foreground truncate">{customerInfo.full_name || "Passenger"}</p>
+                                  <p className="font-bold text-sm text-foreground truncate">
+                                    {customerInfo.full_name || "Passenger"}
+                                  </p>
                                   {customerInfo.phone ? (
                                     <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="font-mono text-xs font-semibold text-primary">{customerInfo.phone}</span>
+                                      <span className="font-mono text-xs font-semibold text-primary">
+                                        {customerInfo.phone}
+                                      </span>
                                       <button
                                         type="button"
                                         onClick={() => {
                                           navigator.clipboard.writeText(customerInfo.phone);
-                                          toast.success(`Copied customer phone: ${customerInfo.phone}`);
+                                          toast.success(
+                                            `Copied customer phone: ${customerInfo.phone}`,
+                                          );
                                         }}
                                         className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 border border-border/60 rounded px-1.5 py-0.5"
                                         title="Copy customer phone"
@@ -1570,7 +2064,9 @@ function DriverConsolePage() {
                                       </button>
                                     </div>
                                   ) : (
-                                    <span className="text-[11px] text-muted-foreground italic">Phone: Syncing via booking</span>
+                                    <span className="text-[11px] text-muted-foreground italic">
+                                      Phone: Syncing via booking
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1580,7 +2076,11 @@ function DriverConsolePage() {
                                 {cleanCustomerPhone ? (
                                   <a
                                     href={`tel:${cleanCustomerPhone}`}
-                                    onClick={() => toast.success(`Calling ${customerInfo.full_name}: ${customerInfo.phone}`)}
+                                    onClick={() =>
+                                      toast.success(
+                                        `Calling ${customerInfo.full_name}: ${customerInfo.phone}`,
+                                      )
+                                    }
                                     className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all active:scale-95"
                                   >
                                     <PhoneCall className="size-3.5" />
@@ -1616,7 +2116,7 @@ function DriverConsolePage() {
                                   size="sm"
                                   onClick={() => {
                                     setActiveChatRide(ride);
-                                    setUnreadChats(prev => ({ ...prev, [ride.id]: 0 }));
+                                    setUnreadChats((prev) => ({ ...prev, [ride.id]: 0 }));
                                   }}
                                   className="relative flex items-center gap-1.5 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs h-9 px-3"
                                 >
@@ -1636,8 +2136,18 @@ function DriverConsolePage() {
 
                       {ride.status === "accepted" && (
                         <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
-                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Pickup</a></Button>
-                          <Button onClick={() => advanceStatus(ride)} className="flex-1">Mark Arrived <Check className="ml-2 size-4" /></Button>
+                          <Button asChild variant="outline" className="flex-1">
+                            <a
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Map className="mr-2 size-4" /> Navigate to Pickup
+                            </a>
+                          </Button>
+                          <Button onClick={() => advanceStatus(ride)} className="flex-1">
+                            Mark Arrived <Check className="ml-2 size-4" />
+                          </Button>
                         </div>
                       )}
 
@@ -1649,8 +2159,17 @@ function DriverConsolePage() {
                           </div>
 
                           <div className="mb-3 flex justify-center">
-                            <Button asChild variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
-                              <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer">
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              <a
+                                href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
                                 <Map className="mr-1.5 size-3.5" /> Re-open Pickup Navigation
                               </a>
                             </Button>
@@ -1666,11 +2185,17 @@ function DriverConsolePage() {
                                   <InputOTP
                                     maxLength={expectedLen}
                                     value={otpInputs[ride.id] || ""}
-                                    onChange={(val) => setOtpInputs(p => ({ ...p, [ride.id]: val }))}
+                                    onChange={(val) =>
+                                      setOtpInputs((p) => ({ ...p, [ride.id]: val }))
+                                    }
                                   >
                                     <InputOTPGroup>
                                       {Array.from({ length: expectedLen }, (_, i) => (
-                                        <InputOTPSlot key={i} index={i} className="size-10 text-lg" />
+                                        <InputOTPSlot
+                                          key={i}
+                                          index={i}
+                                          className="size-10 text-lg"
+                                        />
                                       ))}
                                     </InputOTPGroup>
                                   </InputOTP>
@@ -1690,8 +2215,21 @@ function DriverConsolePage() {
 
                       {ride.status === "in_progress" && (
                         <div className="mt-6 flex flex-col sm:flex-row gap-3 border-t border-border pt-4">
-                          <Button asChild variant="outline" className="flex-1"><a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer"><Map className="mr-2 size-4" /> Navigate to Drop-off</a></Button>
-                          <Button onClick={() => advanceStatus(ride)} className="flex-1 bg-green-600 hover:bg-green-700">Complete Ride <CheckCircle className="ml-2 size-4" /></Button>
+                          <Button asChild variant="outline" className="flex-1">
+                            <a
+                              href={getNavUrl(ride.drop_area, ride.drop_address)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Map className="mr-2 size-4" /> Navigate to Drop-off
+                            </a>
+                          </Button>
+                          <Button
+                            onClick={() => advanceStatus(ride)}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            Complete Ride <CheckCircle className="ml-2 size-4" />
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -1702,11 +2240,15 @@ function DriverConsolePage() {
           </TabsContent>
 
           <TabsContent value="requests">
-            {!driver.is_online && <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">You're offline. Go online to receive ride requests.</div>}
+            {!driver.is_online && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                You're offline. Go online to receive ride requests.
+              </div>
+            )}
 
             {/* Open Advance Scheduled Pre-Bookings */}
             {(() => {
-              const unclaimedSched = scheduledBookings.filter(b => !b.driver_id);
+              const unclaimedSched = scheduledBookings.filter((b) => !b.driver_id);
               if (unclaimedSched.length === 0) return null;
               return (
                 <div className="mb-6 space-y-3">
@@ -1724,29 +2266,48 @@ function DriverConsolePage() {
                     {unclaimedSched.map((ride) => {
                       const schedule = formatScheduledDeparture(ride.scheduled_at);
                       return (
-                        <div key={ride.id} className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm">
+                        <div
+                          key={ride.id}
+                          className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm"
+                        >
                           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[11px] font-bold px-2 py-0.5 border border-purple-300">
                                   📅 Scheduled Departure
                                 </span>
-                                <span className="text-xs font-bold text-foreground">{schedule.fullText}</span>
-                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">({schedule.countdown})</span>
+                                <span className="text-xs font-bold text-foreground">
+                                  {schedule.fullText}
+                                </span>
+                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                                  ({schedule.countdown})
+                                </span>
                               </div>
                               <div className="flex items-center gap-2 text-sm font-bold">
                                 <MapPin className="size-4 text-primary shrink-0" />
-                                <a href={getNavUrl(ride.pickup_area, ride.pickup_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                <a
+                                  href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline hover:text-primary"
+                                >
                                   {ride.pickup_area}
                                 </a>
                                 <span className="text-muted-foreground">→</span>
                                 <Navigation className="size-4 text-primary shrink-0" />
-                                <a href={getNavUrl(ride.drop_area, ride.drop_address)} target="_blank" rel="noreferrer" className="hover:underline hover:text-primary">
+                                <a
+                                  href={getNavUrl(ride.drop_area, ride.drop_address)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:underline hover:text-primary"
+                                >
                                   {ride.drop_area}
                                 </a>
                               </div>
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                                <span className="font-mono font-bold text-primary text-sm">
+                                  ₹{Math.round(ride.estimated_fare)}
+                                </span>
                                 <span>{Math.round(ride.distance_km)} km</span>
                                 <span>{ride.vehicle_name}</span>
                               </div>
@@ -1769,22 +2330,32 @@ function DriverConsolePage() {
             })()}
 
             {newRequests.length === 0 ? (
-              scheduledBookings.filter(b => !b.driver_id).length === 0 && (
-                <EmptyState icon={Clock} title="No new requests" text="New ride requests in your area will appear here." />
+              scheduledBookings.filter((b) => !b.driver_id).length === 0 && (
+                <EmptyState
+                  icon={Clock}
+                  title="No new requests"
+                  text="New ride requests in your area will appear here."
+                />
               )
             ) : (
               <div className="space-y-4">
-                {newRequests.map(ride => {
-                  const reqPref = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
+                {newRequests.map((ride) => {
+                  const reqPref = parseRidePreferences(
+                    ride.pickup_address,
+                    ride.id || ride.reference,
+                  );
                   return (
-                    <div key={ride.id} className="rounded-xl border border-border bg-background p-6">
+                    <div
+                      key={ride.id}
+                      className="rounded-xl border border-border bg-background p-6"
+                    >
                       <div className="flex justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 text-sm font-bold">
                             <MapPin className="size-4 text-primary shrink-0" />
-                            <a 
-                              href={getNavUrl(ride.pickup_area, ride.pickup_address)} 
-                              target="_blank" 
+                            <a
+                              href={getNavUrl(ride.pickup_area, ride.pickup_address)}
+                              target="_blank"
                               rel="noreferrer"
                               className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
                               title="Preview pickup location on Google Maps"
@@ -1792,11 +2363,11 @@ function DriverConsolePage() {
                               {ride.pickup_area}
                               <Map className="size-3 text-muted-foreground inline" />
                             </a>
-                            <span className="text-muted-foreground">→</span> 
+                            <span className="text-muted-foreground">→</span>
                             <Navigation className="size-4 text-primary shrink-0" />
-                            <a 
-                              href={getNavUrl(ride.drop_area, ride.drop_address)} 
-                              target="_blank" 
+                            <a
+                              href={getNavUrl(ride.drop_area, ride.drop_address)}
+                              target="_blank"
                               rel="noreferrer"
                               className="hover:underline hover:text-primary transition-colors flex items-center gap-1"
                               title="Preview drop location on Google Maps"
@@ -1806,7 +2377,9 @@ function DriverConsolePage() {
                             </a>
                           </div>
                           <div className="mt-2 text-xs text-muted-foreground space-x-4">
-                            <span className="font-bold text-primary font-mono text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                            <span className="font-bold text-primary font-mono text-sm">
+                              ₹{Math.round(ride.estimated_fare)}
+                            </span>
                             <span>{Math.round(ride.distance_km)} km</span>
                             <span>{ride.vehicle_name}</span>
                           </div>
@@ -1814,15 +2387,18 @@ function DriverConsolePage() {
                           {/* Customer Comfort Preferences on incoming request */}
                           {(reqPref.cabinClimate || reqPref.quietRide || reqPref.pickupPillar) && (
                             <div className="mt-3 flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
-                              {reqPref.cabinClimate && (() => {
-                                const b = getCabinClimateBadge(reqPref.cabinClimate);
-                                return (
-                                  <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}>
-                                    <Snowflake className="size-3" />
-                                    <span>Pre-cool {b.label}</span>
-                                  </span>
-                                );
-                              })()}
+                              {reqPref.cabinClimate &&
+                                (() => {
+                                  const b = getCabinClimateBadge(reqPref.cabinClimate);
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-1 text-[11px] font-bold ${b.textClass}`}
+                                    >
+                                      <Snowflake className="size-3" />
+                                      <span>Pre-cool {b.label}</span>
+                                    </span>
+                                  );
+                                })()}
                               {reqPref.quietRide && (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
                                   <VolumeX className="size-3" />
@@ -1839,8 +2415,17 @@ function DriverConsolePage() {
                           )}
                         </div>
                         <div className="flex gap-2 shrink-0 items-start">
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDecline(ride.id)}><X className="size-4" /></Button>
-                          <Button size="sm" onClick={() => acceptRide(ride.id)}>Accept</Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => handleDecline(ride.id)}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                          <Button size="sm" onClick={() => acceptRide(ride.id)}>
+                            Accept
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -1866,8 +2451,11 @@ function DriverConsolePage() {
                       </span>
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Scheduled rides are confirmed in advance. Pre-claim long-distance airport & city trips to plan your daily earnings.
-                      During the <strong>15–30 minute priority dispatch window</strong>, unclaimed rides broadcast urgent audio chimes. Chauffeurs must arrive <strong>5–10 mins prior</strong> with Dual-Zone AC pre-cooled to 22°C.
+                      Scheduled rides are confirmed in advance. Pre-claim long-distance airport &
+                      city trips to plan your daily earnings. During the{" "}
+                      <strong>15–30 minute priority dispatch window</strong>, unclaimed rides
+                      broadcast urgent audio chimes. Chauffeurs must arrive{" "}
+                      <strong>5–10 mins prior</strong> with Dual-Zone AC pre-cooled to 22°C.
                     </p>
                   </div>
                 </div>
@@ -1886,7 +2474,10 @@ function DriverConsolePage() {
                   const schedule = formatScheduledDeparture(ride.scheduled_at);
                   const isAssignedToMe = ride.driver_id === driver?.id;
                   const isUnassigned = !ride.driver_id;
-                  const reqPref = parseRidePreferences(ride.pickup_address, ride.id || ride.reference);
+                  const reqPref = parseRidePreferences(
+                    ride.pickup_address,
+                    ride.id || ride.reference,
+                  );
                   const customer = ride.customer_id ? customerProfiles[ride.customer_id] : null;
 
                   return (
@@ -1896,8 +2487,8 @@ function DriverConsolePage() {
                         isAssignedToMe
                           ? "border-purple-500/50 bg-purple-500/[0.03] dark:bg-purple-950/10 shadow-sm"
                           : schedule.isUrgent
-                          ? "border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-950/10"
-                          : "border-border bg-background"
+                            ? "border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-950/10"
+                            : "border-border bg-background"
                       }`}
                     >
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -1931,7 +2522,9 @@ function DriverConsolePage() {
                           {/* Scheduled Time Banner */}
                           <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/50 px-3 py-2 rounded-lg border border-border/60">
                             <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
-                            <span>Scheduled Pickup: <strong>{schedule.fullText}</strong></span>
+                            <span>
+                              Scheduled Pickup: <strong>{schedule.fullText}</strong>
+                            </span>
                           </div>
 
                           {/* Pickup & Drop Addresses */}
@@ -1963,7 +2556,9 @@ function DriverConsolePage() {
 
                           {/* Fare and distance */}
                           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="font-mono font-bold text-primary text-sm">₹{Math.round(ride.estimated_fare)}</span>
+                            <span className="font-mono font-bold text-primary text-sm">
+                              ₹{Math.round(ride.estimated_fare)}
+                            </span>
                             <span>{Math.round(ride.distance_km)} km</span>
                             <span>{ride.vehicle_name}</span>
                             {customer && (
@@ -1977,15 +2572,18 @@ function DriverConsolePage() {
                           {/* Passenger Comfort Preferences */}
                           {(reqPref.cabinClimate || reqPref.quietRide || reqPref.pickupPillar) && (
                             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
-                              {reqPref.cabinClimate && (() => {
-                                const b = getCabinClimateBadge(reqPref.cabinClimate);
-                                return (
-                                  <span className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}>
-                                    <Snowflake className="size-3" />
-                                    <span>Pre-cool {b.label}</span>
-                                  </span>
-                                );
-                              })()}
+                              {reqPref.cabinClimate &&
+                                (() => {
+                                  const b = getCabinClimateBadge(reqPref.cabinClimate);
+                                  return (
+                                    <span
+                                      className={`inline-flex items-center gap-1 rounded-full border ${b.borderClass} ${b.bgClass} px-2.5 py-0.5 text-[11px] font-bold ${b.textClass}`}
+                                    >
+                                      <Snowflake className="size-3" />
+                                      <span>Pre-cool {b.label}</span>
+                                    </span>
+                                  );
+                                })()}
                               {reqPref.quietRide && (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
                                   <VolumeX className="size-3" />
@@ -2065,14 +2663,19 @@ function DriverConsolePage() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        You drive your own EV and retain 85% of all rider fares. 15% platform commission is settled with Orange Taxi.
+                        You drive your own EV and retain 85% of all rider fares. 15% platform
+                        commission is settled with Orange Taxi.
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="text-left sm:text-right">
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Balance Due</p>
-                      <p className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                        Commission Balance Due
+                      </p>
+                      <p
+                        className={`text-3xl font-mono font-bold ${partnerCommissionDue > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}
+                      >
                         ₹{Number(partnerCommissionDue).toFixed(2)}
                       </p>
                     </div>
@@ -2095,21 +2698,40 @@ function DriverConsolePage() {
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="rounded-lg border border-border bg-background p-3.5">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Gross Fares Collected</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Number(allTimeFares).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Cash + UPI from all rides</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                      Gross Fares Collected
+                    </p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">
+                      ₹{Number(allTimeFares).toFixed(2)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Cash + UPI from all rides
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-                    <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">Your Net Take-Home (85%)</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">₹{Number(partnerNetEarnings).toFixed(2)}</p>
-                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Retained earnings after platform fee</p>
+                    <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">
+                      Your Net Take-Home (85%)
+                    </p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                      ₹{Number(partnerNetEarnings).toFixed(2)}
+                    </p>
+                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                      Retained earnings after platform fee
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-border bg-background p-3.5">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Commission Paid to Admin</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Number(partnerCommissionPaid).toFixed(2)}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{commissionSettlements.length} recorded settlement{commissionSettlements.length !== 1 ? "s" : ""}</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                      Commission Paid to Admin
+                    </p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">
+                      ₹{Number(partnerCommissionPaid).toFixed(2)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {commissionSettlements.length} recorded settlement
+                      {commissionSettlements.length !== 1 ? "s" : ""}
+                    </p>
                   </div>
                 </div>
 
@@ -2119,17 +2741,30 @@ function DriverConsolePage() {
                       Recent Commission Settlements Recorded by Admin
                     </p>
                     <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                      {commissionSettlements.slice(0, 5).map(c => (
-                        <div key={c.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
+                      {commissionSettlements.slice(0, 5).map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border"
+                        >
                           <div className="flex items-center gap-2">
                             <Check className="size-3.5 text-emerald-600" />
-                            <span className="font-semibold text-emerald-600 font-mono">₹{Math.round(c.amount)}</span>
+                            <span className="font-semibold text-emerald-600 font-mono">
+                              ₹{Math.round(c.amount)}
+                            </span>
                             <span className="text-muted-foreground text-[11px]">
-                              via {c.payment_method?.toUpperCase() || "UPI"} {c.utr_reference ? `(UTR: ${c.utr_reference})` : ""}
+                              via {c.payment_method?.toUpperCase() || "UPI"}{" "}
+                              {c.utr_reference ? `(UTR: ${c.utr_reference})` : ""}
                             </span>
                           </div>
                           <span className="font-mono text-[10px] text-muted-foreground">
-                            {c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                            {c.created_at
+                              ? new Date(c.created_at).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "—"}
                           </span>
                         </div>
                       ))}
@@ -2149,13 +2784,16 @@ function DriverConsolePage() {
                         Cash in Hand (To Be Handed Over to Admin)
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Physical cash collected from riders. Reduces automatically when remitted via UPI or deposited with Admin.
+                        Physical cash collected from riders. Reduces automatically when remitted via
+                        UPI or deposited with Admin.
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="text-left sm:text-right">
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">Current Cash Holding</p>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                        Current Cash Holding
+                      </p>
                       <p className="text-3xl font-mono font-bold text-amber-700 dark:text-amber-400">
                         ₹{Math.round(currentCashHolding)}
                       </p>
@@ -2179,15 +2817,27 @@ function DriverConsolePage() {
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="rounded-lg border border-border bg-background p-3.5">
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">Total Cash Collected (Rides)</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">₹{Math.round(totalCashCollected)}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">From all completed cash rides</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                      Total Cash Collected (Rides)
+                    </p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-foreground">
+                      ₹{Math.round(totalCashCollected)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      From all completed cash rides
+                    </p>
                   </div>
 
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3.5 dark:border-emerald-950 dark:bg-emerald-950/20">
-                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">Cash Deposited with Admin</p>
-                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">₹{Math.round(totalCashSubmitted)}</p>
-                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">{settlements.length} verified handover{settlements.length !== 1 ? "s" : ""}</p>
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase">
+                      Cash Deposited with Admin
+                    </p>
+                    <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-400">
+                      ₹{Math.round(totalCashSubmitted)}
+                    </p>
+                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">
+                      {settlements.length} verified handover{settlements.length !== 1 ? "s" : ""}
+                    </p>
                   </div>
                 </div>
 
@@ -2197,8 +2847,11 @@ function DriverConsolePage() {
                       Recent Handover Receipts from Admin
                     </p>
                     <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                      {settlements.slice(0, 5).map(s => (
-                        <div key={s.id} className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border">
+                      {settlements.slice(0, 5).map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between text-xs rounded-lg bg-background/90 px-3 py-2 border border-border"
+                        >
                           <div className="flex items-center gap-2">
                             <Check className="size-3.5 text-emerald-600" />
                             {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
@@ -2206,11 +2859,20 @@ function DriverConsolePage() {
                                 ⚡ UPI Remittance ({s.notes})
                               </span>
                             ) : (
-                              <span className="text-muted-foreground text-[11px]">({s.notes || "Admin cash collection"})</span>
+                              <span className="text-muted-foreground text-[11px]">
+                                ({s.notes || "Admin cash collection"})
+                              </span>
                             )}
                           </div>
                           <span className="font-mono text-[10px] text-muted-foreground">
-                            {s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                            {s.created_at
+                              ? new Date(s.created_at).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "—"}
                           </span>
                         </div>
                       ))}
@@ -2222,34 +2884,51 @@ function DriverConsolePage() {
 
             {/* Today's breakdown */}
             <div className="mb-6">
-
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Today</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                Today
+              </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-muted-foreground">Total Earned</p>
-                  <p className="mt-2 text-3xl font-bold font-mono">₹{Number(todayTotal).toFixed(2)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{todayRides.length} ride{todayRides.length !== 1 ? "s" : ""}</p>
+                  <p className="mt-2 text-3xl font-bold font-mono">
+                    ₹{Number(todayTotal).toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {todayRides.length} ride{todayRides.length !== 1 ? "s" : ""}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900 p-5">
                   <p className="text-xs font-semibold text-blue-600">via UPI</p>
-                  <p className="mt-2 text-3xl font-bold font-mono text-blue-700">₹{Number(todayUPI).toFixed(2)}</p>
-                  <p className="mt-1 text-xs text-blue-500">{todayRides.filter(r => r.payment_method === "upi").length} rides</p>
+                  <p className="mt-2 text-3xl font-bold font-mono text-blue-700">
+                    ₹{Number(todayUPI).toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs text-blue-500">
+                    {todayRides.filter((r) => r.payment_method === "upi").length} rides
+                  </p>
                 </div>
                 <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-5">
                   <p className="text-xs font-semibold text-green-600">via Cash</p>
-                  <p className="mt-2 text-3xl font-bold font-mono text-green-700">₹{Number(todayCash).toFixed(2)}</p>
-                  <p className="mt-1 text-xs text-green-500">{todayRides.filter(r => r.payment_method === "cash").length} rides</p>
+                  <p className="mt-2 text-3xl font-bold font-mono text-green-700">
+                    ₹{Number(todayCash).toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs text-green-500">
+                    {todayRides.filter((r) => r.payment_method === "cash").length} rides
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Weekly breakdown */}
             <div className="mb-6">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">This Week</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                This Week
+              </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-muted-foreground">Total</p>
-                  <p className="mt-2 text-2xl font-bold font-mono">₹{Number(weeklyEarnings).toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-bold font-mono">
+                    ₹{Number(weeklyEarnings).toFixed(2)}
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">{weeklyRides.length} rides</p>
                 </div>
                 <div className="rounded-xl border border-border bg-background p-5">
@@ -2258,14 +2937,18 @@ function DriverConsolePage() {
                 </div>
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-green-600">Cash</p>
-                  <p className="mt-2 text-2xl font-bold font-mono">₹{Number(weekCash).toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-bold font-mono">
+                    ₹{Number(weekCash).toFixed(2)}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Monthly breakdown */}
             <div className="mb-8">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">This Month</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                This Month
+              </p>
               <div className="grid gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-border bg-background p-5">
                   <p className="text-xs font-semibold text-muted-foreground">Total</p>
@@ -2289,45 +2972,69 @@ function DriverConsolePage() {
 
             {/* Ride history */}
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Ride History</p>
-              {recentRides.length === 0
-                ? <EmptyState icon={TrendingUp} title="No completed rides yet" text="Completed rides will appear here." />
-                : <div className="space-y-2">
-                    {recentRides.map(ride => {
-                      const ridePlate = getBookingVehiclePlate(ride, driver);
-                      return (
-                        <div key={ride.id} className="flex items-center justify-between rounded-xl border border-border bg-background px-5 py-4 gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <MapPin className="size-3 shrink-0 text-primary" />
-                              <span className="truncate">{ride.pickup_area} → {ride.drop_area}</span>
-                            </div>
-                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                              <span>
-                                {ride.completed_at ? new Date(ride.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
-                              </span>
-                              {ridePlate && (
-                                <>
-                                  <span>·</span>
-                                  <span className="inline-flex items-center gap-1 font-mono font-bold text-foreground bg-primary/10 px-1.5 py-0.5 rounded text-[10px]">
-                                    <Car className="size-2.5 text-primary" />
-                                    <span>{ridePlate}</span>
-                                  </span>
-                                </>
-                              )}
-                            </div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                Ride History
+              </p>
+              {recentRides.length === 0 ? (
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No completed rides yet"
+                  text="Completed rides will appear here."
+                />
+              ) : (
+                <div className="space-y-2">
+                  {recentRides.map((ride) => {
+                    const ridePlate = getBookingVehiclePlate(ride, driver);
+                    return (
+                      <div
+                        key={ride.id}
+                        className="flex items-center justify-between rounded-xl border border-border bg-background px-5 py-4 gap-4"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <MapPin className="size-3 shrink-0 text-primary" />
+                            <span className="truncate">
+                              {ride.pickup_area} → {ride.drop_area}
+                            </span>
                           </div>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                            <span>
+                              {ride.completed_at
+                                ? new Date(ride.completed_at).toLocaleDateString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                : "—"}
+                            </span>
+                            {ridePlate && (
+                              <>
+                                <span>·</span>
+                                <span className="inline-flex items-center gap-1 font-mono font-bold text-foreground bg-primary/10 px-1.5 py-0.5 rounded text-[10px]">
+                                  <Car className="size-2.5 text-primary" />
+                                  <span>{ridePlate}</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
-                            {ride.payment_method === "driver_upi" ? "DRIVER UPI" : ride.payment_method?.toUpperCase()}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}
+                          >
+                            {ride.payment_method === "driver_upi"
+                              ? "DRIVER UPI"
+                              : ride.payment_method?.toUpperCase()}
                           </span>
-                          <span className="font-bold text-primary">₹{Math.round(ride.final_fare ?? ride.estimated_fare)}</span>
+                          <span className="font-bold text-primary">
+                            ₹{Math.round(ride.final_fare ?? ride.estimated_fare)}
+                          </span>
                         </div>
                       </div>
                     );
                   })}
-                  </div>
-              }
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -2335,13 +3042,14 @@ function DriverConsolePage() {
           <TabsContent value="praise">
             {(() => {
               const totalTips = driverReviews.reduce((sum, r) => sum + (Number(r.tip) || 0), 0);
-              const allRatings = driverReviews.map(r => Number(r.rating)).filter(Boolean);
-              const praiseAvgRating = allRatings.length > 0
-                ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1)
-                : (driver.rating || 5.0).toFixed(1);
+              const allRatings = driverReviews.map((r) => Number(r.rating)).filter(Boolean);
+              const praiseAvgRating =
+                allRatings.length > 0
+                  ? (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1)
+                  : (driver.rating || 5.0).toFixed(1);
 
               const complimentCounts: Record<string, number> = {};
-              driverReviews.forEach(r => {
+              driverReviews.forEach((r) => {
                 if (Array.isArray(r.compliments)) {
                   r.compliments.forEach((c: string) => {
                     complimentCounts[c] = (complimentCounts[c] || 0) + 1;
@@ -2358,27 +3066,41 @@ function DriverConsolePage() {
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-5">
                       <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                         <Banknote className="size-5" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Total Tips Earned</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                          Total Tips Earned
+                        </span>
                       </div>
                       <p className="mt-2 text-3xl font-extrabold text-foreground">₹{totalTips}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">100% direct to your bank payout</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        100% direct to your bank payout
+                      </p>
                     </div>
 
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
                       <div className="flex items-center gap-2 text-amber-500">
                         <Star className="size-5 fill-amber-400 text-amber-400" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Driver Rating</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                          Driver Rating
+                        </span>
                       </div>
-                      <p className="mt-2 text-3xl font-extrabold text-foreground">{praiseAvgRating} ⭐</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Based on customer ratings</p>
+                      <p className="mt-2 text-3xl font-extrabold text-foreground">
+                        {praiseAvgRating} ⭐
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Based on customer ratings
+                      </p>
                     </div>
 
                     <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
                       <div className="flex items-center gap-2 text-primary">
                         <Award className="size-5" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Praise Badges</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                          Praise Badges
+                        </span>
                       </div>
-                      <p className="mt-2 text-3xl font-extrabold text-foreground">{totalCompliments}</p>
+                      <p className="mt-2 text-3xl font-extrabold text-foreground">
+                        {totalCompliments}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">Compliments collected</p>
                     </div>
                   </div>
@@ -2390,7 +3112,10 @@ function DriverConsolePage() {
                       <h3 className="font-bold text-sm">Customer Compliment Badges</h3>
                     </div>
                     {Object.keys(complimentCounts).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No compliment badges collected yet. Deliver exceptional service to earn praise badges!</p>
+                      <p className="text-xs text-muted-foreground">
+                        No compliment badges collected yet. Deliver exceptional service to earn
+                        praise badges!
+                      </p>
                     ) : (
                       <div className="flex flex-wrap gap-2.5">
                         {Object.entries(complimentCounts).map(([badge, count]) => (
@@ -2410,13 +3135,22 @@ function DriverConsolePage() {
 
                   {/* Passenger Reviews & Praise Feed */}
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">Recent Customer Reviews</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+                      Recent Customer Reviews
+                    </p>
                     {driverReviews.length === 0 ? (
-                      <EmptyState icon={Heart} title="No customer reviews yet" text="Customer feedback and ratings will appear here after completed rides." />
+                      <EmptyState
+                        icon={Heart}
+                        title="No customer reviews yet"
+                        text="Customer feedback and ratings will appear here after completed rides."
+                      />
                     ) : (
                       <div className="space-y-3">
                         {driverReviews.map((rev, idx) => (
-                          <div key={rev.booking_id || idx} className="rounded-xl border border-border bg-background p-4 sm:p-5">
+                          <div
+                            key={rev.booking_id || idx}
+                            className="rounded-xl border border-border bg-background p-4 sm:p-5"
+                          >
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-0.5">
@@ -2484,7 +3218,7 @@ function DriverConsolePage() {
       </div>
 
       {/* Background Active Ride Chat Sheets for Realtime Alerts & In-Ride Messaging */}
-      {activeRides.map(ride => {
+      {activeRides.map((ride) => {
         const isThisChatOpen = activeChatRide?.id === ride.id;
         const custInfo = (ride.customer_id && customerProfiles[ride.customer_id]) || {
           full_name: "Passenger",
@@ -2505,7 +3239,7 @@ function DriverConsolePage() {
               else if (activeChatRide?.id === ride.id) setActiveChatRide(null);
             }}
             onUnreadCountChange={(count) => {
-              setUnreadChats(prev => ({ ...prev, [ride.id]: count }));
+              setUnreadChats((prev) => ({ ...prev, [ride.id]: count }));
             }}
           />
         );
@@ -2520,7 +3254,8 @@ function DriverConsolePage() {
               Remit Holding Cash via UPI
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Transfer physical passenger cash collections directly to Orange Taxi official account using any UPI app (GPay, PhonePe, Paytm, BHIM).
+              Transfer physical passenger cash collections directly to Orange Taxi official account
+              using any UPI app (GPay, PhonePe, Paytm, BHIM).
             </DialogDescription>
           </DialogHeader>
 
@@ -2528,12 +3263,14 @@ function DriverConsolePage() {
             {/* Cash in Hand Info */}
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold uppercase text-amber-700 dark:text-amber-400">Total Cash in Hand</p>
-                <p className="text-2xl font-mono font-black text-amber-600 dark:text-amber-300">₹{Math.round(currentCashHolding)}</p>
+                <p className="text-[11px] font-bold uppercase text-amber-700 dark:text-amber-400">
+                  Total Cash in Hand
+                </p>
+                <p className="text-2xl font-mono font-black text-amber-600 dark:text-amber-300">
+                  ₹{Math.round(currentCashHolding)}
+                </p>
               </div>
-              <Badge className="bg-amber-600 text-white font-semibold text-xs">
-                Physical Cash
-              </Badge>
+              <Badge className="bg-amber-600 text-white font-semibold text-xs">Physical Cash</Badge>
             </div>
 
             {/* Official Orange Taxi UPI ID */}
@@ -2555,7 +3292,9 @@ function DriverConsolePage() {
               <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
                 orangeetaxi@upi
               </p>
-              <p className="text-[11px] text-muted-foreground">Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong></p>
+              <p className="text-[11px] text-muted-foreground">
+                Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong>
+              </p>
             </div>
 
             {/* Remittance Amount */}
@@ -2608,7 +3347,9 @@ function DriverConsolePage() {
             {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
             {Number(depositAmount) > 0 && (
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
-                <p className="text-xs font-bold text-foreground">Scan with any UPI App to Pay ₹{depositAmount}</p>
+                <p className="text-xs font-bold text-foreground">
+                  Scan with any UPI App to Pay ₹{depositAmount}
+                </p>
                 <div className="flex justify-center">
                   <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
                     <img
@@ -2634,7 +3375,9 @@ function DriverConsolePage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-bold flex items-center justify-between">
                 <span>12-Digit UPI Reference / UTR No. *</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Found in UPI app receipt</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  Found in UPI app receipt
+                </span>
               </Label>
               <Input
                 type="text"
@@ -2661,10 +3404,20 @@ function DriverConsolePage() {
               <Button
                 type="button"
                 onClick={handleSubmitUpiDeposit}
-                disabled={submittingDeposit || !depositAmount || Number(depositAmount) <= 0 || !depositUtr || depositUtr.trim().length < 4}
+                disabled={
+                  submittingDeposit ||
+                  !depositAmount ||
+                  Number(depositAmount) <= 0 ||
+                  !depositUtr ||
+                  depositUtr.trim().length < 4
+                }
                 className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5"
               >
-                {submittingDeposit ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {submittingDeposit ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
                 <span>Confirm Deposit</span>
               </Button>
             </div>
@@ -2681,7 +3434,8 @@ function DriverConsolePage() {
               Pay 15% Platform Commission via UPI
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Settle your platform commission balance directly to Orange Taxi using any UPI app (GPay, PhonePe, Paytm, BHIM).
+              Settle your platform commission balance directly to Orange Taxi using any UPI app
+              (GPay, PhonePe, Paytm, BHIM).
             </DialogDescription>
           </DialogHeader>
 
@@ -2689,8 +3443,12 @@ function DriverConsolePage() {
             {/* Commission Due Info */}
             <div className="rounded-xl border border-primary/30 bg-primary/10 p-3.5 flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-bold uppercase text-primary">Commission Balance Due</p>
-                <p className="text-2xl font-mono font-black text-primary">₹{partnerCommissionDue}</p>
+                <p className="text-[11px] font-bold uppercase text-primary">
+                  Commission Balance Due
+                </p>
+                <p className="text-2xl font-mono font-black text-primary">
+                  ₹{partnerCommissionDue}
+                </p>
               </div>
               <Badge className="bg-primary text-primary-foreground font-semibold text-xs">
                 15% Platform Fee
@@ -2716,7 +3474,9 @@ function DriverConsolePage() {
               <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
                 orangeetaxi@upi
               </p>
-              <p className="text-[11px] text-muted-foreground">Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong></p>
+              <p className="text-[11px] text-muted-foreground">
+                Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong>
+              </p>
             </div>
 
             {/* Commission Payment Amount */}
@@ -2726,7 +3486,9 @@ function DriverConsolePage() {
                 type="number"
                 min={1}
                 value={commissionPayAmount}
-                onChange={(e) => setCommissionPayAmount(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) =>
+                  setCommissionPayAmount(e.target.value ? Number(e.target.value) : "")
+                }
                 placeholder="Enter amount to pay"
                 className="font-mono text-base font-bold"
               />
@@ -2768,7 +3530,9 @@ function DriverConsolePage() {
             {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
             {Number(commissionPayAmount) > 0 && (
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
-                <p className="text-xs font-bold text-foreground">Scan with any UPI App to Pay ₹{commissionPayAmount}</p>
+                <p className="text-xs font-bold text-foreground">
+                  Scan with any UPI App to Pay ₹{commissionPayAmount}
+                </p>
                 <div className="flex justify-center">
                   <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
                     <img
@@ -2794,7 +3558,9 @@ function DriverConsolePage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-bold flex items-center justify-between">
                 <span>12-Digit UPI Reference / UTR No. *</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Found in UPI app receipt</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  Found in UPI app receipt
+                </span>
               </Label>
               <Input
                 type="text"
@@ -2821,10 +3587,20 @@ function DriverConsolePage() {
               <Button
                 type="button"
                 onClick={handleSubmitUpiCommission}
-                disabled={submittingCommission || !commissionPayAmount || Number(commissionPayAmount) <= 0 || !commissionUtr || commissionUtr.trim().length < 4}
+                disabled={
+                  submittingCommission ||
+                  !commissionPayAmount ||
+                  Number(commissionPayAmount) <= 0 ||
+                  !commissionUtr ||
+                  commissionUtr.trim().length < 4
+                }
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
               >
-                {submittingCommission ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                {submittingCommission ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
                 <span>Record Payment</span>
               </Button>
             </div>
@@ -2836,5 +3612,11 @@ function DriverConsolePage() {
 }
 
 function EmptyState({ icon: Icon, title, text }: any) {
-  return <div className="flex flex-col items-center rounded-xl border border-dashed py-16 text-center"><Icon className="size-10 text-muted-foreground/40" /><p className="mt-4 font-semibold">{title}</p><p className="mt-2 text-sm text-muted-foreground">{text}</p></div>;
+  return (
+    <div className="flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
+      <Icon className="size-10 text-muted-foreground/40" />
+      <p className="mt-4 font-semibold">{title}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+    </div>
+  );
 }

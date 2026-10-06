@@ -50,10 +50,13 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
   try {
     const body = (await request.json()) as SendInvoicePayload;
     if (!body || !body.to || !body.invoiceNumber) {
-      return new Response(JSON.stringify({ error: "Missing required fields (to, invoiceNumber)" }), {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing required fields (to, invoiceNumber)" }),
+        {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        },
+      );
     }
 
     const apiKey =
@@ -79,10 +82,13 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
 
     const resendData = (await resendRes.json()) as any;
     if (!resendRes.ok) {
-      return new Response(JSON.stringify({ error: resendData?.message || "Failed to dispatch email via Resend" }), {
-        status: resendRes.status,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: resendData?.message || "Failed to dispatch email via Resend" }),
+        {
+          status: resendRes.status,
+          headers: { "content-type": "application/json" },
+        },
+      );
     }
 
     return new Response(JSON.stringify({ success: true, id: resendData.id }), {
@@ -90,10 +96,13 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
       headers: { "content-type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message || "Failed to process invoice email request" }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: err.message || "Failed to process invoice email request" }),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      },
+    );
   }
 }
 

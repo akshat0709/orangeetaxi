@@ -26,7 +26,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +76,11 @@ interface CommissionLedgerManagerProps {
   onRefresh: () => void;
 }
 
-export function CommissionLedgerManager({ drivers, bookings, onRefresh }: CommissionLedgerManagerProps) {
+export function CommissionLedgerManager({
+  drivers,
+  bookings,
+  onRefresh,
+}: CommissionLedgerManagerProps) {
   const [settlements, setSettlements] = useState<CommissionSettlement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -116,7 +120,10 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
           }
         } else {
           setSettlements(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS);
-          localStorage.setItem("orange_commission_settlements", JSON.stringify(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS));
+          localStorage.setItem(
+            "orange_commission_settlements",
+            JSON.stringify(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS),
+          );
         }
       }
     } catch (e) {
@@ -155,42 +162,51 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
   }, []);
 
   // Filter partner drivers
-  const partnerDriversList = drivers.filter(d => {
+  const partnerDriversList = drivers.filter((d) => {
     if (d.driver_type === "partner" || d.owns_vehicle) return true;
     const hasPartnerCar = partnerVehicles.some(
-      pv => pv.owner_phone === d.phone || pv.owner_name?.toLowerCase() === d.full_name?.toLowerCase()
+      (pv) =>
+        pv.owner_phone === d.phone || pv.owner_name?.toLowerCase() === d.full_name?.toLowerCase(),
     );
     return hasPartnerCar;
   });
 
-  const activePartnerDrivers = partnerDriversList.length > 0 ? partnerDriversList : [
-    {
-      id: "partner-sample-1",
-      full_name: "Vikramaditya Rao",
-      phone: "+91 98450 12345",
-      city: "Bengaluru",
-      vehicle_model: "Tata Nexon EV",
-      vehicle_number: "KA 01 EV 4421",
-      driver_type: "partner",
-    },
-    {
-      id: "partner-sample-2",
-      full_name: "Sunil Gowda",
-      phone: "+91 97422 98765",
-      city: "Bengaluru",
-      vehicle_model: "Mahindra BE.6",
-      vehicle_number: "KA 05 EV 8890",
-      driver_type: "partner",
-    },
-  ];
+  const activePartnerDrivers =
+    partnerDriversList.length > 0
+      ? partnerDriversList
+      : [
+          {
+            id: "partner-sample-1",
+            full_name: "Vikramaditya Rao",
+            phone: "+91 98450 12345",
+            city: "Bengaluru",
+            vehicle_model: "Tata Nexon EV",
+            vehicle_number: "KA 01 EV 4421",
+            driver_type: "partner",
+          },
+          {
+            id: "partner-sample-2",
+            full_name: "Sunil Gowda",
+            phone: "+91 97422 98765",
+            city: "Bengaluru",
+            vehicle_model: "Mahindra BE.6",
+            vehicle_number: "KA 05 EV 8890",
+            driver_type: "partner",
+          },
+        ];
 
   // Calculate commission metrics for each partner driver
   function getPartnerCommissionStats(driverId: string, driverName?: string) {
     const driverRides = bookings.filter(
-      b => (b.driver_id === driverId || (driverName && b.driver_name === driverName)) && b.status === "completed"
+      (b) =>
+        (b.driver_id === driverId || (driverName && b.driver_name === driverName)) &&
+        b.status === "completed",
     );
 
-    let grossFare = driverRides.reduce((sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
+    let grossFare = driverRides.reduce(
+      (sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)),
+      0,
+    );
     let ridesCount = driverRides.length;
 
     if (ridesCount === 0 && driverId === "partner-sample-1") {
@@ -204,8 +220,11 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
     const commissionRate = 0.15; // 15% Platform Commission
     const commissionPayable = Math.round(grossFare * commissionRate);
 
-    const driverSettlements = settlements.filter(s => s.driver_id === driverId);
-    const commissionPaid = driverSettlements.reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
+    const driverSettlements = settlements.filter((s) => s.driver_id === driverId);
+    const commissionPaid = driverSettlements.reduce(
+      (sum, s) => sum + Math.round(Number(s.amount || 0)),
+      0,
+    );
 
     const outstandingCommission = Math.max(0, commissionPayable - commissionPaid);
     const partnerNetEarnings = Math.max(0, grossFare - commissionPayable); // 85%
@@ -224,13 +243,19 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
   }
 
   // Aggregate totals across all partner drivers
-  const totalPartnerGrossFare = activePartnerDrivers.reduce((sum, d) => sum + getPartnerCommissionStats(d.id, d.full_name).grossFare, 0);
+  const totalPartnerGrossFare = activePartnerDrivers.reduce(
+    (sum, d) => sum + getPartnerCommissionStats(d.id, d.full_name).grossFare,
+    0,
+  );
   const totalCommissionEarned = Math.round(totalPartnerGrossFare * 0.15);
-  const totalCommissionPaid = settlements.reduce((sum, s) => sum + Math.round(Number(s.amount || 0)), 0);
+  const totalCommissionPaid = settlements.reduce(
+    (sum, s) => sum + Math.round(Number(s.amount || 0)),
+    0,
+  );
   const totalCommissionOutstanding = Math.max(0, totalCommissionEarned - totalCommissionPaid);
 
   // Filtered partner drivers
-  const filteredDrivers = activePartnerDrivers.filter(d => {
+  const filteredDrivers = activePartnerDrivers.filter((d) => {
     const term = search.toLowerCase();
     return (
       d.full_name.toLowerCase().includes(term) ||
@@ -253,7 +278,7 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
       return;
     }
 
-    const targetDriver = activePartnerDrivers.find(d => d.id === selectedDriverId);
+    const targetDriver = activePartnerDrivers.find((d) => d.id === selectedDriverId);
     if (!targetDriver) return;
 
     const stats = getPartnerCommissionStats(targetDriver.id, targetDriver.full_name);
@@ -265,7 +290,9 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
     }
 
     if (amt > maxDue) {
-      toast.error(`The maximum amount that can be collected cannot exceed ₹${maxDue.toLocaleString("en-IN")} (amount to be paid from ${targetDriver.full_name}).`);
+      toast.error(
+        `The maximum amount that can be collected cannot exceed ₹${maxDue.toLocaleString("en-IN")} (amount to be paid from ${targetDriver.full_name}).`,
+      );
       return;
     }
 
@@ -296,7 +323,9 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
 
     // Update localStorage
     const stored = localStorage.getItem("orange_commission_settlements");
-    let current: CommissionSettlement[] = stored ? JSON.parse(stored) : [...DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS];
+    const current: CommissionSettlement[] = stored
+      ? JSON.parse(stored)
+      : [...DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS];
     current.unshift(newRecord);
     localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
     window.dispatchEvent(new Event("commission_settlements_updated"));
@@ -318,12 +347,16 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
         <div>
           <div className="flex items-center gap-2">
             <h2 className="display-serif text-2xl font-bold">Partner Commission Management</h2>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
+            <Badge
+              variant="outline"
+              className="bg-primary/10 text-primary border-primary/30 text-xs"
+            >
               15% Platform Commission
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Track ride revenues collected by partner owner-operators, monitor 15% platform fees owed to Orange Taxi, and record settlements.
+            Track ride revenues collected by partner owner-operators, monitor 15% platform fees owed
+            to Orange Taxi, and record settlements.
           </p>
         </div>
 
@@ -364,7 +397,9 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
               Partner Owner-Operator Operating Framework
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Drivers bringing their own Orange Standard EV retain <strong>85%</strong> of all ride fares. A <strong>15% platform commission</strong> is payable to Orange Taxi Limited. Partner drivers do not appear in company depot cash surrender.
+              Drivers bringing their own Orange Standard EV retain <strong>85%</strong> of all ride
+              fares. A <strong>15% platform commission</strong> is payable to Orange Taxi Limited.
+              Partner drivers do not appear in company depot cash surrender.
             </p>
           </div>
         </div>
@@ -382,251 +417,290 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
             <span className="text-[11px] font-semibold uppercase tracking-wider">Gross Fares</span>
             <BadgeIndianRupee className="size-4 text-primary" />
           </div>
-          <p className="mt-2 text-2xl font-bold font-mono">₹{totalPartnerGrossFare.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl font-bold font-mono">
+            ₹{totalPartnerGrossFare.toLocaleString("en-IN")}
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">All partner rides</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Commission Earned</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
+              Commission Earned
+            </span>
             <Percent className="size-4 text-blue-600" />
           </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-blue-600">₹{totalCommissionEarned.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl font-bold font-mono text-blue-600">
+            ₹{totalCommissionEarned.toLocaleString("en-IN")}
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">15% Orange Taxi fee</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Commission Paid</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
+              Commission Paid
+            </span>
             <CheckCircle2 className="size-4 text-emerald-600" />
           </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-emerald-600">₹{totalCommissionPaid.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl font-bold font-mono text-emerald-600">
+            ₹{totalCommissionPaid.toLocaleString("en-IN")}
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">Deposited by partners</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Outstanding Due</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
+              Outstanding Due
+            </span>
             <Clock className="size-4 text-amber-500" />
           </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-amber-500">₹{totalCommissionOutstanding.toLocaleString("en-IN")}</p>
+          <p className="mt-2 text-2xl font-bold font-mono text-amber-500">
+            ₹{totalCommissionOutstanding.toLocaleString("en-IN")}
+          </p>
           <p className="text-xs text-muted-foreground mt-0.5">Receivable from drivers</p>
         </div>
       </div>
 
       {/* Record Commission Payment Modal */}
-      {isRecording && (() => {
-        const targetDriver = activePartnerDrivers.find(d => d.id === selectedDriverId);
-        const selectedStats = targetDriver ? getPartnerCommissionStats(targetDriver.id, targetDriver.full_name) : null;
-        const maxDue = selectedStats ? selectedStats.outstandingCommission : 0;
-        const isExceeding = Boolean(selectedDriverId && settleAmount !== "" && Number(settleAmount) > maxDue);
+      {isRecording &&
+        (() => {
+          const targetDriver = activePartnerDrivers.find((d) => d.id === selectedDriverId);
+          const selectedStats = targetDriver
+            ? getPartnerCommissionStats(targetDriver.id, targetDriver.full_name)
+            : null;
+          const maxDue = selectedStats ? selectedStats.outstandingCommission : 0;
+          const isExceeding = Boolean(
+            selectedDriverId && settleAmount !== "" && Number(settleAmount) > maxDue,
+          );
 
-        return (
-          <form
-            onSubmit={handleRecordSettlement}
-            className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
-          >
-            <div className="flex items-center justify-between border-b border-primary/20 pb-3">
-              <div className="flex items-center gap-2">
-                <Plus className="size-4 text-primary" />
-                <p className="text-sm font-bold uppercase tracking-wider text-primary">
-                  Record Partner Commission Deposit
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRecording(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Driver Select */}
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                  Partner Driver *
-                </label>
-                <select
-                  value={selectedDriverId}
-                  onChange={e => {
-                    const dId = e.target.value;
-                    setSelectedDriverId(dId);
-                    if (dId) {
-                      const dObj = activePartnerDrivers.find(d => d.id === dId);
-                      const stats = getPartnerCommissionStats(dId, dObj?.full_name);
-                      setSettleAmount(stats.outstandingCommission > 0 ? stats.outstandingCommission : "");
-                    } else {
-                      setSettleAmount("");
-                    }
-                  }}
-                  required
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="">-- Choose Partner Driver --</option>
-                  {activePartnerDrivers.map(d => {
-                    const stats = getPartnerCommissionStats(d.id, d.full_name);
-                    return (
-                      <option key={d.id} value={d.id}>
-                        {d.full_name} ({d.vehicle_number || "Partner EV"}) — Due: ₹{stats.outstandingCommission}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Amount */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Amount Received (₹) *
-                  </label>
-                  {selectedDriverId && (
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      Max: <strong className={maxDue > 0 ? "text-primary font-bold" : "text-muted-foreground"}>₹{maxDue}</strong>
-                    </span>
-                  )}
-                </div>
-                <div className="relative mt-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">₹</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={maxDue > 0 ? maxDue : undefined}
-                    step="1"
-                    value={settleAmount}
-                    onKeyDown={e => {
-                      if (e.key === "." || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
-                        e.preventDefault();
-                      }
-                    }}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (val === "") {
-                        setSettleAmount("");
-                      } else {
-                        const num = Math.round(Number(val));
-                        setSettleAmount(isNaN(num) ? "" : num);
-                      }
-                    }}
-                    placeholder={maxDue > 0 ? `Max ₹${maxDue}` : "e.g. 1500"}
-                    required
-                    className={`w-full rounded-lg border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none transition-colors ${
-                      isExceeding
-                        ? "border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive text-destructive"
-                        : "border-border focus:border-primary focus:ring-1 focus:ring-primary"
-                    }`}
-                  />
-                </div>
-                {isExceeding && (
-                  <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
-                    <AlertCircle className="size-3 shrink-0" />
-                    Cannot exceed ₹{maxDue} (commission due from driver)
+          return (
+            <form
+              onSubmit={handleRecordSettlement}
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
+            >
+              <div className="flex items-center justify-between border-b border-primary/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <Plus className="size-4 text-primary" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                    Record Partner Commission Deposit
                   </p>
-                )}
-                {selectedDriverId && maxDue <= 0 && (
-                  <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="size-3 shrink-0" />
-                    Driver has cleared all commission due (₹0 to be paid)
-                  </p>
-                )}
-              </div>
-
-              {/* Payment Mode */}
-              <div>
-                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                  Payment Mode *
-                </label>
-                <select
-                  value={paymentMode}
-                  onChange={e => setPaymentMode(e.target.value as any)}
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
-                >
-                  <option value="upi">UPI Transfer</option>
-                  <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
-                  <option value="cash">Cash Deposit at Depot</option>
-                </select>
-              </div>
-
-              {/* Reference No */}
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                  Transaction Ref / UTR / Receipt No.
-                </label>
-                <input
-                  type="text"
-                  value={referenceNo}
-                  onChange={e => setReferenceNo(e.target.value)}
-                  placeholder="e.g. UPI/4019284092/HDFC or Cash Receipt #104"
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              {/* Notes */}
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                  Admin Notes
-                </label>
-                <input
-                  type="text"
-                  value={settleNotes}
-                  onChange={e => setSettleNotes(e.target.value)}
-                  placeholder="e.g. Cleared commission for August rides"
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            {/* Quick Presets for Partner Driver */}
-            {selectedDriverId && maxDue > 0 && (
-              <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-primary/20">
-                <span>Quick Preset (Max ₹{maxDue}):</span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setSettleAmount(maxDue)}
-                  className="rounded bg-primary/10 text-primary px-2 py-0.5 font-bold hover:bg-primary/20 border border-primary/30"
+                  onClick={() => setIsRecording(false)}
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  Full Outstanding Due (₹{maxDue})
+                  <X className="size-4" />
                 </button>
-                {[500, 1000, 2000]
-                  .filter(val => val <= maxDue && val !== maxDue)
-                  .map(val => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setSettleAmount(val)}
-                      className="rounded border border-border bg-background px-2 py-0.5 text-muted-foreground hover:bg-muted font-mono"
-                    >
-                      ₹{val}
-                    </button>
-                  ))}
               </div>
-            )}
 
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsRecording(false)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={submitting || !settleAmount || !selectedDriverId || isExceeding || maxDue <= 0}
-                className="text-xs font-semibold gap-1.5 disabled:opacity-50"
-              >
-                {submitting ? "Saving..." : <Check className="size-3.5" />}
-                Save Commission Settlement
-              </Button>
-            </div>
-          </form>
-        );
-      })()}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Driver Select */}
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Partner Driver *
+                  </label>
+                  <select
+                    value={selectedDriverId}
+                    onChange={(e) => {
+                      const dId = e.target.value;
+                      setSelectedDriverId(dId);
+                      if (dId) {
+                        const dObj = activePartnerDrivers.find((d) => d.id === dId);
+                        const stats = getPartnerCommissionStats(dId, dObj?.full_name);
+                        setSettleAmount(
+                          stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
+                        );
+                      } else {
+                        setSettleAmount("");
+                      }
+                    }}
+                    required
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    <option value="">-- Choose Partner Driver --</option>
+                    {activePartnerDrivers.map((d) => {
+                      const stats = getPartnerCommissionStats(d.id, d.full_name);
+                      return (
+                        <option key={d.id} value={d.id}>
+                          {d.full_name} ({d.vehicle_number || "Partner EV"}) — Due: ₹
+                          {stats.outstandingCommission}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                      Amount Received (₹) *
+                    </label>
+                    {selectedDriverId && (
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        Max:{" "}
+                        <strong
+                          className={
+                            maxDue > 0 ? "text-primary font-bold" : "text-muted-foreground"
+                          }
+                        >
+                          ₹{maxDue}
+                        </strong>
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={maxDue > 0 ? maxDue : undefined}
+                      step="1"
+                      value={settleAmount}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "." ||
+                          e.key === "e" ||
+                          e.key === "E" ||
+                          e.key === "+" ||
+                          e.key === "-"
+                        ) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "") {
+                          setSettleAmount("");
+                        } else {
+                          const num = Math.round(Number(val));
+                          setSettleAmount(isNaN(num) ? "" : num);
+                        }
+                      }}
+                      placeholder={maxDue > 0 ? `Max ₹${maxDue}` : "e.g. 1500"}
+                      required
+                      className={`w-full rounded-lg border bg-background py-2 pl-7 pr-3 text-xs font-mono font-bold text-foreground outline-none transition-colors ${
+                        isExceeding
+                          ? "border-destructive focus:border-destructive focus:ring-1 focus:ring-destructive text-destructive"
+                          : "border-border focus:border-primary focus:ring-1 focus:ring-primary"
+                      }`}
+                    />
+                  </div>
+                  {isExceeding && (
+                    <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
+                      <AlertCircle className="size-3 shrink-0" />
+                      Cannot exceed ₹{maxDue} (commission due from driver)
+                    </p>
+                  )}
+                  {selectedDriverId && maxDue <= 0 && (
+                    <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="size-3 shrink-0" />
+                      Driver has cleared all commission due (₹0 to be paid)
+                    </p>
+                  )}
+                </div>
+
+                {/* Payment Mode */}
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Payment Mode *
+                  </label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value as any)}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    <option value="upi">UPI Transfer</option>
+                    <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
+                    <option value="cash">Cash Deposit at Depot</option>
+                  </select>
+                </div>
+
+                {/* Reference No */}
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Transaction Ref / UTR / Receipt No.
+                  </label>
+                  <input
+                    type="text"
+                    value={referenceNo}
+                    onChange={(e) => setReferenceNo(e.target.value)}
+                    placeholder="e.g. UPI/4019284092/HDFC or Cash Receipt #104"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Admin Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={settleNotes}
+                    onChange={(e) => setSettleNotes(e.target.value)}
+                    placeholder="e.g. Cleared commission for August rides"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Quick Presets for Partner Driver */}
+              {selectedDriverId && maxDue > 0 && (
+                <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-primary/20">
+                  <span>Quick Preset (Max ₹{maxDue}):</span>
+                  <button
+                    type="button"
+                    onClick={() => setSettleAmount(maxDue)}
+                    className="rounded bg-primary/10 text-primary px-2 py-0.5 font-bold hover:bg-primary/20 border border-primary/30"
+                  >
+                    Full Outstanding Due (₹{maxDue})
+                  </button>
+                  {[500, 1000, 2000]
+                    .filter((val) => val <= maxDue && val !== maxDue)
+                    .map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setSettleAmount(val)}
+                        className="rounded border border-border bg-background px-2 py-0.5 text-muted-foreground hover:bg-muted font-mono"
+                      >
+                        ₹{val}
+                      </button>
+                    ))}
+                </div>
+              )}
+
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsRecording(false)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={
+                    submitting || !settleAmount || !selectedDriverId || isExceeding || maxDue <= 0
+                  }
+                  className="text-xs font-semibold gap-1.5 disabled:opacity-50"
+                >
+                  {submitting ? "Saving..." : <Check className="size-3.5" />}
+                  Save Commission Settlement
+                </Button>
+              </div>
+            </form>
+          );
+        })()}
 
       {/* Search Bar */}
       <div className="flex items-center gap-3">
@@ -636,7 +710,7 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
             type="text"
             placeholder="Search partner drivers by name, phone, plate, or vehicle model..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-4 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -657,7 +731,9 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
         <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Handshake className="size-4 text-primary" />
-            <h3 className="font-bold text-sm">Partner Owner-Operator Accounts ({filteredDrivers.length})</h3>
+            <h3 className="font-bold text-sm">
+              Partner Owner-Operator Accounts ({filteredDrivers.length})
+            </h3>
           </div>
           <span className="text-xs text-muted-foreground">
             Platform Fee: 15% · Retained by Partner: 85%
@@ -665,7 +741,7 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
         </div>
 
         <div className="divide-y divide-border">
-          {filteredDrivers.map(d => {
+          {filteredDrivers.map((d) => {
             const stats = getPartnerCommissionStats(d.id, d.full_name);
             const isExpanded = expandedDriverId === d.id;
 
@@ -706,28 +782,42 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                   {/* Financial Metrics Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
                     <div className="rounded-lg bg-muted/40 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">Completed Trips</p>
+                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">
+                        Completed Trips
+                      </p>
                       <p className="mt-1 font-bold text-foreground">{stats.ridesCount} rides</p>
                     </div>
 
                     <div className="rounded-lg bg-muted/40 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">Gross Fare</p>
-                      <p className="mt-1 font-bold font-mono text-foreground">₹{stats.grossFare.toLocaleString("en-IN")}</p>
+                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">
+                        Gross Fare
+                      </p>
+                      <p className="mt-1 font-bold font-mono text-foreground">
+                        ₹{stats.grossFare.toLocaleString("en-IN")}
+                      </p>
                     </div>
 
                     <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">15% Comm. Due</p>
-                      <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">₹{stats.commissionPayable.toLocaleString("en-IN")}</p>
+                      <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">
+                        15% Comm. Due
+                      </p>
+                      <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">
+                        ₹{stats.commissionPayable.toLocaleString("en-IN")}
+                      </p>
                     </div>
 
-                    <div className={`rounded-lg p-2.5 border ${
-                      stats.outstandingCommission > 0
-                        ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                    }`}>
+                    <div
+                      className={`rounded-lg p-2.5 border ${
+                        stats.outstandingCommission > 0
+                          ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                          : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                      }`}
+                    >
                       <p className="text-[10px] uppercase font-semibold">Outstanding</p>
                       <p className="mt-1 font-bold font-mono">
-                        {stats.outstandingCommission > 0 ? `₹${stats.outstandingCommission.toLocaleString("en-IN")}` : "Cleared ✓"}
+                        {stats.outstandingCommission > 0
+                          ? `₹${stats.outstandingCommission.toLocaleString("en-IN")}`
+                          : "Cleared ✓"}
                       </p>
                     </div>
                   </div>
@@ -739,13 +829,21 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                       disabled={stats.outstandingCommission <= 0}
                       onClick={() => {
                         setSelectedDriverId(d.id);
-                        setSettleAmount(stats.outstandingCommission > 0 ? stats.outstandingCommission : "");
+                        setSettleAmount(
+                          stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
+                        );
                         setIsRecording(true);
                       }}
                       className={`h-8 text-xs font-semibold gap-1 ${
-                        stats.outstandingCommission > 0 ? "bg-primary" : "opacity-50 cursor-not-allowed"
+                        stats.outstandingCommission > 0
+                          ? "bg-primary"
+                          : "opacity-50 cursor-not-allowed"
                       }`}
-                      title={stats.outstandingCommission > 0 ? `Settle up to ₹${stats.outstandingCommission}` : "Driver has no outstanding commission (₹0 to be paid)"}
+                      title={
+                        stats.outstandingCommission > 0
+                          ? `Settle up to ₹${stats.outstandingCommission}`
+                          : "Driver has no outstanding commission (₹0 to be paid)"
+                      }
                     >
                       <Receipt className="size-3.5" /> Settle
                     </Button>
@@ -754,7 +852,11 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                       onClick={() => setExpandedDriverId(isExpanded ? null : d.id)}
                       className="h-8 px-2.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1"
                     >
-                      {isExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                      {isExpanded ? (
+                        <ChevronUp className="size-3.5" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
                       History
                     </button>
                   </div>
@@ -765,18 +867,24 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                   <div className="border-t border-border bg-muted/20 p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Receipt className="size-3.5 text-primary" /> Settlement History for {d.full_name}
+                        <Receipt className="size-3.5 text-primary" /> Settlement History for{" "}
+                        {d.full_name}
                       </h4>
                       <span className="text-xs text-muted-foreground">
-                        Net partner take-home (85%): <strong className="text-emerald-600 font-mono">₹{stats.partnerNetEarnings.toLocaleString("en-IN")}</strong>
+                        Net partner take-home (85%):{" "}
+                        <strong className="text-emerald-600 font-mono">
+                          ₹{stats.partnerNetEarnings.toLocaleString("en-IN")}
+                        </strong>
                       </span>
                     </div>
 
                     {stats.settlements.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-3">No commission settlements recorded yet for this partner.</p>
+                      <p className="text-xs text-muted-foreground py-3">
+                        No commission settlements recorded yet for this partner.
+                      </p>
                     ) : (
                       <div className="divide-y divide-border/60 rounded-lg border border-border bg-background overflow-hidden text-xs">
-                        {stats.settlements.map(s => (
+                        {stats.settlements.map((s) => (
                           <div key={s.id} className="p-3 flex items-center justify-between gap-3">
                             <div className="space-y-0.5">
                               <p className="font-mono font-bold text-foreground">
@@ -789,9 +897,14 @@ export function CommissionLedgerManager({ drivers, bookings, onRefresh }: Commis
                                   year: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                })} · Recorded by {s.collected_by}
+                                })}{" "}
+                                · Recorded by {s.collected_by}
                               </p>
-                              {s.notes && <p className="text-[11px] text-muted-foreground/80 italic">{s.notes}</p>}
+                              {s.notes && (
+                                <p className="text-[11px] text-muted-foreground/80 italic">
+                                  {s.notes}
+                                </p>
+                              )}
                             </div>
                             <div className="text-right shrink-0">
                               <span className="font-mono font-bold text-emerald-600 text-sm">

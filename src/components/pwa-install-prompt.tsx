@@ -146,9 +146,15 @@ export function PWAInstallPrompt() {
             <Share className="size-3.5" /> How to install on iPhone:
           </p>
           <ol className="mt-1.5 list-decimal pl-4 space-y-1 text-muted-foreground text-[11px]">
-            <li>Tap the <strong>Share</strong> button at the bottom of Safari (square with arrow ↑).</li>
-            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-            <li>Tap <strong>Add</strong> at top right.</li>
+            <li>
+              Tap the <strong>Share</strong> button at the bottom of Safari (square with arrow ↑).
+            </li>
+            <li>
+              Scroll down and tap <strong>Add to Home Screen</strong>.
+            </li>
+            <li>
+              Tap <strong>Add</strong> at top right.
+            </li>
           </ol>
         </div>
       ) : (
@@ -187,9 +193,13 @@ export function triggerPWAInstall() {
   } else {
     const ua = window.navigator.userAgent.toLowerCase();
     if (/iphone|ipad|ipod/.test(ua)) {
-      alert("To install Orange Taxi on your iPhone:\n1. Tap the Share button (square with arrow ↑) at the bottom of Safari\n2. Scroll down and tap 'Add to Home Screen'");
+      alert(
+        "To install Orange Taxi on your iPhone:\n1. Tap the Share button (square with arrow ↑) at the bottom of Safari\n2. Scroll down and tap 'Add to Home Screen'",
+      );
     } else {
-      alert("To install Orange Taxi:\nTap the 3 dots (⋮) in your browser menu and select 'Install app' or 'Add to Home screen'.");
+      alert(
+        "To install Orange Taxi:\nTap the 3 dots (⋮) in your browser menu and select 'Install app' or 'Add to Home screen'.",
+      );
     }
   }
 }

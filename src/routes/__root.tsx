@@ -13,7 +13,10 @@ import "../i18n";
 
 function Analytics() {
   useEffect(() => {
-    if (typeof window !== "undefined" && (window.location.hostname.includes("vercel") || window.location.hostname.includes("orange"))) {
+    if (
+      typeof window !== "undefined" &&
+      (window.location.hostname.includes("vercel") || window.location.hostname.includes("orange"))
+    ) {
       if (!document.getElementById("vercel-analytics-script")) {
         const script = document.createElement("script");
         script.id = "vercel-analytics-script";
@@ -52,7 +55,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -104,36 +107,37 @@ const SCHEMA_JSON_LD = JSON.stringify({
     {
       "@type": "TaxiService",
       "@id": "https://orange-taxi.com/#service",
-      "name": "Orange Taxi",
-      "serviceType": "Electric Taxi & Airport Transfer Service",
-      "provider": {
+      name: "Orange Taxi",
+      serviceType: "Electric Taxi & Airport Transfer Service",
+      provider: {
         "@type": "Organization",
         "@id": "https://orange-taxi.com/#organization",
-        "name": "Orange Taxi Limited",
-        "legalName": "Orange Taxi Limited",
-        "url": "https://orange-taxi.com",
-        "logo": "https://orange-taxi.com/pwa-512x512.png",
-        "email": "support@orange-taxi.com",
-        "telephone": "+91-11-4000-7000",
-        "address": {
+        name: "Orange Taxi Limited",
+        legalName: "Orange Taxi Limited",
+        url: "https://orange-taxi.com",
+        logo: "https://orange-taxi.com/pwa-512x512.png",
+        email: "support@orange-taxi.com",
+        telephone: "+91-11-4000-7000",
+        address: {
           "@type": "PostalAddress",
-          "streetAddress": "S-210, 2nd Floor, Panchshila Park, South Malviya Nagar",
-          "addressLocality": "South Delhi",
-          "addressRegion": "Delhi",
-          "postalCode": "110017",
-          "addressCountry": "IN"
-        }
+          streetAddress: "S-210, 2nd Floor, Panchshila Park, South Malviya Nagar",
+          addressLocality: "South Delhi",
+          addressRegion: "Delhi",
+          postalCode: "110017",
+          addressCountry: "IN",
+        },
       },
-      "areaServed": [
-        { "@type": "City", "name": "Delhi" },
-        { "@type": "City", "name": "Gurugram" },
-        { "@type": "City", "name": "Noida" },
-        { "@type": "City", "name": "Ghaziabad" },
-        { "@type": "City", "name": "Faridabad" }
+      areaServed: [
+        { "@type": "City", name: "Delhi" },
+        { "@type": "City", name: "Gurugram" },
+        { "@type": "City", name: "Noida" },
+        { "@type": "City", name: "Ghaziabad" },
+        { "@type": "City", name: "Faridabad" },
       ],
-      "description": "Orange Taxi is a premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs."
-    }
-  ]
+      description:
+        "Orange Taxi is a premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs.",
+    },
+  ],
 });
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -141,21 +145,44 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { httpEquiv: "Content-Security-Policy", content: "upgrade-insecure-requests" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      },
       { title: "Orange Taxi — Premium Electric Cab Service" },
-      { name: "description", content: "Book premium 100% electric cab rides with Orange Taxi in Mahindra BE.6 SUVs. Zero cancellations, guaranteed AC, clean cabins, and professional chauffeurs." },
-      { name: "keywords", content: "electric taxi, premium cab service, electric cab, orange taxi, airport taxi, mahindra be6 cab, zero cancellation taxi" },
-      { name: "robots", content: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" },
+      {
+        name: "description",
+        content:
+          "Book premium 100% electric cab rides with Orange Taxi in Mahindra BE.6 SUVs. Zero cancellations, guaranteed AC, clean cabins, and professional chauffeurs.",
+      },
+      {
+        name: "keywords",
+        content:
+          "electric taxi, premium cab service, electric cab, orange taxi, airport taxi, mahindra be6 cab, zero cancellation taxi",
+      },
+      {
+        name: "robots",
+        content: "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1",
+      },
       { name: "author", content: "Orange Taxi Limited" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "Orange Taxi" },
       { property: "og:title", content: "Orange Taxi — Premium Electric Cab Service" },
-      { property: "og:description", content: "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs." },
+      {
+        property: "og:description",
+        content:
+          "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs.",
+      },
       { property: "og:url", content: "https://orange-taxi.com/" },
       { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Orange Taxi — Premium Electric Cab Service" },
-      { name: "twitter:description", content: "100% Electric Cab Service. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations." },
+      {
+        name: "twitter:description",
+        content:
+          "100% Electric Cab Service. Mahindra BE.6 SUVs, daily newspapers, pre-cooled cabins, zero cancellations.",
+      },
       { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "theme-color", content: "#f56b00" },
       { name: "mobile-web-app-capable", content: "yes" },
@@ -192,10 +219,7 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: SCHEMA_JSON_LD }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SCHEMA_JSON_LD }} />
       </head>
       <body>
         {children}
@@ -250,11 +274,11 @@ function RootComponent() {
       <Toaster richColors position="top-right" />
       <PWAInstallPrompt />
       <SiteHeader />
-      <main className="min-w-0 max-w-full overflow-x-hidden"><Outlet /></main>
+      <main className="min-w-0 max-w-full overflow-x-hidden">
+        <Outlet />
+      </main>
       <SiteFooter />
       <CookieBanner />
     </QueryClientProvider>
   );
 }
-
-

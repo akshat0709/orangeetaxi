@@ -43,7 +43,7 @@ export function NotificationBanner({ context = "rider", className = "" }: Notifi
       toast.success(
         context === "rider"
           ? "Ride alerts enabled! We'll notify you when your chauffeur arrives 🔔"
-          : "Driver alerts enabled! You'll receive alerts for incoming rides 🔔"
+          : "Driver alerts enabled! You'll receive alerts for incoming rides 🔔",
       );
     } else {
       toast.info("Notifications were blocked. You can enable them in browser settings.");

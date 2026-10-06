@@ -43,10 +43,7 @@ async function fetchRole(userId: string, email?: string): Promise<AppRole> {
 
   try {
     // Priority: admin > driver > customer
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
 
     let determinedRole: AppRole = "customer";
 
@@ -93,7 +90,7 @@ function initGlobalAuth() {
       if (globalUser) {
         localStorage.setItem(
           "orange_auth_cache",
-          JSON.stringify({ user: globalUser, role: globalRole })
+          JSON.stringify({ user: globalUser, role: globalRole }),
         );
       } else {
         localStorage.removeItem("orange_auth_cache");
@@ -117,7 +114,7 @@ function initGlobalAuth() {
       if (globalUser) {
         localStorage.setItem(
           "orange_auth_cache",
-          JSON.stringify({ user: globalUser, role: globalRole })
+          JSON.stringify({ user: globalUser, role: globalRole }),
         );
       } else {
         localStorage.removeItem("orange_auth_cache");

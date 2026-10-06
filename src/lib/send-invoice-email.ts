@@ -73,7 +73,7 @@ export function generateInvoiceHtml(p: SendInvoicePayload): string {
           </td>
           <td style="width: 50%; vertical-align: top;">
             <div class="label">Billed To</div>
-            <div class="val">${isCorporate ? p.corporateName : (p.customerName || "Passenger")}</div>
+            <div class="val">${isCorporate ? p.corporateName : p.customerName || "Passenger"}</div>
             ${isCorporate ? `<div class="val" style="font-size: 11px; color: #64748b;">GSTIN: ${p.corporateGstin}</div>` : ""}
             <div class="val" style="font-size: 11px; color: #64748b;">${p.to}</div>
             ${p.customerPhone ? `<div class="val" style="font-size: 11px; color: #64748b;">Phone: ${p.customerPhone}</div>` : ""}
@@ -109,7 +109,9 @@ export function generateInvoiceHtml(p: SendInvoicePayload): string {
             <td>${profile.sacCode}</td>
             <td style="text-align: right;">₹${p.subtotal.toFixed(2)}</td>
           </tr>
-          ${p.cgst > 0 ? `
+          ${
+            p.cgst > 0
+              ? `
           <tr>
             <td>Central GST (CGST @ 2.5%)</td>
             <td>${profile.sacCode}</td>
@@ -120,13 +122,15 @@ export function generateInvoiceHtml(p: SendInvoicePayload): string {
             <td>${profile.sacCode}</td>
             <td style="text-align: right;">₹${p.sgst.toFixed(2)}</td>
           </tr>
-          ` : `
+          `
+              : `
           <tr>
             <td>Integrated GST (IGST @ 5.0%)</td>
             <td>${profile.sacCode}</td>
             <td style="text-align: right;">₹${p.igst.toFixed(2)}</td>
           </tr>
-          `}
+          `
+          }
           <tr class="total-row">
             <td colspan="2">Total Paid (Inclusive of Taxes)</td>
             <td style="text-align: right;">₹${p.totalFare.toFixed(2)}</td>

@@ -1,3 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ContentPage } from "@/components/content-page";
-export const Route = createFileRoute("/electric")({ head: () => ({ meta: [{ title: "Electric Rides — Orange Taxi" }, { name: "description", content: "A quieter, smoother ride powered by Orange Taxi's electric fleet." }, { property: "og:title", content: "Electric Rides — Orange Taxi" }, { property: "og:description", content: "Quiet comfort for you and cleaner movement for the city." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }), component: () => <ContentPage eyebrow="Electric by nature" title="Quiet feels premium." copy="Electric power makes every Orange journey calm and smooth while supporting cleaner cities. It is part of a better experience—not a compromise you have to think about." action="book" /> });
+export const Route = createFileRoute("/electric")({
+  head: () => ({
+    meta: [
+      { title: "Electric Rides — Orange Taxi" },
+      {
+        name: "description",
+        content: "A quieter, smoother ride powered by Orange Taxi's electric fleet.",
+      },
+      { property: "og:title", content: "Electric Rides — Orange Taxi" },
+      {
+        property: "og:description",
+        content: "Quiet comfort for you and cleaner movement for the city.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: () => (
+    <ContentPage
+      eyebrow="Electric by nature"
+      title="Quiet feels premium."
+      copy="Electric power makes every Orange journey calm and smooth while supporting cleaner cities. It is part of a better experience—not a compromise you have to think about."
+      action="book"
+    />
+  ),
+});
