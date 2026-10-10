@@ -3,6 +3,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   BadgeCheck,
   Banknote,
   BriefcaseBusiness,
@@ -154,7 +155,7 @@ interface Driver {
 
 const STATUS_BADGE: Record<string, string> = {
   scheduled:
-    "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:border dark:border-purple-800/40",
+    "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
   searching:
     "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40",
   accepted:
@@ -175,7 +176,7 @@ const STATUS_BADGE: Record<string, string> = {
   rejected:
     "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border dark:border-red-800/40",
   contacted:
-    "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:border dark:border-purple-800/40",
+    "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
 };
 
 function AdminPage() {
@@ -217,10 +218,10 @@ function AdminPage() {
   async function loadAll() {
     setLoading(true);
     const [{ data: b }, { data: a }, { data: e }, { data: d }] = await Promise.all([
-      supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("driver_applications").select("*").order("created_at", { ascending: false }),
-      supabase.from("corporate_enquiries").select("*").order("created_at", { ascending: false }),
-      supabase.from("drivers").select("*").order("created_at", { ascending: false }),
+      supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(300),
+      supabase.from("driver_applications").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("corporate_enquiries").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("drivers").select("*").order("created_at", { ascending: false }).limit(300),
     ]);
     const fetchedBookings = (b as Booking[]) ?? [];
     const fetchedDrivers = (d as Driver[]) ?? [];
@@ -294,152 +295,142 @@ function AdminPage() {
       };
     });
 
-    // Automatically resolve and backfill phone numbers, photos & vehicle plates into drivers table
-    for (const dr of fetchedDrivers) {
-      // Decode existing vehicle_code if encoded with ORANGE_META
-      let metaEncoded: any = {};
-      if (
-        dr.vehicle_code &&
-        typeof dr.vehicle_code === "string" &&
-        dr.vehicle_code.startsWith("ORANGE_META:")
-      ) {
-        try {
-          metaEncoded = JSON.parse(dr.vehicle_code.replace("ORANGE_META:", ""));
-          if (!dr.photo_url && metaEncoded.photo) dr.photo_url = metaEncoded.photo;
-          if (
-            (!dr.vehicle_number || dr.vehicle_number === "Unassigned") &&
-            metaEncoded.plate &&
-            metaEncoded.plate !== "Unassigned"
-          ) {
-            dr.vehicle_number = metaEncoded.plate;
-          }
-          if (!dr.vehicle_model && metaEncoded.model) dr.vehicle_model = metaEncoded.model;
-          if (!dr.driver_type && metaEncoded.type) dr.driver_type = metaEncoded.type;
-        } catch (e) {}
-      }
+    // Update UI immediately for fast loading
+    setBookings(fetchedBookings);
+    setApplications(mergedApps);
+    setEnquiries((e as Enquiry[]) ?? []);
+    setDrivers([...fetchedDrivers]);
+    setLoading(false);
 
-      if (!dr.phone || dr.phone.trim() === "") {
-        try {
-          if (dr.user_id) {
-            const { data: prof } = await supabase
-              .from("profiles")
-              .select("phone")
-              .eq("id", dr.user_id)
-              .maybeSingle();
-            if (prof?.phone && prof.phone.trim()) {
-              dr.phone = prof.phone.trim();
-              await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
-            }
-          }
-          if (!dr.phone || dr.phone.trim() === "") {
-            const matchingApp = mergedApps.find(
-              (app) => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone,
-            );
-            if (matchingApp?.phone && matchingApp.phone.trim()) {
-              dr.phone = matchingApp.phone.trim();
-              await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
-            }
-          }
-        } catch (err) {
-          console.warn("Could not backfill driver phone in admin:", err);
-        }
-      }
+    // Run heavy data backfill and DB sync in background so it doesn't block the UI
+    backgroundBackfill(fetchedDrivers, mergedApps, fetchedBookings);
+  }
 
-      // Backfill driver photo, vehicle_number & driver_type from applications
-      const matchingApp = mergedApps.find(
-        (app) =>
-          (dr.phone && app.phone && app.phone.replace(/\D/g, "") === dr.phone.replace(/\D/g, "")) ||
-          (app.full_name &&
-            dr.full_name &&
-            app.full_name.trim().toLowerCase() === dr.full_name.trim().toLowerCase()),
-      );
-      if (matchingApp) {
-        if (!dr.photo_url && matchingApp.photo_url) {
-          dr.photo_url = matchingApp.photo_url;
-        }
-        if (!dr.driver_type) {
-          dr.driver_type =
-            matchingApp.driver_type || (matchingApp.owns_vehicle ? "partner" : "company");
-        }
-        if (!dr.chassis_number && matchingApp.chassis_number) {
-          dr.chassis_number = matchingApp.chassis_number;
-        }
+  async function backgroundBackfill(fetchedDrivers: Driver[], mergedApps: Application[], fetchedBookings: Booking[]) {
+    let hasUpdates = false;
+
+    await Promise.all(
+      fetchedDrivers.map(async (dr) => {
+        let updated = false;
+
+        // Decode existing vehicle_code if encoded with ORANGE_META
+        let metaEncoded: any = {};
         if (
-          (!dr.vehicle_number || dr.vehicle_number === "Unassigned") &&
-          matchingApp.vehicle_number
+          dr.vehicle_code &&
+          typeof dr.vehicle_code === "string" &&
+          dr.vehicle_code.startsWith("ORANGE_META:")
         ) {
-          dr.vehicle_number = matchingApp.vehicle_number;
+          try {
+            metaEncoded = JSON.parse(dr.vehicle_code.replace("ORANGE_META:", ""));
+            if (!dr.photo_url && metaEncoded.photo) { dr.photo_url = metaEncoded.photo; updated = true; }
+            if (
+              (!dr.vehicle_number || dr.vehicle_number === "Unassigned") &&
+              metaEncoded.plate &&
+              metaEncoded.plate !== "Unassigned"
+            ) {
+              dr.vehicle_number = metaEncoded.plate;
+              updated = true;
+            }
+            if (!dr.vehicle_model && metaEncoded.model) { dr.vehicle_model = metaEncoded.model; updated = true; }
+            if (!dr.driver_type && metaEncoded.type) { dr.driver_type = metaEncoded.type; updated = true; }
+          } catch (e) {}
         }
-        if (!dr.vehicle_model && matchingApp.vehicle_model) {
-          dr.vehicle_model = matchingApp.vehicle_model;
+
+        if (!dr.phone || dr.phone.trim() === "") {
+          try {
+            if (dr.user_id) {
+              const { data: prof } = await supabase
+                .from("profiles")
+                .select("phone")
+                .eq("id", dr.user_id)
+                .maybeSingle();
+              if (prof?.phone && prof.phone.trim()) {
+                dr.phone = prof.phone.trim();
+                updated = true;
+                await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
+              }
+            }
+            if (!dr.phone || dr.phone.trim() === "") {
+              const matchingApp = mergedApps.find(
+                (app) => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone,
+              );
+              if (matchingApp?.phone && matchingApp.phone.trim()) {
+                dr.phone = matchingApp.phone.trim();
+                updated = true;
+                await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
+              }
+            }
+          } catch (err) {}
         }
-      }
 
-      if (!dr.photo_url) {
-        const storedPhoto =
-          localStorage.getItem(`orange_driver_photo_${dr.id}`) ||
-          (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null) ||
-          (dr.phone
-            ? localStorage.getItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\D/g, "")}`)
-            : null) ||
-          (dr.full_name
-            ? localStorage.getItem(
-                `orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`,
-              )
-            : null);
-        if (storedPhoto) dr.photo_url = storedPhoto;
-      }
+        const matchingApp = mergedApps.find(
+          (app) =>
+            (dr.phone && app.phone && app.phone.replace(/\\D/g, "") === dr.phone.replace(/\\D/g, "")) ||
+            (app.full_name && dr.full_name && app.full_name.trim().toLowerCase() === dr.full_name.trim().toLowerCase()),
+        );
+        if (matchingApp) {
+          if (!dr.photo_url && matchingApp.photo_url) { dr.photo_url = matchingApp.photo_url; updated = true; }
+          if (!dr.driver_type) {
+            dr.driver_type = matchingApp.driver_type || (matchingApp.owns_vehicle ? "partner" : "company");
+            updated = true;
+          }
+          if (!dr.chassis_number && matchingApp.chassis_number) { dr.chassis_number = matchingApp.chassis_number; updated = true; }
+          if ((!dr.vehicle_number || dr.vehicle_number === "Unassigned") && matchingApp.vehicle_number) {
+            dr.vehicle_number = matchingApp.vehicle_number;
+            updated = true;
+          }
+          if (!dr.vehicle_model && matchingApp.vehicle_model) { dr.vehicle_model = matchingApp.vehicle_model; updated = true; }
+        }
 
-      // Persist resolved photo and vehicle data back to drivers table if missing
-      const isPartnerDriver = dr.driver_type === "partner";
-      if (!dr.vehicle_number || dr.vehicle_number === "Unassigned") {
-        dr.vehicle_number = isPartnerDriver ? "KA 01 EV 4421" : "DL 01 EV 1001";
-      }
-      if (!dr.vehicle_model) {
-        dr.vehicle_model = isPartnerDriver ? "Tata Nexon EV" : "Mahindra BE.6";
-      }
+        if (!dr.photo_url) {
+          const storedPhoto =
+            localStorage.getItem(`orange_driver_photo_${dr.id}`) ||
+            (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null) ||
+            (dr.phone ? localStorage.getItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\\D/g, "")}`) : null) ||
+            (dr.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`) : null);
+          if (storedPhoto) { dr.photo_url = storedPhoto; updated = true; }
+        }
 
-      const metaObj = {
-        photo: dr.photo_url || "",
-        plate: dr.vehicle_number,
-        model: dr.vehicle_model,
-        type: dr.driver_type || (isPartnerDriver ? "partner" : "company"),
-      };
-      const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
+        const isPartnerDriver = dr.driver_type === "partner";
+        if (!dr.vehicle_number || dr.vehicle_number === "Unassigned") {
+          dr.vehicle_number = isPartnerDriver ? "KA 01 EV 4421" : "DL 01 EV 1001";
+          updated = true;
+        }
+        if (!dr.vehicle_model) {
+          dr.vehicle_model = isPartnerDriver ? "Tata Nexon EV" : "Mahindra BE.6";
+          updated = true;
+        }
 
-      try {
-        await supabase
-          .from("drivers")
-          .update({
-            vehicle_number: dr.vehicle_number,
-            vehicle_model: dr.vehicle_model,
-          })
-          .eq("id", dr.id);
-        dr.vehicle_code = updatedCode;
-      } catch (err) {
-        console.warn("Could not sync driver meta in admin:", err);
-      }
+        const metaObj = {
+          photo: dr.photo_url || "",
+          plate: dr.vehicle_number,
+          model: dr.vehicle_model,
+          type: dr.driver_type || (isPartnerDriver ? "partner" : "company"),
+        };
+        const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
 
-      // Sync photos to localStorage for fast local access
-      if (dr.photo_url) {
-        try {
-          localStorage.setItem(`orange_driver_photo_${dr.id}`, dr.photo_url);
-          if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, dr.photo_url);
-          if (dr.phone)
-            localStorage.setItem(
-              `orange_driver_photo_by_phone_${dr.phone.replace(/\D/g, "")}`,
-              dr.photo_url,
-            );
-          if (dr.full_name)
-            localStorage.setItem(
-              `orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`,
-              dr.photo_url,
-            );
-        } catch (e) {}
-      }
-    }
+        if (dr.vehicle_code !== updatedCode) {
+          try {
+            await supabase.from("drivers").update({ vehicle_number: dr.vehicle_number, vehicle_model: dr.vehicle_model }).eq("id", dr.id);
+            dr.vehicle_code = updatedCode;
+            updated = true;
+          } catch (err) {}
+        }
 
-    // Automatically snapshot and freeze vehicle registration numbers for existing completed rides
+        if (dr.photo_url) {
+          try {
+            localStorage.setItem(`orange_driver_photo_${dr.id}`, dr.photo_url);
+            if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, dr.photo_url);
+            if (dr.phone) localStorage.setItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\\D/g, "")}`, dr.photo_url);
+            if (dr.full_name) localStorage.setItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`, dr.photo_url);
+          } catch (e) {}
+        }
+
+        if (updated) hasUpdates = true;
+      })
+    );
+
+    // Snapshot existing ride plates
     fetchedBookings.forEach((booking) => {
       if (booking.driver_id && ["completed", "in_progress"].includes(booking.status)) {
         const dr = fetchedDrivers.find((x) => x.id === booking.driver_id);
@@ -450,84 +441,55 @@ function AdminPage() {
     });
 
     // Ensure approved driver applicants & partner operators exist in drivers panel
-    for (const app of mergedApps) {
-      if (app.status === "approved") {
-        const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
-        const alreadyExists = fetchedDrivers.some(
-          (dr) =>
-            (dr.phone &&
-              app.phone &&
-              dr.phone.replace(/\D/g, "") === app.phone.replace(/\D/g, "")) ||
-            (dr.full_name &&
-              app.full_name &&
-              dr.full_name.trim().toLowerCase() === app.full_name.trim().toLowerCase()),
-        );
+    const newDrivers = [];
+    await Promise.all(
+      mergedApps.map(async (app) => {
+        if (app.status === "approved") {
+          const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
+          const alreadyExists = fetchedDrivers.some(
+            (dr) =>
+              (dr.phone && app.phone && dr.phone.replace(/\\D/g, "") === app.phone.replace(/\\D/g, "")) ||
+              (dr.full_name && app.full_name && dr.full_name.trim().toLowerCase() === app.full_name.trim().toLowerCase()),
+          );
 
-        if (!alreadyExists) {
-          const plate = app.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
-          const model = app.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
-          const photo = app.photo_url || "";
-          const metaObj = {
-            photo,
-            plate,
-            model,
-            type: isPartner ? "partner" : "company",
-          };
-          const newDrRecord: any = {
-            full_name: app.full_name,
-            phone: app.phone || "",
-            city: app.city || "Bengaluru",
+          if (!alreadyExists) {
+            const plate = app.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+            const model = app.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+            const photo = app.photo_url || "";
+            const metaObj = { photo, plate, model, type: isPartner ? "partner" : "company" };
+            const newDrRecord: any = {
+              full_name: app.full_name,
+              phone: app.phone || "",
+              city: app.city || "Bengaluru",
+              vehicle_number: plate,
+              vehicle_model: model,
+              rating: 5,
+              total_rides: 0,
+              is_online: false,
+            };
 
-            vehicle_number: plate,
-            vehicle_model: model,
-            rating: 5,
-            total_rides: 0,
-            is_online: false,
-          };
-
-          try {
-            const { data: createdDr } = await supabase
-              .from("drivers")
-              .insert(newDrRecord)
-              .select()
-              .maybeSingle();
-            if (createdDr) {
-              const fullCreatedDr: Driver = {
-                ...createdDr,
-                driver_type: isPartner ? "partner" : "company",
-                photo_url: photo,
-              };
-              fetchedDrivers.push(fullCreatedDr);
-              if (photo) {
-                localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
+            try {
+              const { data: createdDr } = await supabase.from("drivers").insert(newDrRecord).select().maybeSingle();
+              if (createdDr) {
+                const fullCreatedDr: Driver = { ...createdDr, driver_type: isPartner ? "partner" : "company", photo_url: photo };
+                newDrivers.push(fullCreatedDr);
+                if (photo) localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
+                hasUpdates = true;
               }
-            } else {
-              fetchedDrivers.push({
-                id: "app-dr-" + app.id,
-                ...newDrRecord,
-                driver_type: isPartner ? "partner" : "company",
-                photo_url: photo,
-              });
-            }
-          } catch (e) {
-            fetchedDrivers.push({
-              id: "app-dr-" + app.id,
-              ...newDrRecord,
-              driver_type: isPartner ? "partner" : "company",
-              photo_url: photo,
-            });
+            } catch (e) {}
           }
         }
-      }
+      })
+    );
+
+    if (newDrivers.length > 0) {
+      fetchedDrivers.push(...newDrivers);
     }
-
-    setBookings(fetchedBookings);
-    setApplications(mergedApps);
-    setEnquiries((e as Enquiry[]) ?? []);
-    setDrivers(fetchedDrivers);
-    setLoading(false);
+    
+    if (hasUpdates || newDrivers.length > 0) {
+      setDrivers([...fetchedDrivers]);
+    }
   }
-
   // Stats
   const stats = {
     totalBookings: bookings.length,
@@ -824,7 +786,7 @@ function AdminPage() {
                         id: "scheduled",
                         label: "Scheduled Advance",
                         count: bookings.filter((b) => b.status === "scheduled").length,
-                        color: "text-purple-600 font-bold",
+                        color: "text-orange-600 font-bold",
                       },
                       {
                         id: "active",
@@ -911,8 +873,8 @@ function AdminPage() {
                               {b.pickup_area} → {b.drop_area}
                             </div>
                             {b.status === "scheduled" && (
-                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300">
-                                <Calendar className="size-3 text-purple-600" />
+                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
+                                <Calendar className="size-3 text-orange-600" />
                                 <span>
                                   {b.scheduled_at
                                     ? new Date(b.scheduled_at).toLocaleDateString("en-IN", {
@@ -2055,7 +2017,7 @@ function DriverAnalyticsPanel({
 
         {/* Inline Partner Vehicle Editor */}
         {isPartner && isEditingPartnerVehicle && (
-          <div className="border-t border-border bg-emerald-500/5 p-5 animate-in fade-in slide-in-from-top-2">
+          <div className="border-t border-border bg-emerald-500/5 p-5  slide-in-from-top-2">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
@@ -2119,7 +2081,7 @@ function DriverAnalyticsPanel({
             const bayVehicles = fleetVehicles.filter((v) => v.status === "in_bay");
 
             return (
-              <div className="border-t border-border bg-primary/5 p-5 animate-in fade-in slide-in-from-top-2">
+              <div className="border-t border-border bg-primary/5 p-5  slide-in-from-top-2">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
