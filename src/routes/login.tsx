@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/login")({
   validateSearch: z.object({
     redirect: z.string().optional(),
-    mode: z.enum(["signin", "signup"]).optional(),
+    mode: z.enum(["signin", "signup", "forgot", "reset"]).optional(),
   }),
   head: () => ({
     meta: [
@@ -39,30 +39,105 @@ const signUpSchema = z.object({
   role: z.enum(["customer", "driver"]).default("customer"),
 });
 
+const forgotSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+});
+
+const resetSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 type SignInValues = z.infer<typeof signInSchema>;
 type SignUpValues = z.infer<typeof signUpSchema>;
+type ForgotValues = z.infer<typeof forgotSchema>;
+type ResetValues = z.infer<typeof resetSchema>;
+
+const LOCKOUT_KEY = "@orange_web_lockout_time";
+const ATTEMPTS_KEY = "@orange_web_login_attempts";
 
 function LoginPage() {
   const { redirect, mode: initialMode } = useSearch({ from: "/login" });
-  const [mode, setMode] = useState<"signin" | "signup">(initialMode ?? "signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">(initialMode ?? "signin");
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
   const navigate = useNavigate();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema) });
+  const forgotForm = useForm<ForgotValues>({ resolver: zodResolver(forgotSchema) });
+  const resetForm = useForm<ResetValues>({ resolver: zodResolver(resetSchema) });
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    const checkLockout = () => {
+      try {
+        const stored = localStorage.getItem(LOCKOUT_KEY);
+        if (stored) {
+          const diff = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+          if (diff > 0) {
+            setLockoutRemaining(diff);
+          } else {
+            setLockoutRemaining(0);
+            localStorage.removeItem(LOCKOUT_KEY);
+          }
+        } else {
+          setLockoutRemaining(0);
+        }
+      } catch {}
+    };
+    checkLockout();
+    const interval = setInterval(checkLockout, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleSignIn(values: SignInValues) {
+    try {
+      const storedLockout = localStorage.getItem(LOCKOUT_KEY);
+      if (storedLockout && parseInt(storedLockout, 10) > Date.now()) {
+        const remainingSeconds = Math.ceil((parseInt(storedLockout, 10) - Date.now()) / 1000);
+        toast.error(`Account locked due to 5 failed attempts. Please wait ${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'} before trying again.`);
+        return;
+      }
+    } catch {}
+
     setSubmitting(true);
     const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
     if (error) {
-      toast.error(error.message);
+      try {
+        const storedAttempts = localStorage.getItem(ATTEMPTS_KEY);
+        let attempts = storedAttempts ? parseInt(storedAttempts, 10) : 0;
+        attempts++;
+        if (attempts >= 5) {
+          const lockoutUntil = Date.now() + 60 * 1000;
+          localStorage.setItem(LOCKOUT_KEY, lockoutUntil.toString());
+          localStorage.setItem(ATTEMPTS_KEY, "0");
+          setLockoutRemaining(60);
+          toast.error("Account locked for 1 minute due to 5 unsuccessful login attempts.");
+        } else {
+          localStorage.setItem(ATTEMPTS_KEY, attempts.toString());
+          toast.error(`${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? '' : 's'} remaining before 1-minute cooldown)`);
+        }
+      } catch {
+        toast.error(error.message);
+      }
       setSubmitting(false);
       return;
     }
+
+    try {
+      localStorage.setItem(ATTEMPTS_KEY, "0");
+      localStorage.removeItem(LOCKOUT_KEY);
+    } catch {}
     if (!data.user) {
       setSubmitting(false);
       return;
@@ -249,6 +324,38 @@ function LoginPage() {
     navigate({ to: destination as any });
   }
 
+  async function handleForgotPassword(values: ForgotValues) {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email.trim(), {
+        redirectTo: `${window.location.origin}/login?mode=reset`,
+      });
+      if (error) throw error;
+      toast.success("Password reset instructions sent! Please check your email inbox.");
+      setMode("signin");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResetPassword(values: ResetValues) {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: values.password,
+      });
+      if (error) throw error;
+      toast.success("Password updated successfully! You can now sign in.");
+      setMode("signin");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update password.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function claimAdmin() {
     const { data, error } = await supabase.auth.getSession();
     if (!data.session) {
@@ -277,20 +384,37 @@ function LoginPage() {
           <div className="mt-10 rounded-2xl border border-border bg-background p-8 shadow-soft">
             {/* Tab toggle */}
             <div className="flex rounded-xl border border-border bg-muted p-1">
-              {(["signin", "signup"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {m === "signin" ? "Sign In" : "Create Account"}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                  mode === "signin" || mode === "forgot" || mode === "reset"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {mode === "forgot" ? "Reset Password" : mode === "reset" ? "Set New Password" : "Sign In"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                  mode === "signup"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Create Account
+              </button>
             </div>
 
             {mode === "signin" ? (
               <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="mt-8 space-y-5">
+                {lockoutRemaining > 0 && (
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+                    Account temporarily locked due to 5 unsuccessful attempts. Please wait {lockoutRemaining} second{lockoutRemaining === 1 ? "" : "s"} before trying again.
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="si-email">Email</Label>
                   <Input
@@ -307,7 +431,20 @@ function LoginPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="si-pass">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="si-pass">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentEmail = signInForm.getValues("email");
+                        if (currentEmail) forgotForm.setValue("email", currentEmail);
+                        setMode("forgot");
+                      }}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative mt-1.5">
                     <Input
                       id="si-pass"
@@ -330,15 +467,116 @@ function LoginPage() {
                     </p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                <Button type="submit" className="w-full" size="lg" disabled={submitting || lockoutRemaining > 0}>
                   {submitting ? (
                     <Loader2 className="size-4 animate-spin" />
+                  ) : lockoutRemaining > 0 ? (
+                    `Locked (${lockoutRemaining}s)`
                   ) : (
                     <>
                       Sign In <ArrowRight className="size-4" />
                     </>
                   )}
                 </Button>
+              </form>
+            ) : mode === "forgot" ? (
+              <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="mt-8 space-y-5">
+                <div>
+                  <h3 className="text-lg font-bold">Reset Password</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Enter your registered email address and we'll send you instructions to reset your password.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="fo-email">Email Address</Label>
+                  <Input
+                    id="fo-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    className="mt-1.5"
+                    {...forgotForm.register("email")}
+                  />
+                  {forgotForm.formState.errors.email && (
+                    <p className="mt-1 text-xs text-destructive">
+                      {forgotForm.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                  {submitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <>
+                      Send Reset Instructions <ArrowRight className="size-4" />
+                    </>
+                  )}
+                </Button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setMode("signin")}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    ← Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : mode === "reset" ? (
+              <form onSubmit={resetForm.handleSubmit(handleResetPassword)} className="mt-8 space-y-5">
+                <div>
+                  <h3 className="text-lg font-bold">Set New Password</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Enter a new secure password for your Orange Taxi account.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="re-pass">New Password</Label>
+                  <Input
+                    id="re-pass"
+                    type="password"
+                    placeholder="At least 8 characters"
+                    className="mt-1.5"
+                    {...resetForm.register("password")}
+                  />
+                  {resetForm.formState.errors.password && (
+                    <p className="mt-1 text-xs text-destructive">
+                      {resetForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="re-cpass">Confirm New Password</Label>
+                  <Input
+                    id="re-cpass"
+                    type="password"
+                    placeholder="Re-enter your new password"
+                    className="mt-1.5"
+                    {...resetForm.register("confirmPassword")}
+                  />
+                  {resetForm.formState.errors.confirmPassword && (
+                    <p className="mt-1 text-xs text-destructive">
+                      {resetForm.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={submitting}>
+                  {submitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <>
+                      Update Password <ArrowRight className="size-4" />
+                    </>
+                  )}
+                </Button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setMode("signin")}
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    ← Back to Sign In
+                  </button>
+                </div>
               </form>
             ) : (
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="mt-8 space-y-5">
