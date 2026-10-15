@@ -702,31 +702,46 @@ function PassengerPage() {
       const scheduledIso =
         isAdvanceBooking && scheduledDateTime ? new Date(scheduledDateTime).toISOString() : null;
 
-      const { data, error } = await supabase
+      const bookingPayload: Record<string, any> = {
+        customer_id: user.id,
+        pickup_area: effectivePickup,
+        pickup_address: encodedPickupAddress,
+        drop_area: drop.name,
+        drop_address: `${drop.lat},${drop.lng}`,
+        distance_km: Math.round(distKm * 10) / 10,
+        duration_min: Math.round(distKm / 0.5),
+        vehicle_code: selectedVehicle.code,
+        vehicle_name: selectedVehicle.name,
+        base_fare: Math.round(fareBreakdown.base),
+        distance_fare: Math.round(fareBreakdown.distance),
+        tax_amount: Math.round(fareBreakdown.tax),
+        estimated_fare: Math.round(fareBreakdown.total),
+        payment_method: paymentMethod,
+        payment_status: transactionId ? "paid" : "pending",
+        status: isAdvanceBooking ? "scheduled" : "searching",
+        scheduled_at: scheduledIso,
+        ride_otp: otp,
+      };
+
+      let { data, error } = await supabase
         .from("bookings")
         .insert({
-          customer_id: user.id,
-          pickup_area: effectivePickup,
-          pickup_address: encodedPickupAddress,
-          drop_area: drop.name,
-          drop_address: `${drop.lat},${drop.lng}`,
-          distance_km: Math.round(distKm * 10) / 10,
-          duration_min: Math.round(distKm / 0.5),
-          vehicle_code: selectedVehicle.code,
-          vehicle_name: selectedVehicle.name,
-          base_fare: Math.round(fareBreakdown.base),
-          distance_fare: Math.round(fareBreakdown.distance),
-          tax_amount: Math.round(fareBreakdown.tax),
-          estimated_fare: Math.round(fareBreakdown.total),
-          payment_method: paymentMethod,
-          payment_status: transactionId ? "paid" : "pending",
+          ...bookingPayload,
           payment_intent_id: transactionId || null,
-          status: isAdvanceBooking ? "scheduled" : "searching",
-          scheduled_at: scheduledIso,
-          ride_otp: otp,
         })
         .select("id, reference")
         .single();
+
+      if (error && error.message && error.message.includes("payment_intent_id")) {
+        console.warn("Retrying booking insert without payment_intent_id due to schema cache:", error.message);
+        const retryResult = await supabase
+          .from("bookings")
+          .insert(bookingPayload)
+          .select("id, reference")
+          .single();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) {
         console.error("Booking insert error:", error);
