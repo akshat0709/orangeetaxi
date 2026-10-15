@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -49,15 +50,50 @@ function SupportPage() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [docketNumber, setDocketNumber] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !phone.trim() || !message.trim()) {
       toast.error("Please fill in your name, contact phone, and complaint details.");
       return;
     }
-    setSubmitted(true);
-    toast.success("Grievance docket created. Acknowledged under statutory SLA.");
+
+    setSubmitting(true);
+    try {
+      const userRes = await supabase.auth.getUser();
+      const userId = userRes.data?.user?.id || null;
+      const genDocket = `OG-TKT-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const { error } = await supabase.from("support_tickets").insert({
+        docket_number: genDocket,
+        user_id: userId,
+        name: name.trim(),
+        email: email.trim() || null,
+        phone: phone.trim(),
+        complaint_type: complaintType,
+        booking_reference: reference.trim() || null,
+        message: message.trim(),
+        status: "open",
+      });
+
+      if (error) {
+        console.error("Support ticket registration error:", error);
+        toast.error("Could not register grievance. Please call our 24x7 helpline or try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      setDocketNumber(genDocket);
+      setSubmitted(true);
+      toast.success("Grievance docket created. Acknowledged under statutory SLA.");
+    } catch (err: any) {
+      console.error("Support submission error:", err);
+      toast.error("An unexpected error occurred while lodging ticket.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -250,14 +286,18 @@ function SupportPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Your ticket ref is{" "}
                   <strong className="text-foreground">
-                    OG-{Math.floor(100000 + Math.random() * 900000)}
+                    {docketNumber || "OG-TKT-RECORDED"}
                   </strong>
                   . Our Grievance Officer will review your submission and acknowledge within 24
                   hours.
                 </p>
                 <Button
                   className="mt-5"
-                  onClick={() => setSubmitted(false)}
+                  onClick={() => {
+                    setSubmitted(false);
+                    setMessage("");
+                    setReference("");
+                  }}
                   variant="outline"
                   size="sm"
                 >
@@ -360,8 +400,9 @@ function SupportPage() {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full">
-                  <Send className="mr-2 size-4" /> Submit to Grievance Desk
+                <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+                  <Send className="mr-2 size-4" />{" "}
+                  {submitting ? "Registering Grievance..." : "Submit to Grievance Desk"}
                 </Button>
               </form>
             )}

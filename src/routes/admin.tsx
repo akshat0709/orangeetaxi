@@ -21,6 +21,7 @@ import {
   Phone,
   PhoneCall,
   MessageSquare,
+  RefreshCw,
   Search,
   Users,
   Wallet,
@@ -153,30 +154,43 @@ interface Driver {
   user_id?: string;
 }
 
+function formatCompactArea(addr?: string | null): string {
+  if (!addr) return "—";
+  const parts = addr.split(",");
+  if (parts.length <= 2) return addr.trim();
+  return `${parts[0].trim()}, ${parts[1].trim()}`;
+}
+
+function sanitizeDocumentUrl(url?: string | null): string | null {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("storage://") ||
+    trimmed.startsWith("data:image/jpeg;base64,") ||
+    trimmed.startsWith("data:image/png;base64,") ||
+    trimmed.startsWith("data:image/webp;base64,") ||
+    trimmed.startsWith("data:application/pdf;base64,")
+  ) {
+    return trimmed;
+  }
+  return null;
+}
+
 const STATUS_BADGE: Record<string, string> = {
-  scheduled:
-    "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
-  searching:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40",
-  accepted:
-    "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
-  arrived:
-    "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 dark:border dark:border-violet-800/40",
-  in_progress:
-    "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
-  completed:
-    "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 dark:border dark:border-green-800/40",
-  cancelled:
-    "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border dark:border-red-800/40",
-  new: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  reviewed:
-    "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800/40",
-  approved:
-    "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 dark:border dark:border-green-800/40",
-  rejected:
-    "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 dark:border dark:border-red-800/40",
-  contacted:
-    "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 dark:border dark:border-orange-800/40",
+  scheduled: "bg-primary/10 text-primary border border-primary/20",
+  searching: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
+  accepted: "bg-primary/10 text-primary border border-primary/20",
+  arrived: "bg-primary/10 text-primary border border-primary/20",
+  in_progress: "bg-primary/10 text-primary border border-primary/20",
+  completed: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/20",
+  new: "bg-muted text-muted-foreground border border-border",
+  reviewed: "bg-muted text-foreground border border-border",
+  approved: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+  rejected: "bg-destructive/10 text-destructive border border-destructive/20",
+  contacted: "bg-primary/10 text-primary border border-primary/20",
 };
 
 function AdminPage() {
@@ -702,7 +716,7 @@ function AdminPage() {
         <h1 className="display-serif mt-2 text-4xl">Orange Operations</h1>
 
         {/* KPIs */}
-        <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="mt-8 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
           <KpiCard
             label="Total Bookings"
             value={stats.totalBookings}
@@ -731,7 +745,7 @@ function AdminPage() {
             label="Pending"
             value={stats.pendingApplications + stats.newEnquiries}
             sub={`${stats.pendingApplications} apps · ${stats.newEnquiries} enquiries`}
-            icon={MoreHorizontal}
+            icon={Clock}
           />
         </div>
 
@@ -776,9 +790,9 @@ function AdminPage() {
           {/* BOOKINGS */}
           <TabsContent value="bookings">
             <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="border-b border-border px-4 py-3 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h3 className="font-semibold">All Bookings</h3>
+                  <h2 className="text-base font-semibold text-foreground">All Bookings</h2>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {[
                       { id: "all", label: "All", count: bookings.length },
@@ -786,7 +800,6 @@ function AdminPage() {
                         id: "scheduled",
                         label: "Scheduled Advance",
                         count: bookings.filter((b) => b.status === "scheduled").length,
-                        color: "text-orange-600 font-bold",
                       },
                       {
                         id: "active",
@@ -806,29 +819,38 @@ function AdminPage() {
                         count: bookings.filter((b) => b.status === "cancelled").length,
                       },
                     ].map((f) => (
-                      <button
+                      <Button
                         key={f.id}
                         type="button"
+                        size="sm"
+                        variant={bookingStatusFilter === f.id ? "default" : "outline"}
+                        className="h-8 px-2.5 text-xs font-semibold gap-1.5"
                         onClick={() => setBookingStatusFilter(f.id)}
-                        className={`px-2.5 py-1 rounded-md text-xs transition-colors flex items-center gap-1 ${
-                          bookingStatusFilter === f.id
-                            ? "bg-primary text-primary-foreground font-bold shadow-xs"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                        }`}
                       >
                         <span>{f.label}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded-full ${bookingStatusFilter === f.id ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-foreground"}`}
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium ${
+                            bookingStatusFilter === f.id
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          }`}
                         >
                           {f.count}
                         </span>
-                      </button>
+                      </Button>
                     ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={loadAll}
+                      className="h-8 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5 ml-1"
+                      title="Reload bookings data"
+                    >
+                      <RefreshCw className="size-3.5" />
+                      <span>Refresh</span>
+                    </Button>
                   </div>
                 </div>
-                <Button size="sm" variant="ghost" onClick={loadAll}>
-                  Refresh
-                </Button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -846,7 +868,7 @@ function AdminPage() {
                       ].map((h) => (
                         <th
                           key={h}
-                          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground"
+                          className="px-4 py-3.5 text-left text-xs font-semibold text-muted-foreground"
                         >
                           {h}
                         </th>
@@ -867,14 +889,17 @@ function AdminPage() {
                       })
                       .map((b) => (
                         <tr key={b.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3 font-mono text-xs font-bold">{b.reference}</td>
-                          <td className="px-4 py-3 text-xs">
-                            <div className="font-medium text-foreground">
-                              {b.pickup_area} → {b.drop_area}
+                          <td className="px-4 py-3.5 align-middle font-mono text-xs font-bold">{b.reference}</td>
+                          <td className="px-4 py-3.5 align-middle text-xs max-w-[280px]">
+                            <div
+                              className="font-medium text-foreground truncate"
+                              title={`${b.pickup_area} → ${b.drop_area}`}
+                            >
+                              {formatCompactArea(b.pickup_area)} → {formatCompactArea(b.drop_area)}
                             </div>
                             {b.status === "scheduled" && (
-                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-orange-700 dark:text-orange-300">
-                                <Calendar className="size-3 text-orange-600" />
+                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-primary">
+                                <Calendar className="size-3 text-primary shrink-0" />
                                 <span>
                                   {b.scheduled_at
                                     ? new Date(b.scheduled_at).toLocaleDateString("en-IN", {
@@ -890,24 +915,24 @@ function AdminPage() {
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                          <td className="px-4 py-3.5 align-middle text-xs text-muted-foreground">
                             {b.vehicle_name}
                           </td>
-                          <td className="px-4 py-3 font-semibold text-primary">
+                          <td className="px-4 py-3.5 align-middle font-semibold text-primary">
                             ₹{Math.round(b.estimated_fare)}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 align-middle">
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}
                             >
                               {b.status.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 align-middle">
                             {b.status === "searching" ||
                             (b.status === "scheduled" && !b.driver_id) ? (
                               <Select onValueChange={(v) => assignDriver(b.id, v)}>
-                                <SelectTrigger className="h-7 w-48 text-xs">
+                                <SelectTrigger className="h-8 w-48 text-xs">
                                   <SelectValue
                                     placeholder={
                                       b.status === "scheduled"
@@ -985,7 +1010,7 @@ function AdminPage() {
                                       const d = drivers.find((dr) => dr.id === b.driver_id);
                                       const ridePlate = getBookingVehiclePlate(b, d);
                                       return d ? (
-                                        <span className="flex flex-col">
+                                        <span className="flex flex-col space-y-0.5 leading-snug">
                                           <span className="font-semibold text-foreground">
                                             {d.full_name}
                                           </span>
@@ -999,7 +1024,7 @@ function AdminPage() {
                                           </span>
                                         </span>
                                       ) : (
-                                        <span className="flex flex-col">
+                                        <span className="flex flex-col space-y-0.5 leading-snug">
                                           <span className="font-semibold text-foreground">
                                             Assigned
                                           </span>
@@ -1014,12 +1039,12 @@ function AdminPage() {
                             )}
                           </td>
 
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 align-middle">
                             <span className="font-mono text-sm font-bold text-primary">
                               {b.ride_otp || "—"}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 align-middle">
                             {[
                               "searching",
                               "scheduled",
@@ -1171,35 +1196,40 @@ function AdminPage() {
                             </p>
                           )}
 
-                          {/* Uploaded Documents */}
-                          {(app.photo_url || app.dl_url) && (
-                            <div className="mt-3 flex gap-4">
-                              {app.photo_url && (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-semibold">Photo</span>
-                                  <a href={app.photo_url} target="_blank" rel="noreferrer">
-                                    <img
-                                      src={app.photo_url}
-                                      alt="Photo"
-                                      className="h-20 w-20 rounded-md object-cover border"
-                                    />
-                                  </a>
-                                </div>
-                              )}
-                              {app.dl_url && (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-semibold">Driving Licence</span>
-                                  <a href={app.dl_url} target="_blank" rel="noreferrer">
-                                    <img
-                                      src={app.dl_url}
-                                      alt="DL"
-                                      className="h-20 w-32 rounded-md object-cover border"
-                                    />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {/* Uploaded Documents with XSS Protection */}
+                          {(() => {
+                            const safePhoto = sanitizeDocumentUrl(app.photo_url);
+                            const safeDl = sanitizeDocumentUrl(app.dl_url);
+                            if (!safePhoto && !safeDl) return null;
+                            return (
+                              <div className="mt-3 flex gap-4">
+                                {safePhoto && (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-xs font-semibold">Photo</span>
+                                    <a href={safePhoto} target="_blank" rel="noreferrer noopener">
+                                      <img
+                                        src={safePhoto}
+                                        alt="Photo"
+                                        className="h-20 w-20 rounded-md object-cover border"
+                                      />
+                                    </a>
+                                  </div>
+                                )}
+                                {safeDl && (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-xs font-semibold">Driving Licence</span>
+                                    <a href={safeDl} target="_blank" rel="noreferrer noopener">
+                                      <img
+                                        src={safeDl}
+                                        alt="DL"
+                                        className="h-20 w-32 rounded-md object-cover border"
+                                      />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -2662,14 +2692,24 @@ function KpiCard({
   sub: string;
   icon: React.ElementType;
 }) {
+  const isTextValue = typeof value === "string" && isNaN(Number(value)) && !value.startsWith("₹");
+
   return (
-    <div className="rounded-xl border border-border bg-background p-5">
+    <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs flex flex-col justify-between min-h-[108px]">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-        <Icon className="size-4 text-primary" />
+        <Icon className="size-4 text-primary shrink-0" aria-hidden="true" />
       </div>
-      <p className="mt-3 text-2xl font-bold">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+      <div>
+        <p
+          className={`mt-2 font-bold tracking-tight text-foreground truncate ${
+            isTextValue ? "text-lg leading-8" : "text-2xl font-mono"
+          }`}
+        >
+          {value}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground truncate">{sub}</p>
+      </div>
     </div>
   );
 }

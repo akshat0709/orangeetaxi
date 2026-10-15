@@ -1058,13 +1058,24 @@ function DriverConsolePage() {
     const flow = STATUS_FLOW[booking.status];
     if (!flow) return;
 
-    // OTP Check if trying to start ride
+    // Server-side OTP verification when advancing to in_progress
     if (flow.next === "in_progress") {
-      const enteredOtp = otpInputs[booking.id];
-      if (enteredOtp !== booking.ride_otp) {
-        toast.error("Incorrect OTP. Please check with the customer.");
+      const enteredOtp = (otpInputs[booking.id] || "").trim();
+      if (!enteredOtp) {
+        toast.error("Please enter the passenger's 4-digit OTP.");
         return;
       }
+      const { data: verifyResult, error: verifyErr } = await supabase.rpc("verify_ride_otp", {
+        _booking_id: booking.id,
+        _otp: enteredOtp,
+      });
+      if (verifyErr || !(verifyResult as any)?.success) {
+        toast.error((verifyResult as any)?.error || verifyErr?.message || "Incorrect OTP. Please check with the customer.");
+        return;
+      }
+      toast.success("OTP verified! Ride in progress 🍊");
+      loadData();
+      return;
     }
 
     const updates: Record<string, string | number | null> = { status: flow.next };
@@ -2175,11 +2186,11 @@ function DriverConsolePage() {
                             </Button>
                           </div>
                           <p className="text-sm font-semibold mb-3">
-                            Ask customer for the {ride.ride_otp?.length === 6 ? "6" : "4"}-digit OTP
+                            Ask customer for the 4-digit OTP
                           </p>
                           <div className="flex flex-col items-center gap-4">
                             {(() => {
-                              const expectedLen = ride.ride_otp?.length === 6 ? 6 : 4;
+                              const expectedLen = 4;
                               return (
                                 <>
                                   <InputOTP

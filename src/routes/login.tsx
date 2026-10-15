@@ -37,7 +37,9 @@ const signUpSchema = z.object({
   phone: z.string().min(7, "Enter a valid phone number"),
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["customer", "driver"]).default("customer"),
+  agreePrivacy: z.boolean().refine((val) => val === true, {
+    message: "You must review and agree to the Privacy Policy to create an account",
+  }),
 });
 
 const forgotSchema = z.object({
@@ -180,6 +182,22 @@ function LoginPage() {
       password: values.password,
     });
     if (error) {
+      // Record failed sign in attempt in security audit trail
+      try {
+        await supabase.from("security_audit_logs").insert({
+          event_type: "auth.login_failed",
+          severity: "low",
+          metadata: { email: values.email.toLowerCase(), reason: error.message },
+        });
+      } catch {}
+
+      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
+        setLockoutRemaining(60);
+        toast.error("Too many login attempts from this network. Please wait 60 seconds before trying again.");
+        setSubmitting(false);
+        return;
+      }
+
       try {
         const storedAttempts = localStorage.getItem(ATTEMPTS_KEY);
         let attempts = storedAttempts ? parseInt(storedAttempts, 10) : 0;
@@ -334,10 +352,19 @@ function LoginPage() {
   async function handleSignUp(values: SignUpValues) {
     setSubmitting(true);
     const cleanPhone = (values.phone || "").trim();
+    const consentTimestamp = new Date().toISOString();
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName, phone: cleanPhone, role: values.role } },
+      options: {
+        data: {
+          full_name: values.fullName,
+          phone: cleanPhone,
+          role: "customer",
+          consent_privacy_policy_at: consentTimestamp,
+          consent_version: "2.4",
+        },
+      },
     });
     if (error) {
       toast.error(error.message);
@@ -346,38 +373,15 @@ function LoginPage() {
     }
 
     if (data.user) {
-      // 1. Immediately save phone in profiles
+      // 1. Immediately save verified profile details with consent metadata
       try {
         await supabase.from("profiles").upsert({
           id: data.user.id,
           full_name: values.fullName,
           phone: cleanPhone,
-          updated_at: new Date().toISOString(),
+          updated_at: consentTimestamp,
         });
       } catch (e) {}
-
-      // 2. If signing up as driver, immediately create driver profile with the exact phone
-      if (values.role === "driver") {
-        try {
-          const defaultPlate = "DL 01 EV 1001";
-          const defaultModel = "Mahindra BE.6";
-          const metaObj = { photo: "", plate: defaultPlate, model: defaultModel, type: "company" };
-
-          await supabase.from("drivers").upsert(
-            {
-              user_id: data.user.id,
-              full_name: values.fullName,
-              phone: cleanPhone,
-              city: "Bengaluru",
-              status: "active",
-              vehicle_model: defaultModel,
-              vehicle_number: defaultPlate,
-              vehicle_code: "ORANGE_META:" + JSON.stringify(metaObj),
-            },
-            { onConflict: "user_id" },
-          );
-        } catch (e) {}
-      }
     }
 
     if (data.user && !data.session) {
@@ -435,19 +439,6 @@ function LoginPage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  async function claimAdmin() {
-    const { data, error } = await supabase.auth.getSession();
-    if (!data.session) {
-      toast.error("Sign in first, then click this button.");
-      return;
-    }
-    const { data: result } = await supabase.rpc("claim_first_admin" as any);
-    if (result) {
-      toast.success("You are now admin! Redirecting...");
-      setTimeout(() => navigate({ to: "/admin" as any }), 1500);
-    } else toast.info("An admin already exists — this button only works once.");
   }
 
   return (
@@ -704,31 +695,14 @@ function LoginPage() {
               </form>
             ) : (
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="mt-8 space-y-5">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-center justify-between">
+                  <span>Looking to drive for Orange?</span>
+                  <Link to="/drive" className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80">
+                    Apply on Driver Portal &rarr;
+                  </Link>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2 flex gap-3">
-                    <label
-                      className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border py-3 text-sm font-semibold transition-colors ${signUpForm.watch("role") === "customer" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                      <input
-                        type="radio"
-                        value="customer"
-                        className="sr-only"
-                        {...signUpForm.register("role")}
-                      />
-                      Ride with Orange
-                    </label>
-                    <label
-                      className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border py-3 text-sm font-semibold transition-colors ${signUpForm.watch("role") === "driver" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                    >
-                      <input
-                        type="radio"
-                        value="driver"
-                        className="sr-only"
-                        {...signUpForm.register("role")}
-                      />
-                      Drive for Orange
-                    </label>
-                  </div>
                   <div className="col-span-2">
                     <Label htmlFor="su-name">Full Name</Label>
                     <Input
@@ -798,6 +772,35 @@ function LoginPage() {
                     </p>
                   )}
                 </div>
+
+                {/* Explicit DPDP Act Consent Checkbox */}
+                <div className="space-y-1 pt-1">
+                  <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/30 p-3">
+                    <input
+                      id="su-agree"
+                      type="checkbox"
+                      className="size-4 mt-0.5 rounded border-border accent-primary shrink-0 cursor-pointer"
+                      {...signUpForm.register("agreePrivacy")}
+                    />
+                    <Label htmlFor="su-agree" className="text-xs font-normal leading-relaxed cursor-pointer text-muted-foreground">
+                      I have read and consent to the{" "}
+                      <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                        Privacy Policy & Data Notice
+                      </Link>{" "}
+                      and{" "}
+                      <Link to="/terms" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                        Terms of Service
+                      </Link>
+                      , including trip telemetry and safety processing under the DPDP Act, 2023.
+                    </Label>
+                  </div>
+                  {signUpForm.formState.errors.agreePrivacy && (
+                    <p className="text-xs text-destructive">
+                      {signUpForm.formState.errors.agreePrivacy.message}
+                    </p>
+                  )}
+                </div>
+
                 <Button type="submit" className="w-full" size="lg" disabled={submitting}>
                   {submitting ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -807,17 +810,6 @@ function LoginPage() {
                     </>
                   )}
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  By signing up you agree to our{" "}
-                  <Link to="/terms" className="underline hover:text-foreground">
-                    Terms
-                  </Link>{" "}
-                  and{" "}
-                  <Link to="/privacy" className="underline hover:text-foreground">
-                    Privacy Policy
-                  </Link>
-                  .
-                </p>
               </form>
             )}
           </div>

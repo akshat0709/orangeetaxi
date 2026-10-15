@@ -719,6 +719,8 @@ function PassengerPage() {
           tax_amount: Math.round(fareBreakdown.tax),
           estimated_fare: Math.round(fareBreakdown.total),
           payment_method: paymentMethod,
+          payment_status: transactionId ? "paid" : "pending",
+          payment_intent_id: transactionId || null,
           status: isAdvanceBooking ? "scheduled" : "searching",
           scheduled_at: scheduledIso,
           ride_otp: otp,
@@ -784,15 +786,62 @@ function PassengerPage() {
         return;
       }
 
-      const options = {
-        key: "rzp_test_TjnylwNIDTQjP2",
+      let orderData: { orderId?: string; amount?: number; keyId?: string } = {
         amount: Math.round(fareBreakdown.total * 100),
+        keyId: "rzp_test_TjnylwNIDTQjP2",
+      };
+
+      try {
+        const orderRes = await fetch("/api/create-razorpay-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: fareBreakdown.total,
+            distanceKm: distKm,
+            vehicleCode: selectedVehicle.code,
+          }),
+        });
+        if (orderRes.ok) {
+          const resJson = await orderRes.json();
+          if (resJson.orderId) {
+            orderData = resJson;
+          }
+        }
+      } catch (err) {
+        console.warn("Server order generation fallback:", err);
+      }
+
+      const options = {
+        key: orderData.keyId || "rzp_test_TjnylwNIDTQjP2",
+        order_id: orderData.orderId || undefined,
+        amount: orderData.amount || Math.round(fareBreakdown.total * 100),
         currency: "INR",
         name: "Orange Taxi",
         description: `Premium EV Ride to ${drop.name.substring(0, 30)}`,
         image: "https://orange-taxi.com/pwa-512x512.png",
         handler: async function (response: any) {
-          toast.success("Payment successful! Confirming your ride...");
+          toast.loading("Verifying payment...", { id: "payment-verify" });
+          try {
+            const verifyRes = await fetch("/api/verify-razorpay-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            toast.dismiss("payment-verify");
+            if (!verifyRes.ok || !verifyData.verified) {
+              toast.error("Payment verification failed. Please contact customer care.");
+              setSubmitting(false);
+              return;
+            }
+          } catch (e) {
+            toast.dismiss("payment-verify");
+          }
+          toast.success("Payment verified! Confirming your ride...");
           await executeBookingInsert(response.razorpay_payment_id);
         },
         prefill: {
@@ -813,7 +862,7 @@ function PassengerPage() {
 
       const rzp1 = new (window as any).Razorpay(options);
       rzp1.on("payment.failed", function (response: any) {
-        toast.error(`Payment failed: ${response.error.description}`);
+        toast.error(`Payment failed: ${response.error?.description || "Payment was rejected."}`);
       });
       rzp1.open();
     } else {

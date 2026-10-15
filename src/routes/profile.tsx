@@ -125,6 +125,9 @@ function ProfilePage() {
   const [workCoords, setWorkCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapPickerTarget, setMapPickerTarget] = useState<"home" | "work" | null>(null);
   const [areas, setAreas] = useState([]);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -333,6 +336,41 @@ function ProfilePage() {
       setTimeout(() => setSavedOnce(false), 2000);
     }
     setSaving(false);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText.trim() !== "DELETE") {
+      toast.error("Please type DELETE to confirm account erasure.");
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("delete_user_account");
+      if (error) {
+        throw error;
+      }
+
+      toast.success(data?.message || "Your account and personal data have been permanently erased.");
+      setDeleteModalOpen(false);
+
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.clear();
+        } catch {}
+      }
+
+      await supabase.auth.signOut();
+      navigate({ to: "/" });
+    } catch (err: any) {
+      console.error("Account deletion failed:", err);
+      toast.error(
+        err.message ||
+          "Failed to delete account. Please complete any active rides and try again, or contact privacy@orange-taxi.com",
+      );
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   if (authLoading) {
@@ -940,6 +978,35 @@ function ProfilePage() {
               )}
             </TabsContent>
           </Tabs>
+
+          {/* Privacy & Account Erasure (DPDP Act, 2023) */}
+          <div className="mt-10 rounded-2xl border border-destructive/25 bg-destructive/5 p-6 space-y-4">
+            <div className="flex items-center gap-2.5 text-destructive">
+              <Trash2 className="size-5 shrink-0" />
+              <h3 className="font-bold text-base">Privacy & Account Erasure (DPDP Act, 2023)</h3>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Under India's Digital Personal Data Protection Act, 2023, you have the right to request the permanent erasure of your account, contact information, saved places, and personal identifiers. Statutory tax invoices are retained in anonymized form for 72 months to satisfy mandatory Central GST (CGST) audit compliance.
+            </p>
+            <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-destructive/15">
+              <div className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Irreversible action:</span> All active sessions will be terminated.
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setDeleteConfirmText("");
+                  setDeleteModalOpen(true);
+                }}
+                className="gap-2 shrink-0 font-semibold text-xs"
+              >
+                <Trash2 className="size-3.5" />
+                Delete My Account
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -990,6 +1057,80 @@ function ProfilePage() {
               onConfirm={handleSaveMapPlace}
               onBack={() => setMapPickerTarget(null)}
             />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Confirmation Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md bg-background border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <ShieldAlert className="size-5" />
+              Permanently Delete Your Account?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-2 space-y-2">
+              <span>
+                This action is <strong>irreversible</strong> and will permanently:
+              </span>
+              <ul className="list-disc list-inside space-y-1 text-foreground/80 pl-1 mt-1">
+                <li>Purge your profile, phone, email, and authentication credentials.</li>
+                <li>Clear all saved places (Home/Work) and emergency contacts.</li>
+                <li>Anonymize your ride history and redact trip pickup/drop locations.</li>
+                <li>Revoke active login sessions across all devices.</li>
+              </ul>
+              <span className="block text-[11px] text-muted-foreground pt-1">
+                Note: Anonymized trip records with financial tax amounts are retained for 72 months solely to comply with Section 36 of the CGST Act, 2017.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="del-confirm" className="text-xs font-semibold">
+                To confirm, type <span className="font-mono text-destructive font-bold">DELETE</span> below:
+              </Label>
+              <Input
+                id="del-confirm"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="mt-1.5 font-mono text-sm uppercase"
+                disabled={deletingAccount}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteModalOpen(false)}
+              disabled={deletingAccount}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmText.trim() !== "DELETE" || deletingAccount}
+              className="gap-1.5"
+            >
+              {deletingAccount ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Erasing Account...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-3.5" />
+                  Erase My Data & Delete
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

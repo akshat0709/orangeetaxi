@@ -22,25 +22,7 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
-// Synchronously rehydrate from localStorage on first import if available
-if (typeof window !== "undefined") {
-  try {
-    const cached = localStorage.getItem("orange_auth_cache");
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (parsed?.user) {
-        globalUser = parsed.user;
-        globalRole = parsed.role ?? "customer";
-        globalLoading = false;
-      }
-    }
-  } catch {}
-}
-
 async function fetchRole(userId: string, email?: string): Promise<AppRole> {
-  // Hardcode admin access for the owner's email
-  if (email === "orangeetaxi@gmail.com") return "admin";
-
   try {
     // Priority: admin > driver > customer
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);

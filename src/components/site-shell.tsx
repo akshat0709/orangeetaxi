@@ -20,9 +20,8 @@ import { triggerPWAInstall } from "@/components/pwa-install-prompt";
 const nav = [
   ["Experience", "/experience"],
   ["Electric", "/electric"],
-  ["For Business", "/business"],
-  ["Drive With Us", "/drive"],
-  ["Talk to Orange", "/talk-to-orange"],
+  ["Business", "/business"],
+  ["Drive", "/drive"],
   ["About", "/about"],
 ] as const;
 
@@ -32,7 +31,7 @@ export function LanguageSwitcher() {
     <button
       onClick={() => i18n.changeLanguage((i18n.language || "en").startsWith("hi") ? "en" : "hi")}
       aria-label="Toggle language"
-      className="hidden md:grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary shrink-0"
+      className="grid size-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary shrink-0"
       title="Toggle Hindi/English"
     >
       <span className="font-bold text-[10px]">
@@ -44,7 +43,7 @@ export function LanguageSwitcher() {
 
 export function Brand() {
   return (
-    <Link to="/" className="flex items-center gap-2.5" aria-label="Orange Taxi home">
+    <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Orange Taxi home">
       <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
         O
       </span>
@@ -66,10 +65,10 @@ export function SiteHeader() {
 
   return (
     <header className="site-header sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-      <div className="section-shell flex h-16 sm:h-18 items-center justify-between gap-4 min-w-0 max-w-full">
+      <div className="section-shell flex h-16 sm:h-18 items-center justify-between gap-3 min-w-0 max-w-full">
         <Brand />
         <nav
-          className="hidden items-center shrink-0 gap-4 xl:gap-5 lg:flex whitespace-nowrap"
+          className="hidden items-center shrink-0 gap-3 xl:gap-4 lg:flex whitespace-nowrap"
           aria-label="Main navigation"
         >
           {nav.map(([label, to]) => (
@@ -77,118 +76,101 @@ export function SiteHeader() {
               key={to}
               to={to}
               className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
+              activeProps={{ className: "text-foreground font-bold" }}
             >
               {label}
             </Link>
           ))}
-          {!loading && user && (
-            <Link
-              to="/profile"
-              className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-primary hover:underline"
-              activeProps={{ className: "text-foreground font-bold" }}
-            >
-              My Rides & Schedule
-            </Link>
-          )}
-          {!loading && role === "driver" && (
-            <Link
-              to="/driver-console"
-              className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
-            >
-              My Console
-            </Link>
-          )}
-          {!loading && role === "admin" && (
-            <Link
-              to="/admin"
-              className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
-            >
-              Admin
-            </Link>
-          )}
-          {/* Install App Trigger */}
-          <button
-            onClick={triggerPWAInstall}
-            type="button"
-            aria-label="Install App"
-            className="hidden items-center shrink-0 gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground xl:flex"
-          >
-            <Download className="size-3.5" /> Install App
-          </button>
-          <LanguageSwitcher />
-          {/* Theme Toggle */}
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          </button>
-          {!loading && user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full border border-border bg-warm px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors">
-                  <User className="size-3.5" />
-                  {user.email?.split("@")[0]}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">📅 My Rides & Schedule</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/book">Book a Ride</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/talk-to-orange">Talk to Orange</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={triggerPWAInstall}>
-                  <Download className="mr-2 size-4" /> Install App
-                </DropdownMenuItem>
-                {role === "driver" && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/driver-console">Driver Console</Link>
-                  </DropdownMenuItem>
-                )}
-                {role === "admin" && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin">Admin Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" search={{ tab: "fleet" }}>
-                        Fleet & Bays
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" search={{ tab: "cash" }}>
-                        Cash Settlements
-                      </Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 size-4" /> Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center gap-1.5 ml-1">
+            <LanguageSwitcher />
+            {/* Theme Toggle */}
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+            </button>
+          </div>
+
+          {!loading && user ? (
+            <div className="flex items-center gap-2 ml-1">
+              <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-xs">
+                <Link to="/book">
+                  Book Ride <MoveUpRight className="size-3 ml-1" />
+                </Link>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-full border border-border bg-warm px-3 py-1.5 text-xs font-semibold hover:bg-accent transition-colors">
+                    <User className="size-3.5 text-primary" />
+                    <span className="max-w-[100px] truncate">{user.email?.split("@")[0]}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border mb-1">
+                    Signed in as <span className="text-foreground font-bold">{user.email}</span>
+                  </div>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile">📅 My Rides & Schedule</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/book">🚖 Book a Ride</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/talk-to-orange">💬 Talk to Orange</Link>
+                  </DropdownMenuItem>
+                  {role === "driver" && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/driver-console">🚘 Chauffeur Console</Link>
+                    </DropdownMenuItem>
+                  )}
+                  {role === "admin" && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin">⚙️ Admin Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" search={{ tab: "fleet" }}>⚡ Fleet & Bays</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin" search={{ tab: "cash" }}>💵 Cash Settlements</Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/login" search={{ mode: "signup" }}>
+                      ➕ Create Account / Sign Up
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={triggerPWAInstall}>
+                    <Download className="mr-2 size-4" /> Install App
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="mr-2 size-4" /> Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             !loading && (
-              <div className="flex items-center gap-2">
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/login">Sign In</Link>
+              <div className="flex items-center gap-2 ml-1">
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs px-2.5">
+                  <Link to="/login" search={{ mode: "signin" }}>Sign In</Link>
                 </Button>
-                <Button asChild>
+                <Button asChild variant="outline" size="sm" className="h-8 text-xs px-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground font-semibold">
+                  <Link to="/login" search={{ mode: "signup" }}>Sign Up</Link>
+                </Button>
+                <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-xs">
                   <Link to="/book">
-                    Book a Ride <MoveUpRight />
+                    Book Ride <MoveUpRight className="size-3 ml-1" />
                   </Link>
                 </Button>
               </div>
@@ -282,16 +264,25 @@ export function SiteHeader() {
                   <LogOut className="size-4" /> Sign Out
                 </button>
               ) : (
-                <div className="mt-8 flex flex-col gap-3">
+                <div className="mt-8 flex flex-col gap-2.5">
                   <SheetClose asChild>
-                    <Button asChild variant="ghost" className="w-full">
-                      <Link to="/login">Sign In</Link>
+                    <Button asChild className="w-full">
+                      <Link to="/login" search={{ mode: "signup" }}>
+                        Sign Up
+                      </Link>
                     </Button>
                   </SheetClose>
                   <SheetClose asChild>
-                    <Button asChild size="lg" className="w-full">
+                    <Button asChild variant="outline" className="w-full">
+                      <Link to="/login" search={{ mode: "signin" }}>
+                        Sign In
+                      </Link>
+                    </Button>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Button asChild variant="ghost" size="lg" className="w-full border border-border">
                       <Link to="/book">
-                        Book a Ride <MoveUpRight />
+                        Book a Ride <MoveUpRight className="ml-1 size-4" />
                       </Link>
                     </Button>
                   </SheetClose>

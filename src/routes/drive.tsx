@@ -503,6 +503,9 @@ const appSchema = z.object({
   chassis_number: z.string().optional(),
   vehicle_year: z.string().optional(),
   message: z.string().optional(),
+  agree_privacy: z.boolean().refine((val) => val === true, {
+    message: "You must consent to the Privacy Policy and background verification to submit your application",
+  }),
 });
 type AppValues = z.infer<typeof appSchema>;
 
@@ -511,8 +514,10 @@ function DriverApplicationForm() {
   const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState(false);
   const [dlDataUrl, setDlDataUrl] = useState<string>("");
+  const [dlFile, setDlFile] = useState<File | null>(null);
   const [dlError, setDlError] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -547,6 +552,8 @@ function DriverApplicationForm() {
       toast.error("Photo size should be under 8MB.");
       return;
     }
+
+    setPhotoFile(file);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -590,6 +597,8 @@ function DriverApplicationForm() {
       toast.error("File size should be under 8MB.");
       return;
     }
+
+    setDlFile(file);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -639,6 +648,30 @@ function DriverApplicationForm() {
     };
     const metaJson = JSON.stringify(metaData);
 
+    let finalPhotoUrl = photoDataUrl;
+    let finalDlUrl = dlDataUrl;
+
+    try {
+      if (photoFile) {
+        const photoExt = (photoFile.name.split(".").pop() || "jpg").toLowerCase();
+        const photoPath = `applications/${Date.now()}_photo_${Math.random().toString(36).substring(2, 7)}.${photoExt}`;
+        const { data: upPhoto, error: photoErr } = await supabase.storage.from("driver_kyc").upload(photoPath, photoFile);
+        if (!photoErr && upPhoto?.path) {
+          finalPhotoUrl = `storage://driver_kyc/${upPhoto.path}`;
+        }
+      }
+      if (dlFile) {
+        const dlExt = (dlFile.name.split(".").pop() || "jpg").toLowerCase();
+        const dlPath = `applications/${Date.now()}_dl_${Math.random().toString(36).substring(2, 7)}.${dlExt}`;
+        const { data: upDl, error: dlErr } = await supabase.storage.from("driver_kyc").upload(dlPath, dlFile);
+        if (!dlErr && upDl?.path) {
+          finalDlUrl = `storage://driver_kyc/${upDl.path}`;
+        }
+      }
+    } catch (e) {
+      console.warn("Storage upload notice:", e);
+    }
+
     const payload = {
       full_name: values.full_name,
       email: values.email,
@@ -650,9 +683,9 @@ function DriverApplicationForm() {
       owns_vehicle: values.owns_vehicle,
       message: values.message ?? "",
       admin_notes: metaJson,
-      // Extended fields (if columns exist in remote table)
-      photo_url: photoDataUrl,
-      dl_url: dlDataUrl,
+      // Extended fields (storage reference preferred, fallback to compressed image)
+      photo_url: finalPhotoUrl,
+      dl_url: finalDlUrl,
       driver_type: values.owns_vehicle ? "partner" : "company",
       vehicle_model: values.owns_vehicle
         ? values.vehicle_model || "Mahindra BE.6"
@@ -1146,14 +1179,28 @@ function DriverApplicationForm() {
               />
             </div>
 
-            {/* DPDP Data Collection Notice */}
-            <div className="col-span-2 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground leading-relaxed">
-              <p>
-                <strong className="text-foreground">Data Notice (DPDP Act, 2023):</strong> By
-                submitting, you consent to Orange Taxi Limited processing your photo, driving
-                licence, and vehicle records for verification and onboarding under our Privacy
-                Policy.
-              </p>
+            {/* DPDP Data Collection Notice & Consent Checkbox */}
+            <div className="col-span-2 space-y-1">
+              <div className="flex items-start gap-2.5 rounded-lg border border-border bg-background/80 p-3 text-[11px] text-muted-foreground leading-relaxed">
+                <input
+                  id="da-consent"
+                  type="checkbox"
+                  className="size-4 mt-0.5 rounded border-border accent-primary shrink-0 cursor-pointer"
+                  {...form.register("agree_privacy")}
+                />
+                <Label htmlFor="da-consent" className="text-[11px] font-normal leading-relaxed cursor-pointer text-muted-foreground">
+                  <strong className="text-foreground">Consent & Verification Notice (DPDP Act, 2023):</strong> I hereby consent to Orange Taxi Electric Mobility Solutions Pvt. Ltd. processing my commercial driving licence, portrait photo, Aadhaar number, and vehicle records for background verification, onboarding, and safety compliance under the{" "}
+                  <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                    Orange Taxi Privacy Policy & Data Notice
+                  </Link>
+                  .
+                </Label>
+              </div>
+              {form.formState.errors.agree_privacy && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.agree_privacy.message}
+                </p>
+              )}
             </div>
           </div>
 

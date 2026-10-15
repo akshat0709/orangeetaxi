@@ -24,15 +24,37 @@ export interface SendInvoicePayload {
   profile?: CompanyGSTProfile;
 }
 
+function escapeHtml(str?: string | number | null): string {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export function generateInvoiceHtml(p: SendInvoicePayload): string {
   const profile = p.profile || DEFAULT_COMPANY_PROFILE;
   const isCorporate = Boolean(p.corporateName && p.corporateGstin);
+  const safeCustomerName = escapeHtml(p.customerName || "Passenger");
+  const safeCorporateName = escapeHtml(p.corporateName || "");
+  const safeCorporateGstin = escapeHtml(p.corporateGstin || "");
+  const safePickup = escapeHtml(p.pickupArea);
+  const safeDrop = escapeHtml(p.dropArea);
+  const safeVehicle = escapeHtml(p.vehicleName);
+  const safePlate = escapeHtml(p.vehiclePlate || "");
+  const safeInvoiceNum = escapeHtml(p.invoiceNumber);
+  const safeEmail = escapeHtml(p.to);
+  const safePhone = escapeHtml(p.customerPhone || "");
+  const safeDate = escapeHtml(p.completedAt);
+  const safeMethod = escapeHtml((p.paymentMethod || "CASH").toUpperCase());
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>GST Tax Invoice - ${p.invoiceNumber}</title>
+  <title>GST Tax Invoice - ${safeInvoiceNum}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; color: #1a1a1a; margin: 0; padding: 24px 12px; }
     .container { max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #eaeaea; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
@@ -67,16 +89,16 @@ export function generateInvoiceHtml(p: SendInvoicePayload): string {
         <tr>
           <td style="width: 50%; vertical-align: top;">
             <div class="label">Invoice Number</div>
-            <div class="val" style="color: #f97316;">${p.invoiceNumber}</div>
+            <div class="val" style="color: #f97316;">${safeInvoiceNum}</div>
             <div class="label" style="margin-top: 8px;">Date & Time</div>
-            <div class="val">${p.completedAt}</div>
+            <div class="val">${safeDate}</div>
           </td>
           <td style="width: 50%; vertical-align: top;">
             <div class="label">Billed To</div>
-            <div class="val">${isCorporate ? p.corporateName : p.customerName || "Passenger"}</div>
-            ${isCorporate ? `<div class="val" style="font-size: 11px; color: #64748b;">GSTIN: ${p.corporateGstin}</div>` : ""}
-            <div class="val" style="font-size: 11px; color: #64748b;">${p.to}</div>
-            ${p.customerPhone ? `<div class="val" style="font-size: 11px; color: #64748b;">Phone: ${p.customerPhone}</div>` : ""}
+            <div class="val">${isCorporate ? safeCorporateName : safeCustomerName}</div>
+            ${isCorporate ? `<div class="val" style="font-size: 11px; color: #64748b;">GSTIN: ${safeCorporateGstin}</div>` : ""}
+            <div class="val" style="font-size: 11px; color: #64748b;">${safeEmail}</div>
+            ${safePhone ? `<div class="val" style="font-size: 11px; color: #64748b;">Phone: ${safePhone}</div>` : ""}
           </td>
         </tr>
       </table>
@@ -84,14 +106,14 @@ export function generateInvoiceHtml(p: SendInvoicePayload): string {
       <div class="card">
         <div class="label">Trip Route & Vehicle</div>
         <div class="route">
-          🟢 <strong>Pickup:</strong> ${p.pickupArea}<br>
-          🔴 <strong>Drop:</strong> ${p.dropArea}
+          🟢 <strong>Pickup:</strong> ${safePickup}<br>
+          🔴 <strong>Drop:</strong> ${safeDrop}
         </div>
         <div style="margin-top: 10px; font-size: 12px; color: #475569;">
-          <strong>Vehicle:</strong> ${p.vehicleName} ${p.vehiclePlate ? `· Plate: <strong>${p.vehiclePlate}</strong>` : ""}<br>
-          ${p.distanceKm ? `Distance: <strong>${p.distanceKm} km</strong> · ` : ""}
-          ${p.durationMinutes ? `Duration: <strong>${p.durationMinutes} mins</strong> · ` : ""}
-          Payment: <strong>${(p.paymentMethod || "CASH").toUpperCase()}</strong>
+          <strong>Vehicle:</strong> ${safeVehicle} ${safePlate ? `· Plate: <strong>${safePlate}</strong>` : ""}<br>
+          ${p.distanceKm ? `Distance: <strong>${Number(p.distanceKm)} km</strong> · ` : ""}
+          ${p.durationMinutes ? `Duration: <strong>${Number(p.durationMinutes)} mins</strong> · ` : ""}
+          Payment: <strong>${safeMethod}</strong>
         </div>
       </div>
 

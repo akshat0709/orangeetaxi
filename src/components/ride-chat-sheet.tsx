@@ -242,53 +242,76 @@ export function RideChatSheet({
   useEffect(() => {
     if (!bookingId) return;
 
-    // 1. Supabase Realtime Broadcast (cross-device)
-    const channel = supabase.channel(`ride-chat-${bookingId}`, {
-      config: { broadcast: { self: false, ack: true } },
-    });
-
-    channel
-      .on("broadcast", { event: "chat_message" }, (payload: any) => {
-        const p = payload?.payload;
-        if (p) {
-          mergeIncomingMessages([p]);
-        }
-      })
-      .on("broadcast", { event: "request_chat_history" }, () => {
-        // If other peer requested chat history, send our current messages list
-        if (messagesRef.current.length > 0 && channelRef.current) {
-          channelRef.current
-            .send({
-              type: "broadcast",
-              event: "sync_chat_history",
-              payload: { messages: messagesRef.current },
-            })
-            .catch(() => {});
-        }
-      })
-      .on("broadcast", { event: "sync_chat_history" }, (payload: any) => {
-        const msgs = payload?.payload?.messages;
-        if (msgs) {
-          mergeIncomingMessages(msgs);
-        }
-      })
-      .subscribe();
-
-    channelRef.current = channel;
-
-    // 2. Browser BroadcastChannel (instant zero-latency same-browser / multi-tab sync)
+    let isCancelled = false;
+    let channel: any = null;
     let bc: BroadcastChannel | null = null;
-    try {
-      bc = new BroadcastChannel(`orange_chat_bc_${bookingId}`);
-      bc.onmessage = (event) => {
-        if (event.data) {
-          if (Array.isArray(event.data)) mergeIncomingMessages(event.data);
-          else mergeIncomingMessages([event.data]);
-        }
-      };
-    } catch {}
 
-    // 3. LocalStorage Event listener (multi-tab cross sync)
+    async function setupAuthorizedChat() {
+      // 1. Verify authenticated session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (isCancelled || !session?.user) {
+        return;
+      }
+
+      // 2. Verify caller is authorized for this specific ride (passenger or assigned driver)
+      const { data: ride, error } = await supabase
+        .from("bookings")
+        .select("id, customer_id, driver_id")
+        .eq("id", bookingId)
+        .maybeSingle();
+
+      if (isCancelled || error || !ride) {
+        return;
+      }
+
+      // 3. Supabase Realtime Broadcast (cross-device)
+      channel = supabase.channel(`ride-chat-${bookingId}`, {
+        config: { broadcast: { self: false, ack: true } },
+      });
+
+      channel
+        .on("broadcast", { event: "chat_message" }, (payload: any) => {
+          const p = payload?.payload;
+          if (p) {
+            mergeIncomingMessages([p]);
+          }
+        })
+        .on("broadcast", { event: "request_chat_history" }, () => {
+          if (messagesRef.current.length > 0 && channelRef.current) {
+            channelRef.current
+              .send({
+                type: "broadcast",
+                event: "sync_chat_history",
+                payload: { messages: messagesRef.current },
+              })
+              .catch(() => {});
+          }
+        })
+        .on("broadcast", { event: "sync_chat_history" }, (payload: any) => {
+          const msgs = payload?.payload?.messages;
+          if (msgs) {
+            mergeIncomingMessages(msgs);
+          }
+        })
+        .subscribe();
+
+      channelRef.current = channel;
+
+      // 4. Browser BroadcastChannel
+      try {
+        bc = new BroadcastChannel(`orange_chat_bc_${bookingId}`);
+        bc.onmessage = (event) => {
+          if (event.data) {
+            if (Array.isArray(event.data)) mergeIncomingMessages(event.data);
+            else mergeIncomingMessages([event.data]);
+          }
+        };
+      } catch (e) {}
+    }
+
+    setupAuthorizedChat();
+
+    // 5. LocalStorage Event listener (multi-tab cross sync)
     const handleStorageEvent = (e: StorageEvent) => {
       if (e.key === storageKey && e.newValue) {
         try {
@@ -299,7 +322,7 @@ export function RideChatSheet({
     };
     window.addEventListener("storage", handleStorageEvent);
 
-    // 4. Custom window event (same-page cross-component dispatch)
+    // 6. Custom window event (same-page cross-component dispatch)
     const handleCustomLocalEvent = (e: any) => {
       if (e.detail?.bookingId === bookingId && e.detail?.message) {
         mergeIncomingMessages([e.detail.message]);
@@ -308,8 +331,13 @@ export function RideChatSheet({
     window.addEventListener("orange_chat_local_event", handleCustomLocalEvent);
 
     return () => {
-      supabase.removeChannel(channel);
-      bc?.close();
+      isCancelled = true;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+      if (bc) {
+        bc.close();
+      }
       window.removeEventListener("storage", handleStorageEvent);
       window.removeEventListener("orange_chat_local_event", handleCustomLocalEvent);
     };

@@ -25,6 +25,7 @@ import {
 } from "@/lib/gst-utils";
 import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 import { SendInvoicePayload } from "@/lib/send-invoice-email";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TaxInvoiceModalProps {
   open: boolean;
@@ -219,9 +220,20 @@ export function TaxInvoiceModal({
         profile,
       };
 
+      let authHeader = "";
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          authHeader = `Bearer ${session.access_token}`;
+        }
+      } catch {}
+
       const res = await fetch("/api/send-invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: authHeader } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

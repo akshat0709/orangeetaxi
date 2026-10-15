@@ -167,13 +167,31 @@ function TrackPage() {
       const cleanRef = activeRef.trim().toUpperCase().replace(/^#/, "");
 
       try {
-        const { data: bData, error } = await supabase
-          .from("bookings")
-          .select("*")
-          .ilike("reference", cleanRef)
-          .maybeSingle();
+        let bData: any = null;
+        try {
+          const { data: rpcData, error: rpcErr } = await (supabase as any).rpc("get_public_tracking_status", {
+            _ref: cleanRef,
+          });
+          if (rpcData && !rpcErr) {
+            bData = rpcData;
+            if (rpcData.driver) {
+              setDriver(rpcData.driver);
+            }
+          }
+        } catch {}
 
-        if (error || !bData) {
+        if (!bData) {
+          const { data, error } = await supabase
+            .from("bookings")
+            .select("*")
+            .ilike("reference", cleanRef)
+            .maybeSingle();
+          if (!error && data) {
+            bData = data;
+          }
+        }
+
+        if (!bData) {
           setBooking(null);
           setDriver(null);
           setNotFound(true);

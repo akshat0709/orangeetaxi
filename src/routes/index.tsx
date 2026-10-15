@@ -193,18 +193,28 @@ function HomePage() {
               India's finest electric SUV — with LED screens, premium audio and daily newspapers —
               designed to make every journey extraordinary.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
+            <div className="mt-8 flex flex-wrap gap-3 sm:flex-row sm:items-center">
+              <Button asChild size="lg" className="shadow-md font-bold">
                 <Link to="/book">
-                  Book a Ride <ArrowRight />
+                  Book a Ride <ArrowRight className="ml-1.5 size-4" />
                 </Link>
               </Button>
               <Button
                 asChild
                 size="lg"
-                className="bg-white text-neutral-900 hover:bg-white/90 shadow-sm"
+                className="bg-white text-neutral-900 hover:bg-white/90 shadow-sm font-semibold"
               >
-                <Link to="/experience">Explore the Orange Experience</Link>
+                <Link to="/login" search={{ mode: "signup" }}>
+                  Sign Up
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                <Link to="/experience">Explore Experience</Link>
               </Button>
             </div>
           </div>
