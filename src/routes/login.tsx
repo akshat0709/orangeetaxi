@@ -327,8 +327,13 @@ function LoginPage() {
   async function handleForgotPassword(values: ForgotValues) {
     setSubmitting(true);
     try {
+      const redirectUrl =
+        typeof window !== "undefined" && window.location.origin.includes("orange-taxi.com")
+          ? `${window.location.origin}/login?mode=reset`
+          : "https://orange-taxi.com/login?mode=reset";
+
       const { error } = await supabase.auth.resetPasswordForEmail(values.email.trim(), {
-        redirectTo: `${window.location.origin}/login?mode=reset`,
+        redirectTo: redirectUrl,
       });
       if (error) throw error;
       toast.success("Password reset instructions sent! Please check your email inbox.");
