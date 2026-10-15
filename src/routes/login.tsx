@@ -550,6 +550,16 @@ function LoginPage() {
                     </>
                   )}
                 </Button>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  By signing in, you agree to Orange Taxi&apos;s{" "}
+                  <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                    Privacy Policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/terms" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                    Terms of Service
+                  </Link>.
+                </p>
               </form>
             ) : mode === "forgot" ? (
               <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="mt-8 space-y-5">
@@ -823,6 +833,20 @@ function LoginPage() {
               {mode === "signin" ? "Sign up" : "Sign in"}
             </button>
           </p>
+
+          <div className="mt-8 pt-4 border-t border-border/60 text-center text-xs text-muted-foreground flex items-center justify-center gap-3">
+            <Link to="/privacy" target="_blank" className="hover:text-foreground underline">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link to="/terms" target="_blank" className="hover:text-foreground underline">
+              Terms of Service
+            </Link>
+            <span>•</span>
+            <Link to="/support" target="_blank" className="hover:text-foreground underline">
+              Support & Grievances
+            </Link>
+          </div>
         </div>
       </div>
     </section>
