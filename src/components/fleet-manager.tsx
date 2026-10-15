@@ -126,36 +126,7 @@ export interface PartnerVehicle {
   notes?: string;
 }
 
-export const DEFAULT_SAMPLE_PARTNER_VEHICLES: PartnerVehicle[] = [
-  {
-    id: "pv-2001",
-    plate_number: "KA 01 EV 4421",
-    chassis_number: "MA3EHB6S7P8912304",
-    model: "Tata Nexon EV",
-    year: "2024",
-    color: "Signature Deep Orange",
-    owner_name: "Vikramaditya Rao",
-    owner_phone: "+91 98450 12345",
-    owner_email: "vikram.rao@gmail.com",
-    status: "active",
-    certified_standard: true,
-    onboarded_at: "2025-01-15T10:00:00.000Z",
-  },
-  {
-    id: "pv-2002",
-    plate_number: "KA 05 EV 8890",
-    chassis_number: "MB9EKD2R5N4410982",
-    model: "Mahindra BE.6",
-    year: "2025",
-    color: "Sunset Orange Wrap",
-    owner_name: "Sunil Gowda",
-    owner_phone: "+91 97422 98765",
-    owner_email: "sunil.gowda@gmail.com",
-    status: "active",
-    certified_standard: true,
-    onboarded_at: "2025-02-01T14:30:00.000Z",
-  },
-];
+export const DEFAULT_SAMPLE_PARTNER_VEHICLES: PartnerVehicle[] = [];
 
 export async function registerApprovedPartnerCar(carData: {
   plate_number: string;
@@ -449,7 +420,10 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         .select("*")
         .order("created_at", { ascending: false });
       if (!error && data && data.length > 0) {
-        setPartnerVehicles(data as any[]);
+        const cleaned = (data as any[]).filter(
+          (pv) => pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
+        );
+        setPartnerVehicles(cleaned);
         return;
       }
     } catch (e) {}
@@ -457,16 +431,21 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     const stored = localStorage.getItem("orange_partner_vehicles");
     if (stored) {
       try {
-        setPartnerVehicles(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const cleaned = parsed.filter(
+          (pv: any) =>
+            pv.id !== "pv-2001" &&
+            pv.id !== "pv-2002" &&
+            pv.owner_name !== "Vikramaditya Rao" &&
+            pv.owner_name !== "Sunil Gowda",
+        );
+        setPartnerVehicles(cleaned);
+        localStorage.setItem("orange_partner_vehicles", JSON.stringify(cleaned));
       } catch (e) {
-        setPartnerVehicles(DEFAULT_SAMPLE_PARTNER_VEHICLES);
+        setPartnerVehicles([]);
       }
     } else {
-      setPartnerVehicles(DEFAULT_SAMPLE_PARTNER_VEHICLES);
-      localStorage.setItem(
-        "orange_partner_vehicles",
-        JSON.stringify(DEFAULT_SAMPLE_PARTNER_VEHICLES),
-      );
+      setPartnerVehicles([]);
     }
   }
 

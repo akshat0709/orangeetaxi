@@ -1383,7 +1383,15 @@ function AdminPage() {
           {/* COMMISSION LEDGER */}
           <TabsContent value="commissions">
             <TabErrorBoundary tabName="Commission Ledger" onRetry={loadAll}>
-              <CommissionLedgerManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
+              <CommissionLedgerManager
+                drivers={drivers}
+                bookings={bookings}
+                onRefresh={loadAll}
+                onNavigateTab={(tab) => {
+                  setActiveTab(tab);
+                  navigate({ to: "/admin", search: { tab }, replace: true });
+                }}
+              />
             </TabErrorBoundary>
           </TabsContent>
 

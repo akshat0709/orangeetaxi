@@ -45,41 +45,53 @@ export interface CommissionSettlement {
   created_at: string;
 }
 
-const DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS: CommissionSettlement[] = [
-  {
-    id: "comm-1001",
-    driver_id: "partner-sample-1",
-    driver_name: "Vikramaditya Rao",
-    amount: 1450,
-    payment_mode: "upi",
-    reference_no: "UPI/3981024982/HDFC",
-    collected_by: "Admin",
-    notes: "Weekly 15% platform fee settlement",
-    created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-  },
-  {
-    id: "comm-1002",
-    driver_id: "partner-sample-2",
-    driver_name: "Sunil Gowda",
-    amount: 2200,
-    payment_mode: "bank_transfer",
-    reference_no: "NEFT-SBIN00084920",
-    collected_by: "Admin",
-    notes: "Bi-weekly commission clearance",
-    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
-  },
-];
+const DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS: CommissionSettlement[] = [];
+
+// Clean up any stale dummy data from localStorage so old sample values never contaminate live state
+function cleanupDummyData() {
+  if (typeof window === "undefined") return;
+  try {
+    const storedComm = localStorage.getItem("orange_commission_settlements");
+    if (storedComm) {
+      const comms = JSON.parse(storedComm);
+      const cleaned = comms.filter(
+        (c: any) =>
+          c.id !== "comm-1001" &&
+          c.id !== "comm-1002" &&
+          c.driver_id !== "partner-sample-1" &&
+          c.driver_id !== "partner-sample-2" &&
+          c.driver_name !== "Vikramaditya Rao" &&
+          c.driver_name !== "Sunil Gowda",
+      );
+      localStorage.setItem("orange_commission_settlements", JSON.stringify(cleaned));
+    }
+    const storedPV = localStorage.getItem("orange_partner_vehicles");
+    if (storedPV) {
+      const pvs = JSON.parse(storedPV);
+      const cleaned = pvs.filter(
+        (pv: any) =>
+          pv.id !== "pv-2001" &&
+          pv.id !== "pv-2002" &&
+          pv.owner_name !== "Vikramaditya Rao" &&
+          pv.owner_name !== "Sunil Gowda",
+      );
+      localStorage.setItem("orange_partner_vehicles", JSON.stringify(cleaned));
+    }
+  } catch (e) {}
+}
 
 interface CommissionLedgerManagerProps {
   drivers: any[];
   bookings: any[];
   onRefresh: () => void;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export function CommissionLedgerManager({
   drivers,
   bookings,
   onRefresh,
+  onNavigateTab,
 }: CommissionLedgerManagerProps) {
   const [settlements, setSettlements] = useState<CommissionSettlement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,53 +114,102 @@ export function CommissionLedgerManager({
   // Load commission settlements
   async function loadSettlements() {
     setLoading(true);
+    cleanupDummyData();
     try {
       const { data, error } = await supabase
         .from("driver_commission_settlements")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        setSettlements(data as CommissionSettlement[]);
+      if (!error && Array.isArray(data)) {
+        const cleaned = data.filter(
+          (s: any) =>
+            s.id !== "comm-1001" &&
+            s.id !== "comm-1002" &&
+            s.driver_id !== "partner-sample-1" &&
+            s.driver_id !== "partner-sample-2" &&
+            s.driver_name !== "Vikramaditya Rao" &&
+            s.driver_name !== "Sunil Gowda",
+        );
+        setSettlements(cleaned as CommissionSettlement[]);
       } else {
         const stored = localStorage.getItem("orange_commission_settlements");
         if (stored) {
           try {
-            setSettlements(JSON.parse(stored));
+            const parsed = JSON.parse(stored);
+            const cleaned = parsed.filter(
+              (c: any) =>
+                c.id !== "comm-1001" &&
+                c.id !== "comm-1002" &&
+                c.driver_id !== "partner-sample-1" &&
+                c.driver_id !== "partner-sample-2",
+            );
+            setSettlements(cleaned);
           } catch (e) {
-            setSettlements(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS);
+            setSettlements([]);
           }
         } else {
-          setSettlements(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS);
-          localStorage.setItem(
-            "orange_commission_settlements",
-            JSON.stringify(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS),
-          );
+          setSettlements([]);
         }
       }
     } catch (e) {
       const stored = localStorage.getItem("orange_commission_settlements");
       if (stored) {
         try {
-          setSettlements(JSON.parse(stored));
-        } catch (err) {}
+          const parsed = JSON.parse(stored);
+          setSettlements(
+            parsed.filter(
+              (c: any) =>
+                c.id !== "comm-1001" &&
+                c.id !== "comm-1002" &&
+                c.driver_id !== "partner-sample-1" &&
+                c.driver_id !== "partner-sample-2",
+            ),
+          );
+        } catch (err) {
+          setSettlements([]);
+        }
       } else {
-        setSettlements(DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS);
+        setSettlements([]);
       }
     }
 
-    // Also load partner vehicles
-    const pCars = localStorage.getItem("orange_partner_vehicles");
-    if (pCars) {
-      try {
-        setPartnerVehicles(JSON.parse(pCars));
-      } catch (e) {}
-    }
+    // Also load partner vehicles from DB or localStorage
+    try {
+      const { data: pvData, error: pvErr } = await supabase
+        .from("partner_vehicles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!pvErr && Array.isArray(pvData)) {
+        setPartnerVehicles(
+          pvData.filter(
+            (pv: any) =>
+              pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
+          ),
+        );
+      } else {
+        const pCars = localStorage.getItem("orange_partner_vehicles");
+        if (pCars) {
+          try {
+            const parsedPV = JSON.parse(pCars);
+            setPartnerVehicles(
+              parsedPV.filter(
+                (pv: any) =>
+                  pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
+              ),
+            );
+          } catch (e) {
+            setPartnerVehicles([]);
+          }
+        }
+      }
+    } catch (e) {}
 
     setLoading(false);
   }
 
   useEffect(() => {
+    cleanupDummyData();
     loadSettlements();
 
     const handleUpdate = () => loadSettlements();
@@ -161,66 +222,75 @@ export function CommissionLedgerManager({
     };
   }, []);
 
-  // Filter partner drivers
-  const partnerDriversList = drivers.filter((d) => {
-    if (d.driver_type === "partner" || d.owns_vehicle) return true;
+  // Filter partner drivers from live drivers array
+  const activePartnerDrivers = drivers.filter((d) => {
+    if (d.driver_type === "partner") return true;
+    if (d.driver_type === "company") return false;
+    if (d.owns_vehicle) return true;
+
+    if (d.vehicle_code && typeof d.vehicle_code === "string") {
+      if (d.vehicle_code.includes('"type":"partner"')) return true;
+      if (d.vehicle_code.includes('"type":"company"')) return false;
+    }
+
     const hasPartnerCar = partnerVehicles.some(
       (pv) =>
-        pv.owner_phone === d.phone || pv.owner_name?.toLowerCase() === d.full_name?.toLowerCase(),
+        (d.id && pv.driver_id === d.id) ||
+        (d.phone &&
+          pv.owner_phone &&
+          pv.owner_phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
+        (d.full_name &&
+          pv.owner_name &&
+          pv.owner_name.toLowerCase().trim() === d.full_name.toLowerCase().trim()),
     );
-    return hasPartnerCar;
+    if (hasPartnerCar) return true;
+
+    if (typeof window !== "undefined") {
+      try {
+        const extApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
+        if (
+          extApps.some(
+            (ea: any) =>
+              (ea.owns_vehicle || ea.driver_type === "partner") &&
+              ((d.phone &&
+                ea.phone &&
+                ea.phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
+                (d.full_name &&
+                  ea.full_name &&
+                  ea.full_name.toLowerCase().trim() === d.full_name.toLowerCase().trim())),
+          )
+        ) {
+          return true;
+        }
+      } catch (e) {}
+    }
+
+    return false;
   });
 
-  const activePartnerDrivers =
-    partnerDriversList.length > 0
-      ? partnerDriversList
-      : [
-          {
-            id: "partner-sample-1",
-            full_name: "Vikramaditya Rao",
-            phone: "+91 98450 12345",
-            city: "Bengaluru",
-            vehicle_model: "Tata Nexon EV",
-            vehicle_number: "KA 01 EV 4421",
-            driver_type: "partner",
-          },
-          {
-            id: "partner-sample-2",
-            full_name: "Sunil Gowda",
-            phone: "+91 97422 98765",
-            city: "Bengaluru",
-            vehicle_model: "Mahindra BE.6",
-            vehicle_number: "KA 05 EV 8890",
-            driver_type: "partner",
-          },
-        ];
-
-  // Calculate commission metrics for each partner driver
+  // Calculate commission metrics for each partner driver based on real bookings
   function getPartnerCommissionStats(driverId: string, driverName?: string) {
     const driverRides = bookings.filter(
       (b) =>
-        (b.driver_id === driverId || (driverName && b.driver_name === driverName)) &&
+        (b.driver_id === driverId ||
+          (driverName && b.driver_name && b.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim())) &&
         b.status === "completed",
     );
 
-    let grossFare = driverRides.reduce(
+    const grossFare = driverRides.reduce(
       (sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)),
       0,
     );
-    let ridesCount = driverRides.length;
-
-    if (ridesCount === 0 && driverId === "partner-sample-1") {
-      grossFare = 14200;
-      ridesCount = 18;
-    } else if (ridesCount === 0 && driverId === "partner-sample-2") {
-      grossFare = 21500;
-      ridesCount = 26;
-    }
+    const ridesCount = driverRides.length;
 
     const commissionRate = 0.15; // 15% Platform Commission
     const commissionPayable = Math.round(grossFare * commissionRate);
 
-    const driverSettlements = settlements.filter((s) => s.driver_id === driverId);
+    const driverSettlements = settlements.filter(
+      (s) =>
+        s.driver_id === driverId ||
+        (driverName && s.driver_name && s.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim()),
+    );
     const commissionPaid = driverSettlements.reduce(
       (sum, s) => sum + Math.round(Number(s.amount || 0)),
       0,
@@ -311,21 +381,32 @@ export function CommissionLedgerManager({
 
     // Try Supabase insert
     try {
-      await supabase.from("driver_commission_settlements").insert({
-        driver_id: newRecord.driver_id,
-        amount: newRecord.amount,
-        payment_mode: newRecord.payment_mode,
-        reference_no: newRecord.reference_no,
-        collected_by: newRecord.collected_by,
-        notes: newRecord.notes,
-      });
-    } catch (e) {}
+      const { data } = await supabase
+        .from("driver_commission_settlements")
+        .insert({
+          driver_id: targetDriver.id,
+          driver_name: targetDriver.full_name,
+          amount: amt,
+          payment_mode: paymentMode,
+          reference_no: newRecord.reference_no,
+          collected_by: newRecord.collected_by,
+          notes: newRecord.notes,
+        })
+        .select()
+        .maybeSingle();
+
+      if (data?.id) {
+        newRecord.id = data.id;
+      }
+    } catch (e) {
+      console.warn("Supabase settlement insert error:", e);
+    }
 
     // Update localStorage
     const stored = localStorage.getItem("orange_commission_settlements");
     const current: CommissionSettlement[] = stored
       ? JSON.parse(stored)
-      : [...DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS];
+      : [];
     current.unshift(newRecord);
     localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
     window.dispatchEvent(new Event("commission_settlements_updated"));
@@ -732,7 +813,7 @@ export function CommissionLedgerManager({
           <div className="flex items-center gap-2">
             <Handshake className="size-4 text-primary" />
             <h3 className="font-bold text-sm">
-              Partner Owner-Operator Accounts ({filteredDrivers.length})
+              Partner Owner-Operator Accounts ({activePartnerDrivers.length})
             </h3>
           </div>
           <span className="text-xs text-muted-foreground">
@@ -741,43 +822,81 @@ export function CommissionLedgerManager({
         </div>
 
         <div className="divide-y divide-border">
-          {filteredDrivers.map((d) => {
-            const stats = getPartnerCommissionStats(d.id, d.full_name);
-            const isExpanded = expandedDriverId === d.id;
+          {activePartnerDrivers.length === 0 ? (
+            <div className="p-12 text-center space-y-4">
+              <div className="size-14 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+                <Handshake className="size-7" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h4 className="font-bold text-base text-foreground">No Partner Drivers Yet</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Currently, all active drivers are company fleet drivers. Partner owner-operators who bring their own EV keep 85% of customer ride fares and pay a 15% platform commission to Orange Taxi.
+                </p>
+              </div>
+              <div className="pt-2 flex items-center justify-center gap-3">
+                {onNavigateTab && (
+                  <Button
+                    size="sm"
+                    onClick={() => onNavigateTab("drivers")}
+                    className="text-xs font-semibold gap-1.5"
+                  >
+                    <Users className="size-3.5" /> Manage Drivers
+                  </Button>
+                )}
+                {onNavigateTab && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onNavigateTab("applications")}
+                    className="text-xs font-semibold gap-1.5"
+                  >
+                    Review Applications
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : filteredDrivers.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No partner drivers matching &quot;{search}&quot;.
+            </p>
+          ) : (
+            filteredDrivers.map((d) => {
+              const stats = getPartnerCommissionStats(d.id, d.full_name);
+              const isExpanded = expandedDriverId === d.id;
 
-            return (
-              <div key={d.id} className="hover:bg-muted/15 transition-colors">
-                <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Driver & Car info */}
-                  <div className="flex items-center gap-3.5">
-                    <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold text-primary">
-                      {d.full_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-sm text-foreground">{d.full_name}</p>
-                        <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                          Partner Owner
-                        </span>
+              return (
+                <div key={d.id} className="hover:bg-muted/15 transition-colors">
+                  <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Driver & Car info */}
+                    <div className="flex items-center gap-3.5">
+                      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold text-primary">
+                        {d.full_name.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                        <span className="font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                          {d.vehicle_number || "KA 01 EV 4421"}
-                        </span>
-                        <span>·</span>
-                        <span>{d.vehicle_model || "Tata Nexon EV"}</span>
-                        <span>·</span>
-                        {d.phone && (
-                          <a
-                            href={`tel:${d.phone.replace(/\s+/g, "")}`}
-                            className="font-mono text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                          >
-                            <Phone className="size-3" /> {d.phone}
-                          </a>
-                        )}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold text-sm text-foreground">{d.full_name}</p>
+                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Partner Owner
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          <span className="font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                            {d.vehicle_number || "Partner EV"}
+                          </span>
+                          <span>·</span>
+                          <span>{d.vehicle_model || "Electric Vehicle"}</span>
+                          <span>·</span>
+                          {d.phone && (
+                            <a
+                              href={`tel:${d.phone.replace(/\s+/g, "")}`}
+                              className="font-mono text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                            >
+                              <Phone className="size-3" /> {d.phone}
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
                   {/* Financial Metrics Row */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
@@ -922,7 +1041,7 @@ export function CommissionLedgerManager({
                 )}
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
     </div>
