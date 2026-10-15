@@ -786,7 +786,7 @@ function PassengerPage() {
         return;
       }
 
-      let orderData: { orderId?: string; amount?: number; keyId?: string } = {
+      let orderData: { orderId?: string; amount?: number; keyId?: string; mock?: boolean } = {
         amount: Math.round(fareBreakdown.total * 100),
         keyId: "rzp_test_TjnylwNIDTQjP2",
       };
@@ -803,17 +803,18 @@ function PassengerPage() {
         });
         if (orderRes.ok) {
           const resJson = await orderRes.json();
-          if (resJson.orderId) {
-            orderData = resJson;
+          if (resJson.keyId) orderData.keyId = resJson.keyId;
+          if (resJson.amount) orderData.amount = resJson.amount;
+          if (resJson.orderId && !resJson.mock) {
+            orderData.orderId = resJson.orderId;
           }
         }
       } catch (err) {
         console.warn("Server order generation fallback:", err);
       }
 
-      const options = {
+      const options: any = {
         key: orderData.keyId || "rzp_test_TjnylwNIDTQjP2",
-        order_id: orderData.orderId || undefined,
         amount: orderData.amount || Math.round(fareBreakdown.total * 100),
         currency: "INR",
         name: "Orange Taxi",
@@ -859,6 +860,10 @@ function PassengerPage() {
           },
         },
       };
+
+      if (orderData.orderId) {
+        options.order_id = orderData.orderId;
+      }
 
       const rzp1 = new (window as any).Razorpay(options);
       rzp1.on("payment.failed", function (response: any) {
