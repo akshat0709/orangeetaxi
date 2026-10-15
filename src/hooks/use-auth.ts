@@ -101,7 +101,13 @@ function initGlobalAuth() {
   });
 
   // Real-time auth subscription
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.href = `/login?mode=reset${window.location.hash || ""}`;
+      }
+    }
+
     globalUser = session?.user ?? null;
     if (session?.user) {
       globalRole = await fetchRole(session.user.id, session.user.email);

@@ -32,6 +32,7 @@ function Analytics() {
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -263,9 +264,38 @@ function RootComponent() {
     const mql = window.matchMedia("(display-mode: standalone)");
     if (mql.addEventListener) {
       mql.addEventListener("change", updateStandalone);
-      return () => mql.removeEventListener("change", updateStandalone);
     }
-    return undefined;
+
+    // Auto-redirect password recovery links to /login?mode=reset
+    try {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        (hash.includes("access_token=") && hash.includes("recovery"))
+      ) {
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = `/login?mode=reset${hash}`;
+          return undefined;
+        }
+      }
+    } catch {}
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = `/login?mode=reset${window.location.hash || ""}`;
+        }
+      }
+    });
+
+    return () => {
+      if (mql.removeEventListener) {
+        mql.removeEventListener("change", updateStandalone);
+      }
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   return (

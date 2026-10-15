@@ -97,6 +97,33 @@ function LoginPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Detect recovery link tokens from email
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        search.includes("mode=reset") ||
+        (hash.includes("access_token=") && hash.includes("recovery"))
+      ) {
+        setMode("reset");
+      }
+    }
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("reset");
+        toast.info("Please enter your new password below to update it in the database.");
+      }
+    });
+
+    return () => {
+      authSub?.subscription?.unsubscribe();
+    };
+  }, []);
+
   async function handleSignIn(values: SignInValues) {
     try {
       const storedLockout = localStorage.getItem(LOCKOUT_KEY);
@@ -352,7 +379,10 @@ function LoginPage() {
         password: values.password,
       });
       if (error) throw error;
-      toast.success("Password updated successfully! You can now sign in.");
+      toast.success("Password updated in database! You can now sign in with your new password.");
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", "/login");
+      }
       setMode("signin");
     } catch (err: any) {
       toast.error(err.message || "Failed to update password.");
