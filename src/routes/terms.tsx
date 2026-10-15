@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SiteHeader } from "@/components/site-shell";
 
 export const Route = createFileRoute("/terms")({
   component: Terms,
@@ -7,10 +6,8 @@ export const Route = createFileRoute("/terms")({
 
 function Terms() {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <SiteHeader />
-      <main className="flex-1 max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold mb-8">Terms and Conditions</h1>
+    <div className="max-w-4xl mx-auto px-4 py-12 text-foreground">
+      <h1 className="text-4xl font-bold mb-8">Terms and Conditions</h1>
         <p className="text-muted-foreground mb-4">Last updated: October 2026</p>
 
         <div className="space-y-6 text-foreground">
@@ -30,7 +27,6 @@ function Terms() {
             </p>
           </section>
         </div>
-      </main>
     </div>
   );
 }

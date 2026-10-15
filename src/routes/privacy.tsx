@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { SiteHeader, SiteFooter } from "@/components/site-shell";
 import {
   Shield,
   Lock,
@@ -34,11 +33,8 @@ export const Route = createFileRoute("/privacy")({
 
 export function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-background flex flex-col text-foreground">
-      <SiteHeader />
-
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-12">
-        {/* Header Badge & Title */}
+    <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-12 text-foreground">
+      {/* Header Badge & Title */}
         <div className="mb-10 text-center sm:text-left border-b border-border pb-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-semibold text-primary mb-4">
             <Shield className="size-3.5" />
@@ -347,9 +343,6 @@ export function PrivacyPolicy() {
             </p>
           </section>
         </div>
-      </main>
-
-      <SiteFooter />
     </div>
   );
 }
