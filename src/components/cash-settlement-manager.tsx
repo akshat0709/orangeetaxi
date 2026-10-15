@@ -445,7 +445,7 @@ export function CashSettlementManager({
           return (
             <form
               onSubmit={handleCollectCash}
-              className="rounded-xl border border-emerald-400/50 bg-emerald-50/40 p-5 shadow-md animate-in fade-in slide-in-from-top-3 duration-200 dark:border-emerald-900 dark:bg-emerald-950/30"
+              className="rounded-xl border border-emerald-400/50 bg-emerald-50/40 p-5 shadow-md  slide-in-from-top-3 duration-200 dark:border-emerald-900 dark:bg-emerald-950/30"
             >
               <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-900 pb-3">
                 <div className="flex items-center gap-2">
@@ -869,7 +869,7 @@ export function CashSettlementManager({
                       <td className="px-5 py-3 text-xs text-muted-foreground">
                         {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-[10px] font-bold border border-purple-500/20">
+                            <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[10px] font-bold border border-orange-500/20">
                               ⚡ UPI Online Deposit
                             </span>
                             <span className="font-mono font-semibold text-foreground text-[11px]">
@@ -883,7 +883,7 @@ export function CashSettlementManager({
 
                       <td className="px-5 py-3 text-xs">
                         <span
-                          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${s.collected_by?.includes("UPI") || s.collected_by?.includes("Driver") ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20" : "bg-muted text-muted-foreground"}`}
+                          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold ${s.collected_by?.includes("UPI") || s.collected_by?.includes("Driver") ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20" : "bg-muted text-muted-foreground"}`}
                         >
                           {s.collected_by || "Admin"}
                         </span>

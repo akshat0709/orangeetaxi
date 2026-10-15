@@ -646,7 +646,7 @@ function TalkToOrangePage() {
       {/* AI Chat widget */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         {chatOpen && (
-          <div className="flex h-[480px] w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-brand-lg animate-gentle-rise">
+          <div className="flex h-[480px] w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-brand-lg ">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-3">
               <div className="flex items-center gap-2.5">

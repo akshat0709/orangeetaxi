@@ -16,6 +16,7 @@ export const Route = createFileRoute("/login")({
   validateSearch: z.object({
     redirect: z.string().optional(),
     mode: z.enum(["signin", "signup", "forgot", "reset"]).optional(),
+    email: z.string().optional(),
   }),
   head: () => ({
     meta: [
@@ -62,8 +63,9 @@ const LOCKOUT_KEY = "@orange_web_lockout_time";
 const ATTEMPTS_KEY = "@orange_web_login_attempts";
 
 function LoginPage() {
-  const { redirect, mode: initialMode } = useSearch({ from: "/login" });
+  const { redirect, mode: initialMode, email: queryEmail } = useSearch({ from: "/login" });
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">(initialMode ?? "signin");
+  const [resetEmail, setResetEmail] = useState<string>(queryEmail || "");
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
@@ -97,8 +99,34 @@ function LoginPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Detect recovery link tokens from email
+  // Detect recovery link tokens from email & resolve verified user email
   useEffect(() => {
+    // 1. Initial check from query param or localStorage
+    if (queryEmail) {
+      setResetEmail(queryEmail);
+    } else {
+      try {
+        const stored = localStorage.getItem("@orange_reset_email");
+        if (stored) setResetEmail(stored);
+      } catch {}
+    }
+
+    // 2. Fetch authenticated user email from recovery session
+    const fetchRecoveryEmail = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setResetEmail(user.email);
+          return;
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          setResetEmail(session.user.email);
+          return;
+        }
+      } catch {}
+    };
+
     if (typeof window !== "undefined") {
       const hash = window.location.hash || "";
       const search = window.location.search || "";
@@ -109,20 +137,32 @@ function LoginPage() {
         (hash.includes("access_token=") && hash.includes("recovery"))
       ) {
         setMode("reset");
+        fetchRecoveryEmail();
       }
+
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const e = params.get("email");
+        if (e) setResetEmail(decodeURIComponent(e));
+      } catch {}
     }
 
-    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (session?.user && mode === "reset")) {
         setMode("reset");
+        if (session?.user?.email) {
+          setResetEmail(session.user.email);
+        }
         toast.info("Please enter your new password below to update it in the database.");
       }
     });
 
+    fetchRecoveryEmail();
+
     return () => {
       authSub?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [mode, queryEmail]);
 
   async function handleSignIn(values: SignInValues) {
     try {
@@ -354,12 +394,18 @@ function LoginPage() {
   async function handleForgotPassword(values: ForgotValues) {
     setSubmitting(true);
     try {
+      const emailTrimmed = values.email.trim();
+      try {
+        localStorage.setItem("@orange_reset_email", emailTrimmed);
+      } catch {}
+      setResetEmail(emailTrimmed);
+
       const redirectUrl =
         typeof window !== "undefined" && window.location.origin.includes("orange-taxi.com")
-          ? `${window.location.origin}/login?mode=reset`
-          : "https://orange-taxi.com/login?mode=reset";
+          ? `${window.location.origin}/login?mode=reset&email=${encodeURIComponent(emailTrimmed)}`
+          : `https://orange-taxi.com/login?mode=reset&email=${encodeURIComponent(emailTrimmed)}`;
 
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email.trim(), {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailTrimmed, {
         redirectTo: redirectUrl,
       });
       if (error) throw error;
@@ -564,30 +610,73 @@ function LoginPage() {
                     Enter a new secure password for your Orange Taxi account.
                   </p>
                 </div>
+
+                {/* Non-editable Account Email field */}
+                <div>
+                  <Label htmlFor="re-email">Account Email</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="re-email"
+                      type="email"
+                      value={resetEmail || "Account Email"}
+                      readOnly
+                      disabled
+                      tabIndex={-1}
+                      className="bg-muted/70 cursor-not-allowed select-none text-foreground font-semibold border-border opacity-95 pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
+                      <ShieldCheck className="size-4 text-emerald-500" />
+                    </div>
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                    Verified account email (non-editable for security).
+                  </p>
+                </div>
+
                 <div>
                   <Label htmlFor="re-pass">New Password</Label>
-                  <Input
-                    id="re-pass"
-                    type="password"
-                    placeholder="At least 8 characters"
-                    className="mt-1.5"
-                    {...resetForm.register("password")}
-                  />
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="re-pass"
+                      type={showPass ? "text" : "password"}
+                      placeholder="At least 8 characters"
+                      className="pr-10"
+                      {...resetForm.register("password")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                   {resetForm.formState.errors.password && (
                     <p className="mt-1 text-xs text-destructive">
                       {resetForm.formState.errors.password.message}
                     </p>
                   )}
                 </div>
+
                 <div>
                   <Label htmlFor="re-cpass">Confirm New Password</Label>
-                  <Input
-                    id="re-cpass"
-                    type="password"
-                    placeholder="Re-enter your new password"
-                    className="mt-1.5"
-                    {...resetForm.register("confirmPassword")}
-                  />
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="re-cpass"
+                      type={showPass ? "text" : "password"}
+                      placeholder="Re-enter your new password"
+                      className="pr-10"
+                      {...resetForm.register("confirmPassword")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                   {resetForm.formState.errors.confirmPassword && (
                     <p className="mt-1 text-xs text-destructive">
                       {resetForm.formState.errors.confirmPassword.message}

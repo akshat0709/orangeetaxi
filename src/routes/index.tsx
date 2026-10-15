@@ -180,7 +180,7 @@ function HomePage() {
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_84%,transparent)_35%,transparent_72%)]" />
         <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
-          <div className="max-w-2xl animate-gentle-rise">
+          <div className="max-w-2xl ">
             <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
               Mahindra BE.6 · Exclusive Fleet
             </p>
@@ -538,23 +538,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="bg-warm py-24">
-        <div className="section-shell">
-          <div className="max-w-4xl">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              A first impression
-            </p>
-            <blockquote className="display-serif mt-6 text-4xl leading-tight md:text-6xl">
-              "Finally, a cab that feels premium without making you think twice about the price."
-            </blockquote>
-            <p className="mt-7 text-sm font-semibold">— Early Orange customer</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Placeholder testimonial for design preview. To be replaced with verified customer
-              feedback.
-            </p>
-          </div>
-        </div>
-      </section>
+
 
       <section className="py-24 md:py-32">
         <div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">

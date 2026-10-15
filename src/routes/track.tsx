@@ -62,7 +62,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; desc: string
   scheduled: {
     label: "Advance Booking Confirmed",
     color:
-      "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+      "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300",
     desc: "Your advance ride is guaranteed. Dedicated chauffeur dispatch activates 15–30 minutes before departure.",
   },
   searching: {
@@ -78,7 +78,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; desc: string
   arrived: {
     label: "Driver Arrived",
     color:
-      "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+      "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300",
     desc: "Vehicle has reached the pickup location.",
   },
   in_progress: {
@@ -456,7 +456,7 @@ function TrackPage() {
                       );
                     })()}
                   {ridePrefs.quietRide && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                       <VolumeX className="size-3" />
                       <span>Quiet Ride Requested</span>
                     </span>
@@ -473,14 +473,14 @@ function TrackPage() {
 
             {/* Dedicated Scheduled Ride Details Banner */}
             {booking.status === "scheduled" && (
-              <div className="rounded-2xl border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/10 via-background to-indigo-500/10 p-5 shadow-sm space-y-4">
+              <div className="rounded-2xl border-2 border-orange-500/50 bg-gradient-to-br from-orange-500/10 via-background to-indigo-500/10 p-5 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="grid size-12 place-items-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-600/25 shrink-0">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-orange-600 text-white shadow-md shadow-orange-600/25 shrink-0">
                       <Calendar className="size-6" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400">
                         Scheduled Advance Departure
                       </span>
                       <h3 className="text-base font-bold text-foreground">
@@ -528,7 +528,7 @@ function TrackPage() {
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-purple-200/50 dark:border-purple-800/40">
+                <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-orange-200/50 dark:border-orange-800/40">
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
                     <span className="text-[10px] uppercase font-bold text-muted-foreground">
                       Locked Fare

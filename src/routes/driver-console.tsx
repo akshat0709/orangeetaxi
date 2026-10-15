@@ -1596,7 +1596,7 @@ function DriverConsolePage() {
                           );
                         })()}
                       {reqPref.quietRide && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                           <VolumeX className="size-3" />
                           <span>Quiet Ride Requested</span>
                         </span>
@@ -1663,13 +1663,13 @@ function DriverConsolePage() {
             Math.round((new Date(target.scheduled_at!).getTime() - Date.now()) / 60000),
           );
           return (
-            <div className="mt-4 rounded-2xl border-2 border-purple-500 bg-gradient-to-r from-purple-500/15 via-primary/10 to-purple-500/15 p-4 sm:p-5 shadow-lg shadow-purple-500/10">
+            <div className="mt-4 rounded-2xl border-2 border-orange-500 bg-gradient-to-r from-orange-500/15 via-primary/10 to-orange-500/15 p-4 sm:p-5 shadow-lg shadow-orange-500/10">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="flex size-3 rounded-full bg-purple-500 animate-ping" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
-                      <Calendar className="size-4 text-purple-500" />⚡ Urgent Advance Booking •
+                    <span className="flex size-3 rounded-full bg-orange-500 animate-ping" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+                      <Calendar className="size-4 text-orange-500" />⚡ Urgent Advance Booking •
                       Pickup in {diffMin} Mins!
                     </span>
                     <span className="font-mono font-bold text-lg text-primary">
@@ -1692,7 +1692,7 @@ function DriverConsolePage() {
                     size="sm"
                     type="button"
                     onClick={() => preAcceptScheduledRide(target.id)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-9 px-5 shadow-md active:scale-95"
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9 px-5 shadow-md active:scale-95"
                   >
                     <Check className="mr-1.5 size-4" />
                     <span>Claim & Dispatch</span>
@@ -1716,15 +1716,15 @@ function DriverConsolePage() {
           const target = unclaimed[0];
           const schedule = formatScheduledDeparture(target.scheduled_at);
           return (
-            <div className="mt-4 rounded-xl border border-purple-400/60 bg-gradient-to-r from-purple-500/10 via-background to-purple-500/5 p-4 shadow-sm">
+            <div className="mt-4 rounded-xl border border-orange-400/60 bg-gradient-to-r from-orange-500/10 via-background to-orange-500/5 p-4 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="grid size-9 place-items-center rounded-lg bg-purple-600 text-white shrink-0">
+                  <div className="grid size-9 place-items-center rounded-lg bg-orange-600 text-white shrink-0">
                     <Calendar className="size-4" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                      <span className="text-xs font-bold text-orange-700 dark:text-orange-300">
                         📅 {unclaimed.length} Advance Scheduled{" "}
                         {unclaimed.length === 1 ? "Trip" : "Trips"} in Fleet Pool
                       </span>
@@ -1746,7 +1746,7 @@ function DriverConsolePage() {
                   <Button
                     size="sm"
                     onClick={() => preAcceptScheduledRide(target.id)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-8 px-3.5 shadow active:scale-95"
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-8 px-3.5 shadow active:scale-95"
                   >
                     <Check className="mr-1 size-3.5" />
                     <span>Pre-Claim Ride (₹{Math.round(target.estimated_fare)})</span>
@@ -1778,7 +1778,7 @@ function DriverConsolePage() {
             <TabsTrigger value="scheduled">
               Scheduled Pre-Bookings{" "}
               {scheduledBookings.length > 0 && (
-                <span className="ml-1.5 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-1.5 rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                   {scheduledBookings.length}
                 </span>
               )}
@@ -1803,10 +1803,10 @@ function DriverConsolePage() {
                 <div className="mb-6 space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                      <Calendar className="size-4 text-purple-600" />
+                      <Calendar className="size-4 text-orange-600" />
                       <span>Upcoming Pre-Assigned Duties ({myScheduled.length})</span>
                     </h3>
-                    <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold bg-purple-50 dark:bg-purple-950/40 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                    <span className="text-xs text-orange-600 dark:text-orange-400 font-semibold bg-orange-50 dark:bg-orange-950/40 px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
                       Guaranteed Advance Booking
                     </span>
                   </div>
@@ -1819,7 +1819,7 @@ function DriverConsolePage() {
                       return (
                         <div
                           key={ride.id}
-                          className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm"
+                          className="rounded-xl border-2 border-orange-500/40 bg-orange-500/[0.04] p-5 shadow-sm"
                         >
                           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                             <div className="flex-1 space-y-2">
@@ -1833,14 +1833,14 @@ function DriverConsolePage() {
                                     ⚡ Dispatch Window Active (&lt; 30m)
                                   </span>
                                 )}
-                                <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-purple-600 bg-purple-100 dark:bg-purple-950 px-2.5 py-0.5 rounded-md">
+                                <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-100 dark:bg-orange-950 px-2.5 py-0.5 rounded-md">
                                   <Clock className="size-3.5" />
                                   <span>{schedule.countdown}</span>
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 px-3 py-1.5 rounded-lg">
-                                <Calendar className="size-3.5 text-purple-600 shrink-0" />
+                                <Calendar className="size-3.5 text-orange-600 shrink-0" />
                                 <span>
                                   Departure: <strong>{schedule.fullText}</strong>
                                 </span>
@@ -2002,7 +2002,7 @@ function DriverConsolePage() {
                                   );
                                 })()}
                               {ridePrefs.quietRide && (
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400">
                                   <VolumeX className="size-3.5" />
                                   <span>Quiet Ride (Resting / Work Call — No Chitchat)</span>
                                 </span>
@@ -2254,10 +2254,10 @@ function DriverConsolePage() {
                 <div className="mb-6 space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                      <Calendar className="size-4 text-purple-600" />
+                      <Calendar className="size-4 text-orange-600" />
                       <span>Open Scheduled Pre-Bookings ({unclaimedSched.length})</span>
                     </h3>
-                    <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+                    <span className="text-xs text-orange-600 dark:text-orange-400 font-semibold bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-800">
                       Available for Pre-Claim
                     </span>
                   </div>
@@ -2268,18 +2268,18 @@ function DriverConsolePage() {
                       return (
                         <div
                           key={ride.id}
-                          className="rounded-xl border-2 border-purple-500/40 bg-purple-500/[0.04] p-5 shadow-sm"
+                          className="rounded-xl border-2 border-orange-500/40 bg-orange-500/[0.04] p-5 shadow-sm"
                         >
                           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[11px] font-bold px-2 py-0.5 border border-purple-300">
+                                <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-[11px] font-bold px-2 py-0.5 border border-orange-300">
                                   📅 Scheduled Departure
                                 </span>
                                 <span className="text-xs font-bold text-foreground">
                                   {schedule.fullText}
                                 </span>
-                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                                <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
                                   ({schedule.countdown})
                                 </span>
                               </div>
@@ -2315,7 +2315,7 @@ function DriverConsolePage() {
                             <Button
                               size="sm"
                               onClick={() => preAcceptScheduledRide(ride.id)}
-                              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm active:scale-95"
+                              className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm active:scale-95"
                             >
                               <Check className="mr-1.5 size-4" />
                               <span>Pre-Claim Ride</span>
@@ -2400,7 +2400,7 @@ function DriverConsolePage() {
                                   );
                                 })()}
                               {reqPref.quietRide && (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                                   <VolumeX className="size-3" />
                                   <span>Quiet Ride Requested</span>
                                 </span>
@@ -2437,16 +2437,16 @@ function DriverConsolePage() {
 
           <TabsContent value="scheduled">
             {/* Advance Scheduling Explainer Banner */}
-            <div className="mb-6 rounded-2xl border border-purple-200/80 bg-gradient-to-r from-purple-50/90 via-background to-indigo-50/70 p-5 shadow-sm dark:border-purple-900/60 dark:from-purple-950/30 dark:to-indigo-950/20">
+            <div className="mb-6 rounded-2xl border border-orange-200/80 bg-gradient-to-r from-orange-50/90 via-background to-indigo-50/70 p-5 shadow-sm dark:border-orange-900/60 dark:from-orange-950/30 dark:to-indigo-950/20">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <div className="grid size-10 place-items-center rounded-xl bg-purple-600 text-white shrink-0 shadow-sm shadow-purple-600/20">
+                  <div className="grid size-10 place-items-center rounded-xl bg-orange-600 text-white shrink-0 shadow-sm shadow-orange-600/20">
                     <Calendar className="size-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                       <span>Guaranteed Chauffeur Pre-Booking System</span>
-                      <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-[10px] font-bold px-2 py-0.5 border border-purple-200 dark:border-purple-800">
+                      <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-[10px] font-bold px-2 py-0.5 border border-orange-200 dark:border-orange-800">
                         100% Payout / 0 Cancel Fees
                       </span>
                     </h3>
@@ -2485,7 +2485,7 @@ function DriverConsolePage() {
                       key={ride.id}
                       className={`rounded-xl border p-6 transition-all ${
                         isAssignedToMe
-                          ? "border-purple-500/50 bg-purple-500/[0.03] dark:bg-purple-950/10 shadow-sm"
+                          ? "border-orange-500/50 bg-orange-500/[0.03] dark:bg-orange-950/10 shadow-sm"
                           : schedule.isUrgent
                             ? "border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-950/10"
                             : "border-border bg-background"
@@ -2502,7 +2502,7 @@ function DriverConsolePage() {
                                 ✓ Assigned to You
                               </span>
                             ) : (
-                              <span className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300 dark:border-purple-800 text-[11px] font-bold px-2.5 py-0.5">
+                              <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-300 dark:border-orange-800 text-[11px] font-bold px-2.5 py-0.5">
                                 Available in Fleet Pool
                               </span>
                             )}
@@ -2513,7 +2513,7 @@ function DriverConsolePage() {
                               </span>
                             )}
 
-                            <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/50 px-2.5 py-1 rounded-md">
+                            <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/50 px-2.5 py-1 rounded-md">
                               <Clock className="size-3.5" />
                               <span>{schedule.countdown}</span>
                             </span>
@@ -2521,7 +2521,7 @@ function DriverConsolePage() {
 
                           {/* Scheduled Time Banner */}
                           <div className="flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/50 px-3 py-2 rounded-lg border border-border/60">
-                            <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <Calendar className="size-4 text-orange-600 dark:text-orange-400 shrink-0" />
                             <span>
                               Scheduled Pickup: <strong>{schedule.fullText}</strong>
                             </span>
@@ -2585,7 +2585,7 @@ function DriverConsolePage() {
                                   );
                                 })()}
                               {reqPref.quietRide && (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                                   <VolumeX className="size-3" />
                                   <span>Quiet Mode</span>
                                 </span>
@@ -2625,7 +2625,7 @@ function DriverConsolePage() {
                             <Button
                               size="sm"
                               onClick={() => preAcceptScheduledRide(ride.id)}
-                              className="bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md shadow-purple-500/20 active:scale-95 text-xs h-9 px-4"
+                              className="bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-md shadow-orange-500/20 active:scale-95 text-xs h-9 px-4"
                             >
                               <Check className="mr-1.5 size-4" />
                               <span>Pre-Claim Ride (₹{Math.round(ride.estimated_fare)})</span>
@@ -2855,7 +2855,7 @@ function DriverConsolePage() {
                           <div className="flex items-center gap-2">
                             <Check className="size-3.5 text-emerald-600" />
                             {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
-                              <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 text-[10px] font-bold border border-purple-500/20">
+                              <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[10px] font-bold border border-orange-500/20">
                                 ⚡ UPI Remittance ({s.notes})
                               </span>
                             ) : (
@@ -3020,7 +3020,7 @@ function DriverConsolePage() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}
                           >
                             {ride.payment_method === "driver_upi"
                               ? "DRIVER UPI"

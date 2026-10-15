@@ -832,7 +832,7 @@ function PassengerPage() {
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
           <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
-            <div className="max-w-2xl animate-gentle-rise min-w-0">
+            <div className="max-w-2xl  min-w-0">
               <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
                 For passengers
               </p>
@@ -1396,18 +1396,18 @@ function Step3Confirm({
               onClick={() => onAdvanceBookingChange?.(true)}
               className={`flex items-center justify-center gap-2 rounded-lg border p-3.5 text-xs font-bold transition-all ${
                 isAdvanceBooking
-                  ? "border-purple-400 bg-purple-500/25 text-foreground shadow-sm"
+                  ? "border-orange-400 bg-orange-500/25 text-foreground shadow-sm"
                   : "border-white/15 bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Calendar className="size-4 text-purple-400" />
+              <Calendar className="size-4 text-orange-400" />
               <span>Schedule for Later</span>
             </button>
           </div>
 
           {isAdvanceBooking && (
-            <div className="mt-3 rounded-xl border border-purple-400/40 bg-purple-500/10 p-4 space-y-2">
-              <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+            <div className="mt-3 rounded-xl border border-orange-400/40 bg-orange-500/10 p-4 space-y-2">
+              <label className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
                 <Calendar className="size-3.5" />
                 <span>Select Departure Date & Time:</span>
               </label>
@@ -1416,7 +1416,7 @@ function Step3Confirm({
                 value={scheduledDateTime}
                 onChange={(e) => onScheduledDateTimeChange?.(e.target.value)}
                 min={new Date(Date.now() + 15 * 60 * 1000).toISOString().slice(0, 16)}
-                className="w-full rounded-lg border border-input bg-black/60 px-3.5 py-2.5 text-sm font-semibold text-foreground focus:border-purple-400 focus:outline-none"
+                className="w-full rounded-lg border border-input bg-black/60 px-3.5 py-2.5 text-sm font-semibold text-foreground focus:border-orange-400 focus:outline-none"
               />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 • <strong>Zero-Surge Fare Locked</strong>: Your fare will never increase.
@@ -1790,15 +1790,15 @@ function Step4Confirmed({
 
       {/* Advance Scheduled Booking Details Banner */}
       {status === "scheduled" && (
-        <div className="mt-6 rounded-2xl border-2 border-purple-500/60 bg-gradient-to-r from-purple-500/20 via-primary/10 to-purple-500/10 p-5 space-y-4 shadow-lg backdrop-blur-sm">
+        <div className="mt-6 rounded-2xl border-2 border-orange-500/60 bg-gradient-to-r from-orange-500/20 via-primary/10 to-orange-500/10 p-5 space-y-4 shadow-lg backdrop-blur-sm">
           <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-purple-600 text-foreground flex items-center justify-center shrink-0 shadow-md">
+            <div className="size-12 rounded-2xl bg-orange-600 text-foreground flex items-center justify-center shrink-0 shadow-md">
               <Calendar className="size-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-purple-400 animate-pulse" />
-                <p className="text-xs font-extrabold uppercase tracking-wider text-purple-300">
+                <span className="size-2 rounded-full bg-orange-400 animate-pulse" />
+                <p className="text-xs font-extrabold uppercase tracking-wider text-orange-300">
                   Advance Chauffeur Reserved
                 </p>
               </div>
@@ -1818,7 +1818,7 @@ function Step4Confirmed({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs border-t border-purple-400/30">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs border-t border-orange-400/30">
             <div className="rounded-lg bg-black/40 p-2.5 border border-border">
               <span className="text-[10px] uppercase text-muted-foreground font-semibold">
                 Locked Fare
@@ -1845,7 +1845,7 @@ function Step4Confirmed({
           <div className="flex gap-2 pt-1">
             <Button
               asChild
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-foreground font-bold h-10 text-xs"
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-foreground font-bold h-10 text-xs"
             >
               <Link to="/track" search={{ ref: bookingData.reference }}>
                 Open Dedicated Live Radar →

@@ -144,7 +144,7 @@ function DriverPage() {
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
         <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
-          <div className="max-w-2xl animate-gentle-rise">
+          <div className="max-w-2xl ">
             <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
               For drivers
             </p>
@@ -1074,7 +1074,7 @@ function DriverApplicationForm() {
 
               {/* DYNAMIC VEHICLE DETAILS (REQUIRED FOR PARTNER DRIVERS) */}
               {ownsVehicle && (
-                <div className="mt-4 pt-3 border-t border-primary/20 space-y-3 animate-in fade-in duration-300">
+                <div className="mt-4 pt-3 border-t border-primary/20 space-y-3  duration-300">
                   <div className="flex items-center gap-2">
                     <Car className="size-4 text-primary" />
                     <p className="text-xs font-bold uppercase tracking-wider text-primary">

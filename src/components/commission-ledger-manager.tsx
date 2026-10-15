@@ -478,7 +478,7 @@ export function CommissionLedgerManager({
           return (
             <form
               onSubmit={handleRecordSettlement}
-              className="rounded-xl border border-primary/40 bg-primary/5 p-5 animate-in fade-in slide-in-from-top-3 duration-200"
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5  slide-in-from-top-3 duration-200"
             >
               <div className="flex items-center justify-between border-b border-primary/20 pb-3">
                 <div className="flex items-center gap-2">

@@ -276,7 +276,8 @@ function RootComponent() {
         (hash.includes("access_token=") && hash.includes("recovery"))
       ) {
         if (!window.location.pathname.startsWith("/login")) {
-          window.location.href = `/login?mode=reset${hash}`;
+          const searchParams = search ? `&${search.replace(/^\?/, "")}` : "";
+          window.location.href = `/login?mode=reset${searchParams}${hash}`;
           return undefined;
         }
       }
@@ -285,7 +286,8 @@ function RootComponent() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         if (!window.location.pathname.startsWith("/login")) {
-          window.location.href = `/login?mode=reset${window.location.hash || ""}`;
+          const searchParams = window.location.search ? `&${window.location.search.replace(/^\?/, "")}` : "";
+          window.location.href = `/login?mode=reset${searchParams}${window.location.hash || ""}`;
         }
       }
     });

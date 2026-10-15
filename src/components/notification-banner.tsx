@@ -57,7 +57,7 @@ export function NotificationBanner({ context = "rider", className = "" }: Notifi
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-primary/10 to-amber-500/10 p-3.5 sm:p-4 text-foreground shadow-sm transition-all animate-in fade-in slide-in-from-top-2 ${className}`}
+      className={`relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/15 via-primary/10 to-amber-500/10 p-3.5 sm:p-4 text-foreground shadow-sm transition-all  slide-in-from-top-2 ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">

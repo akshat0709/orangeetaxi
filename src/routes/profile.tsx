@@ -55,7 +55,7 @@ const STATUS_STYLES = {
   scheduled: {
     label: "Scheduled",
     className:
-      "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-300 dark:border-purple-800",
+      "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 border border-orange-300 dark:border-orange-800",
   },
   completed: {
     label: "Completed",
@@ -75,7 +75,7 @@ const STATUS_STYLES = {
   },
   arrived: {
     label: "Arrived",
-    className: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400",
+    className: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400",
   },
   in_progress: {
     label: "In Progress",
@@ -672,7 +672,7 @@ function ProfilePage() {
                             filter === f
                               ? "bg-primary-foreground/20 text-primary-foreground"
                               : f === "scheduled"
-                                ? "bg-purple-600 text-white"
+                                ? "bg-orange-600 text-white"
                                 : "bg-muted text-muted-foreground"
                           }`}
                         >
@@ -686,17 +686,17 @@ function ProfilePage() {
 
               {/* Upcoming Scheduled Trips Alert Banner */}
               {bookings.filter((b) => b.status === "scheduled").length > 0 && filter === "all" && (
-                <div className="mt-4 rounded-xl border border-purple-300 dark:border-purple-800 bg-purple-50/80 dark:bg-purple-950/30 p-4 flex items-center justify-between gap-3">
+                <div className="mt-4 rounded-xl border border-orange-300 dark:border-orange-800 bg-orange-50/80 dark:bg-orange-950/30 p-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="grid size-8 place-items-center rounded-lg bg-purple-600 text-white shrink-0">
+                    <div className="grid size-8 place-items-center rounded-lg bg-orange-600 text-white shrink-0">
                       <Calendar className="size-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                      <p className="text-xs font-bold text-orange-900 dark:text-orange-200">
                         {bookings.filter((b) => b.status === "scheduled").length} Upcoming Scheduled
                         Ride{bookings.filter((b) => b.status === "scheduled").length > 1 ? "s" : ""}
                       </p>
-                      <p className="text-[11px] text-purple-700 dark:text-purple-400">
+                      <p className="text-[11px] text-orange-700 dark:text-orange-400">
                         Zero surge locked fare • Dedicated EV Chauffeur dispatch
                       </p>
                     </div>
@@ -705,7 +705,7 @@ function ProfilePage() {
                     size="sm"
                     variant="outline"
                     onClick={() => setFilter("scheduled")}
-                    className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:text-purple-300"
+                    className="h-7 text-xs border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-800 dark:text-orange-300"
                   >
                     View Scheduled
                   </Button>
@@ -755,19 +755,19 @@ function ProfilePage() {
                         key={booking.id}
                         className={`rounded-xl border p-5 shadow-sm transition-all hover:shadow-md ${
                           isScheduled
-                            ? "border-purple-300 bg-purple-500/[0.03] dark:border-purple-800 dark:bg-purple-950/20"
+                            ? "border-orange-300 bg-orange-500/[0.03] dark:border-orange-800 dark:bg-orange-950/20"
                             : "border-border bg-card"
                         }`}
                       >
                         {isScheduled && (
-                          <div className="mb-3 flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-950/60 px-3 py-2 text-xs font-semibold text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
+                          <div className="mb-3 flex items-center justify-between rounded-lg bg-orange-100 dark:bg-orange-950/60 px-3 py-2 text-xs font-semibold text-orange-900 dark:text-orange-200 border border-orange-200 dark:border-orange-800">
                             <div className="flex items-center gap-2">
-                              <Calendar className="size-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                              <Calendar className="size-4 text-orange-600 dark:text-orange-400 shrink-0" />
                               <span>
                                 Scheduled Departure: <strong>{schedText}</strong>
                               </span>
                             </div>
-                            <span className="rounded-full bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5">
+                            <span className="rounded-full bg-orange-600 text-white text-[10px] font-bold px-2 py-0.5">
                               Guaranteed
                             </span>
                           </div>
@@ -818,7 +818,7 @@ function ProfilePage() {
                                 <Button
                                   asChild
                                   size="sm"
-                                  className="h-7 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white"
+                                  className="h-7 px-3 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white"
                                 >
                                   <Link to="/track" search={{ ref: booking.reference }}>
                                     Track →
