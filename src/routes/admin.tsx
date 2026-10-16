@@ -33,6 +33,8 @@ import {
   Sparkles,
   ShieldCheck,
   BadgeIndianRupee,
+  MapPin,
+  Radio,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -56,12 +58,15 @@ import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
+import { LiveDriversMap } from "@/components/live-drivers-map";
 import {
   getBookingVehiclePlate,
   lockBookingVehicle,
   saveRideVehiclePlate,
   resolveDriverDetails,
 } from "@/lib/ride-vehicle";
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // Haversine distance formula (returns km)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -766,6 +771,9 @@ function AdminPage() {
             <TabsTrigger value="bookings">
               Bookings <CountBadge n={stats.activeBookings} />
             </TabsTrigger>
+            <TabsTrigger value="live-map" className="gap-1.5 font-semibold text-primary">
+              <Radio className="size-3.5 text-primary animate-pulse" /> Live Drivers Map
+            </TabsTrigger>
             <TabsTrigger value="fleet" className="gap-1.5 font-semibold">
               <ParkingSquare className="size-3.5 text-primary" /> Fleet & Bays
             </TabsTrigger>
@@ -1355,6 +1363,18 @@ function AdminPage() {
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          {/* LIVE DRIVERS MAP */}
+          <TabsContent value="live-map">
+            <TabErrorBoundary tabName="Live Drivers Map" onRetry={loadAll}>
+              <LiveDriversMap
+                drivers={drivers}
+                bookings={bookings}
+                apiKey={GOOGLE_MAPS_KEY}
+                onRefresh={loadAll}
+              />
+            </TabErrorBoundary>
           </TabsContent>
 
           {/* DRIVERS */}
