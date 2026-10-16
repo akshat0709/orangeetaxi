@@ -32,6 +32,7 @@ export function CoolCarSplashScreen({ onFinish }: CoolCarSplashScreenProps) {
 
   return (
     <div
+      id="splash-overlay"
       className={`fixed inset-0 z-[9999999] flex flex-col justify-between overflow-hidden bg-[#07090E] transition-opacity duration-400 select-none ${
         fadingOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
@@ -259,7 +260,7 @@ export function CoolCarSplashScreen({ onFinish }: CoolCarSplashScreenProps) {
           <div className="loading-progress-bar h-full rounded-full bg-[#F97316]" />
         </div>
         <p className="mt-3 text-xs font-semibold tracking-wider text-slate-400">
-          Redirecting to Sign In / Sign Up...
+          Entering Orange Taxi...
         </p>
       </div>
 

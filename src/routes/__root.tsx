@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -223,6 +222,31 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SCHEMA_JSON_LD }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var isRecovery = location.hash.indexOf('recovery') !== -1 || location.search.indexOf('recovery') !== -1;
+                  var hasSeen = sessionStorage.getItem('orange_splash_seen');
+                  var isSplashForced = location.search.indexOf('splash=true') !== -1;
+                  if ((hasSeen || isRecovery) && !isSplashForced) {
+                    document.documentElement.classList.add('hide-splash');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html.hide-splash #splash-overlay {
+                display: none !important;
+              }
+            `,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -234,36 +258,32 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const navigate = useNavigate();
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashFinish = () => {
     setShowSplash(false);
     try {
       sessionStorage.setItem("orange_splash_seen", "true");
+      document.documentElement.classList.add("hide-splash");
     } catch {}
-    if (!window.location.pathname.startsWith("/login")) {
-      navigate({ to: "/login" });
-    }
   };
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    // Check if user has already seen splash or on recovery / login
+    // Check if user has already seen splash or on recovery link
     const isRecovery =
       window.location.hash.includes("recovery") ||
       window.location.search.includes("recovery") ||
       (window.location.hash.includes("access_token=") && window.location.hash.includes("recovery"));
-    const isLogin = window.location.pathname.startsWith("/login");
     let hasSeenSplash = false;
     try {
       hasSeenSplash = !!sessionStorage.getItem("orange_splash_seen");
     } catch {}
     const forceSplash = window.location.search.includes("splash=true");
 
-    if ((!hasSeenSplash && !isRecovery && !isLogin) || forceSplash) {
-      setShowSplash(true);
+    if ((hasSeenSplash || isRecovery) && !forceSplash) {
+      setShowSplash(false);
     }
 
     // Enforce HTTPS
@@ -328,7 +348,7 @@ function RootComponent() {
       }
       authListener?.subscription?.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
