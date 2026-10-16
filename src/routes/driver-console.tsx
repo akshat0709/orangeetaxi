@@ -925,7 +925,7 @@ function DriverConsolePage() {
       resolvedPlate,
     );
 
-    const { error } = await supabase
+    const { data: updatedBooking, error } = await supabase
       .from("bookings")
       .update({
         driver_id: driver.id,
@@ -934,9 +934,16 @@ function DriverConsolePage() {
         vehicle_name: updatedVehicleName,
       })
       .eq("id", bookingId)
-      .eq("status", "searching");
-    if (error) {
-      toast.error("Could not accept ride — it may have been taken by another driver.");
+      .eq("status", "searching")
+      .is("driver_id", null)
+      .select()
+      .maybeSingle();
+
+    if (error || !updatedBooking) {
+      toast.error("Ride Already Claimed", {
+        description: "Another chauffeur accepted this ride just before you. Returning to radar...",
+      });
+      loadData();
       return;
     }
 
@@ -967,7 +974,7 @@ function DriverConsolePage() {
       resolvedPlate,
     );
 
-    const { error } = await supabase
+    const { data: updatedBooking, error } = await supabase
       .from("bookings")
       .update({
         driver_id: driver.id,
@@ -975,12 +982,16 @@ function DriverConsolePage() {
       })
       .eq("id", bookingId)
       .eq("status", "scheduled")
-      .is("driver_id", null);
+      .is("driver_id", null)
+      .select()
+      .maybeSingle();
 
-    if (error) {
-      toast.error(
-        "Could not claim scheduled booking — it may have already been claimed by another chauffeur.",
-      );
+    if (error || !updatedBooking) {
+      toast.error("Already Claimed", {
+        description:
+          "Could not claim scheduled booking — it may have already been claimed by another chauffeur.",
+      });
+      loadData();
       return;
     }
 
