@@ -4,12 +4,14 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import "../i18n";
+import { CoolCarSplashScreen } from "../components/cool-car-splash-screen";
 
 function Analytics() {
   useEffect(() => {
@@ -232,9 +234,37 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const [showSplash, setShowSplash] = useState(false);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+    try {
+      sessionStorage.setItem("orange_splash_seen", "true");
+    } catch {}
+    if (!window.location.pathname.startsWith("/login")) {
+      navigate({ to: "/login" });
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
+
+    // Check if user has already seen splash or on recovery / login
+    const isRecovery =
+      window.location.hash.includes("recovery") ||
+      window.location.search.includes("recovery") ||
+      (window.location.hash.includes("access_token=") && window.location.hash.includes("recovery"));
+    const isLogin = window.location.pathname.startsWith("/login");
+    let hasSeenSplash = false;
+    try {
+      hasSeenSplash = !!sessionStorage.getItem("orange_splash_seen");
+    } catch {}
+    const forceSplash = window.location.search.includes("splash=true");
+
+    if ((!hasSeenSplash && !isRecovery && !isLogin) || forceSplash) {
+      setShowSplash(true);
+    }
 
     // Enforce HTTPS
     if (
@@ -298,13 +328,14 @@ function RootComponent() {
       }
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <Analytics />
       <Toaster richColors position="top-right" />
       <PWAInstallPrompt />
+      {showSplash && <CoolCarSplashScreen onFinish={handleSplashFinish} />}
       <SiteHeader />
       <main className="min-w-0 max-w-full overflow-x-hidden">
         <Outlet />
