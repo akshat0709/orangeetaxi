@@ -3,9 +3,26 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   APIProvider,
   Map,
-  AdvancedMarker,
+  Marker,
   useMap,
 } from "@vis.gl/react-google-maps";
+
+function createDriverMarkerIcon(status: "available" | "on_trip" | "offline", isSelected: boolean) {
+  const color = status === "available" ? "#10B981" : status === "on_trip" ? "#F97316" : "#64748B";
+  const size = isSelected ? 42 : 34;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="16" fill="${color}" stroke="#FFFFFF" stroke-width="2.5"/>
+    <path d="M10 21v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 20.4 9h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-10.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H11.5l1.3-2.5zM12.5 18a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/>
+    ${isSelected ? '<circle cx="18" cy="18" r="17" fill="none" stroke="#F97316" stroke-width="2"/>' : ''}
+  </svg>`;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Size(size, size) : undefined,
+    anchor: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Point(size / 2, size / 2) : undefined,
+  };
+}
 import {
   Car,
   MapPin,
@@ -393,14 +410,13 @@ export function LiveDriversMap({
         {/* Right Map Canvas & Selected Inspector */}
         <div className="lg:col-span-8 flex flex-col gap-3">
           <div className="relative w-full rounded-xl border border-border overflow-hidden bg-card h-[620px] shadow-sm">
-            <APIProvider apiKey={apiKey}>
+            <APIProvider apiKey={apiKey} libraries={["places", "geometry"]}>
               <Map
                 id="orange-taxi-admin-live-radar"
                 defaultCenter={defaultCenter}
                 defaultZoom={13}
                 gestureHandling="greedy"
                 disableDefaultUI={false}
-                mapId="orange-taxi-admin-radar"
                 style={{ width: "100%", height: "100%" }}
               >
                 <MapPanController
@@ -414,47 +430,17 @@ export function LiveDriversMap({
                   const isOnline = d.is_online;
                   const isOnTrip = d.derivedStatus === "on_trip";
 
-                  let pinBg = "bg-slate-600 border-slate-300 text-white";
-                  let pingDot = "bg-slate-400";
-                  if (isOnTrip) {
-                    pinBg = "bg-orange-500 border-amber-200 text-white shadow-orange-500/40";
-                    pingDot = "bg-amber-300";
-                  } else if (isOnline) {
-                    pinBg = "bg-emerald-600 border-emerald-200 text-white shadow-emerald-600/40";
-                    pingDot = "bg-emerald-300";
-                  }
-
                   return (
-                    <AdvancedMarker
+                    <Marker
                       key={d.id}
                       position={{ lat: d.lat, lng: d.lng }}
                       onClick={() => setSelectedDriverId(d.id)}
+                      title={`${d.full_name} (${d.vehicle_number || "BE.6"}) - ${
+                        isOnTrip ? "On Trip" : isOnline ? "Available" : "Offline"
+                      }`}
                       zIndex={isSelected ? 999 : isOnTrip ? 80 : isOnline ? 50 : 10}
-                    >
-                      <div
-                        className={`group relative flex items-center justify-center transition-all cursor-pointer ${
-                          isSelected
-                            ? "scale-125 z-50 ring-4 ring-primary ring-offset-2"
-                            : "hover:scale-110"
-                        }`}
-                      >
-                        <div
-                          className={`flex size-9 items-center justify-center rounded-full border-2 shadow-lg transition-all ${pinBg}`}
-                        >
-                          <Car className="size-4" />
-                          <span
-                            className={`absolute -top-1 -right-1 size-3 rounded-full border-2 border-white ${pingDot} ${
-                              isOnTrip || isOnline ? "animate-pulse" : ""
-                            }`}
-                          />
-                        </div>
-
-                        {/* Hover Name Tag */}
-                        <div className="pointer-events-none absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-night/90 px-2 py-0.5 text-[10px] font-bold text-white opacity-0 shadow backdrop-blur transition-opacity group-hover:opacity-100">
-                          {d.full_name} · {d.vehicle_number || "BE.6"}
-                        </div>
-                      </div>
-                    </AdvancedMarker>
+                      icon={createDriverMarkerIcon(d.derivedStatus, isSelected)}
+                    />
                   );
                 })}
               </Map>

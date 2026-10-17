@@ -1,6 +1,6 @@
 /// <reference types="google.maps" />
 import { MapPin, Car, Clock, Route } from "lucide-react";
-import { Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { Map, Marker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
 
 function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFound }: any) {
@@ -148,22 +148,29 @@ export function LiveRideMap({
         defaultZoom={14}
         disableDefaultUI={true}
         gestureHandling="greedy"
-        mapId="orange-taxi-picker"
         style={{ width: "100%", height: "420px" }}
       >
         {parsedPickup && (
-          <AdvancedMarker position={parsedPickup}>
-            <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500 shadow-lg ring-2 ring-white">
-              <MapPin className="size-4 text-white" />
-            </div>
-          </AdvancedMarker>
+          <Marker
+            position={parsedPickup}
+            title="Pickup Location"
+            icon={{
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>'
+              )}`,
+            }}
+          />
         )}
         {parsedDropoff && (
-          <AdvancedMarker position={parsedDropoff}>
-            <div className="flex size-8 items-center justify-center rounded-full bg-red-500 shadow-lg ring-2 ring-white">
-              <MapPin className="size-4 text-white" />
-            </div>
-          </AdvancedMarker>
+          <Marker
+            position={parsedDropoff}
+            title="Drop-off Destination"
+            icon={{
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#EF4444" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>'
+              )}`,
+            }}
+          />
         )}
         <MapBoundsController pickup={parsedPickup} dropoff={parsedDropoff} driver={parsedDriver} />
         <DirectionsController
@@ -174,14 +181,15 @@ export function LiveRideMap({
           onRouteFound={setRouteInfo}
         />
         {parsedDriver && (
-          <AdvancedMarker position={parsedDriver}>
-            <div
-              className="flex size-10 items-center justify-center rounded-full bg-primary shadow-lg ring-4 ring-primary/30"
-              style={{ transform: `rotate(${driverLocation?.heading || 0}deg)` }}
-            >
-              <Car className="size-5 text-white" />
-            </div>
-          </AdvancedMarker>
+          <Marker
+            position={parsedDriver}
+            title="Mahindra BE.6 Chauffeur"
+            icon={{
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="17" fill="#F97316" stroke="#FFFFFF" stroke-width="3"/><path d="M11 23v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 21.4 11h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-9.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H12.5l1.3-2.5zM13.5 20a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/></svg>'
+              )}`,
+            }}
+          />
         )}
       </Map>
     </div>
