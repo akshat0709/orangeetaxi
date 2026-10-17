@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { LiveRideMap } from "@/components/live-ride-map";
 import {
   getBookingVehiclePlate,
@@ -578,23 +579,25 @@ function TrackPage() {
 
             {/* Live Interactive Map */}
             <div className="rounded-2xl border border-border overflow-hidden shadow-lg bg-card">
-              <LiveRideMap
-                pickup={{ name: booking.pickup_area, lat: pickupCoords.lat, lng: pickupCoords.lng }}
-                drop={{ name: booking.drop_area, lat: dropCoords.lat, lng: dropCoords.lng }}
-                driver={
-                  driver
-                    ? {
-                        full_name: driver.full_name,
-                        vehicle_model: driver.vehicle_model || booking.vehicle_name,
-                        vehicle_number: driver.vehicle_number,
-                        current_lat: driver.current_lat,
-                        current_lng: driver.current_lng,
-                      }
-                    : null
-                }
-                status={booking.status}
-                distKm={booking.distance_km || 10}
-              />
+              <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8"} libraries={["routes", "geometry"]}>
+                <LiveRideMap
+                  pickup={{ name: booking.pickup_area, lat: pickupCoords.lat, lng: pickupCoords.lng }}
+                  drop={{ name: booking.drop_area, lat: dropCoords.lat, lng: dropCoords.lng }}
+                  driver={
+                    driver
+                      ? {
+                          full_name: driver.full_name,
+                          vehicle_model: driver.vehicle_model || booking.vehicle_name,
+                          vehicle_number: driver.vehicle_number,
+                          current_lat: driver.current_lat,
+                          current_lng: driver.current_lng,
+                        }
+                      : null
+                  }
+                  status={booking.status}
+                  distKm={booking.distance_km || 10}
+                />
+              </APIProvider>
             </div>
 
             {/* Driver & Vehicle Details */}
