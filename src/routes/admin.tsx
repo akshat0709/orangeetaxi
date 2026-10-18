@@ -4,6 +4,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
+  ArrowUpRight,
   BadgeCheck,
   Banknote,
   BriefcaseBusiness,
@@ -15,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileSpreadsheet,
+  LayoutGrid,
   Loader2,
   MoreHorizontal,
   ParkingSquare,
@@ -85,7 +88,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search.tab === "string" ? search.tab : "bookings",
+    tab: typeof search.tab === "string" ? search.tab : "hub",
   }),
   head: () => ({ meta: [{ title: "Admin — Orange Taxi" }] }),
   component: AdminPage,
@@ -206,9 +209,22 @@ function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
+  const [tabLoading, setTabLoading] = useState(false);
+  const [hubSearch, setHubSearch] = useState("");
+  const [summaryCounts, setSummaryCounts] = useState({
+    totalBookings: 0,
+    activeBookings: 0,
+    completedBookings: 0,
+    totalRevenue: 0,
+    onlineDrivers: 0,
+    totalDrivers: 0,
+    pendingApplications: 0,
+    newEnquiries: 0,
+  });
+
   const search = Route.useSearch();
-  const [activeTab, setActiveTab] = useState(() => search?.tab || "bookings");
+  const [activeTab, setActiveTab] = useState(() => search?.tab || "hub");
   const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
 
   useEffect(() => {
@@ -230,29 +246,13 @@ function AdminPage() {
     }
   }, [user, role, authLoading, navigate]);
 
-  useEffect(() => {
-    if (role === "admin") loadAll();
-  }, [role]);
-
-  async function loadAll() {
-    setLoading(true);
-    const [{ data: b }, { data: a }, { data: e }, { data: d }] = await Promise.all([
-      supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(300),
-      supabase.from("driver_applications").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("corporate_enquiries").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("drivers").select("*").order("created_at", { ascending: false }).limit(300),
-    ]);
-    const fetchedBookings = (b as Booking[]) ?? [];
-    const fetchedDrivers = (d as Driver[]) ?? [];
-    const appsList = (a as Application[]) ?? [];
-
-    // Merge applications with extended details from localStorage (photo_url, vehicle details, driver_type)
+  function processApplicationsList(appsList: Application[]): Application[] {
     let storedExtApps: any[] = [];
     try {
       storedExtApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
     } catch (err) {}
 
-    const mergedApps: Application[] = appsList.map((app) => {
+    return appsList.map((app) => {
       let parsedNotes: any = {};
       try {
         if (
@@ -313,215 +313,250 @@ function AdminPage() {
           "",
       };
     });
-
-    // Update UI immediately for fast loading
-    setBookings(fetchedBookings);
-    setApplications(mergedApps);
-    setEnquiries((e as Enquiry[]) ?? []);
-    setDrivers([...fetchedDrivers]);
-    setLoading(false);
-
-    // Run heavy data backfill and DB sync in background so it doesn't block the UI
-    backgroundBackfill(fetchedDrivers, mergedApps, fetchedBookings);
   }
 
-  async function backgroundBackfill(fetchedDrivers: Driver[], mergedApps: Application[], fetchedBookings: Booking[]) {
-    let hasUpdates = false;
-
-    await Promise.all(
-      fetchedDrivers.map(async (dr) => {
-        let updated = false;
-
-        // Decode existing vehicle_code if encoded with ORANGE_META
-        let metaEncoded: any = {};
-        if (
-          dr.vehicle_code &&
-          typeof dr.vehicle_code === "string" &&
-          dr.vehicle_code.startsWith("ORANGE_META:")
-        ) {
-          try {
-            metaEncoded = JSON.parse(dr.vehicle_code.replace("ORANGE_META:", ""));
-            if (!dr.photo_url && metaEncoded.photo) { dr.photo_url = metaEncoded.photo; updated = true; }
-            if (
-              (!dr.vehicle_number || dr.vehicle_number === "Unassigned") &&
-              metaEncoded.plate &&
-              metaEncoded.plate !== "Unassigned"
-            ) {
-              dr.vehicle_number = metaEncoded.plate;
-              updated = true;
-            }
-            if (!dr.vehicle_model && metaEncoded.model) { dr.vehicle_model = metaEncoded.model; updated = true; }
-            if (!dr.driver_type && metaEncoded.type) { dr.driver_type = metaEncoded.type; updated = true; }
-          } catch (e) {}
-        }
-
-        if (!dr.phone || dr.phone.trim() === "") {
-          try {
-            if (dr.user_id) {
-              const { data: prof } = await supabase
-                .from("profiles")
-                .select("phone")
-                .eq("id", dr.user_id)
-                .maybeSingle();
-              if (prof?.phone && prof.phone.trim()) {
-                dr.phone = prof.phone.trim();
-                updated = true;
-                await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
-              }
-            }
-            if (!dr.phone || dr.phone.trim() === "") {
-              const matchingApp = mergedApps.find(
-                (app) => app.full_name?.toLowerCase() === dr.full_name?.toLowerCase() && app.phone,
-              );
-              if (matchingApp?.phone && matchingApp.phone.trim()) {
-                dr.phone = matchingApp.phone.trim();
-                updated = true;
-                await supabase.from("drivers").update({ phone: dr.phone }).eq("id", dr.id);
-              }
-            }
-          } catch (err) {}
-        }
-
-        const matchingApp = mergedApps.find(
-          (app) =>
-            (dr.phone && app.phone && app.phone.replace(/\\D/g, "") === dr.phone.replace(/\\D/g, "")) ||
-            (app.full_name && dr.full_name && app.full_name.trim().toLowerCase() === dr.full_name.trim().toLowerCase()),
-        );
-        if (matchingApp) {
-          if (!dr.photo_url && matchingApp.photo_url) { dr.photo_url = matchingApp.photo_url; updated = true; }
-          if (!dr.driver_type) {
-            dr.driver_type = matchingApp.driver_type || (matchingApp.owns_vehicle ? "partner" : "company");
-            updated = true;
+  function processDriversList(drList: Driver[]): Driver[] {
+    return drList.map((dr) => {
+      const copy = { ...dr };
+      if (
+        copy.vehicle_code &&
+        typeof copy.vehicle_code === "string" &&
+        copy.vehicle_code.startsWith("ORANGE_META:")
+      ) {
+        try {
+          const metaEncoded = JSON.parse(copy.vehicle_code.replace("ORANGE_META:", ""));
+          if (!copy.photo_url && metaEncoded.photo) copy.photo_url = metaEncoded.photo;
+          if (
+            (!copy.vehicle_number || copy.vehicle_number === "Unassigned") &&
+            metaEncoded.plate &&
+            metaEncoded.plate !== "Unassigned"
+          ) {
+            copy.vehicle_number = metaEncoded.plate;
           }
-          if (!dr.chassis_number && matchingApp.chassis_number) { dr.chassis_number = matchingApp.chassis_number; updated = true; }
-          if ((!dr.vehicle_number || dr.vehicle_number === "Unassigned") && matchingApp.vehicle_number) {
-            dr.vehicle_number = matchingApp.vehicle_number;
-            updated = true;
-          }
-          if (!dr.vehicle_model && matchingApp.vehicle_model) { dr.vehicle_model = matchingApp.vehicle_model; updated = true; }
-        }
-
-        if (!dr.photo_url) {
-          const storedPhoto =
-            localStorage.getItem(`orange_driver_photo_${dr.id}`) ||
-            (dr.user_id ? localStorage.getItem(`orange_driver_photo_${dr.user_id}`) : null) ||
-            (dr.phone ? localStorage.getItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\\D/g, "")}`) : null) ||
-            (dr.full_name ? localStorage.getItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`) : null);
-          if (storedPhoto) { dr.photo_url = storedPhoto; updated = true; }
-        }
-
-        const isPartnerDriver = dr.driver_type === "partner";
-        if (!dr.vehicle_number || dr.vehicle_number === "Unassigned") {
-          dr.vehicle_number = isPartnerDriver ? "KA 01 EV 4421" : "DL 01 EV 1001";
-          updated = true;
-        }
-        if (!dr.vehicle_model) {
-          dr.vehicle_model = isPartnerDriver ? "Tata Nexon EV" : "Mahindra BE.6";
-          updated = true;
-        }
-
-        const metaObj = {
-          photo: dr.photo_url || "",
-          plate: dr.vehicle_number,
-          model: dr.vehicle_model,
-          type: dr.driver_type || (isPartnerDriver ? "partner" : "company"),
-        };
-        const updatedCode = "ORANGE_META:" + JSON.stringify(metaObj);
-
-        if (dr.vehicle_code !== updatedCode) {
-          try {
-            await supabase.from("drivers").update({ vehicle_number: dr.vehicle_number, vehicle_model: dr.vehicle_model }).eq("id", dr.id);
-            dr.vehicle_code = updatedCode;
-            updated = true;
-          } catch (err) {}
-        }
-
-        if (dr.photo_url) {
-          try {
-            localStorage.setItem(`orange_driver_photo_${dr.id}`, dr.photo_url);
-            if (dr.user_id) localStorage.setItem(`orange_driver_photo_${dr.user_id}`, dr.photo_url);
-            if (dr.phone) localStorage.setItem(`orange_driver_photo_by_phone_${dr.phone.replace(/\\D/g, "")}`, dr.photo_url);
-            if (dr.full_name) localStorage.setItem(`orange_driver_photo_by_name_${dr.full_name.trim().toLowerCase()}`, dr.photo_url);
-          } catch (e) {}
-        }
-
-        if (updated) hasUpdates = true;
-      })
-    );
-
-    // Snapshot existing ride plates
-    fetchedBookings.forEach((booking) => {
-      if (booking.driver_id && ["completed", "in_progress"].includes(booking.status)) {
-        const dr = fetchedDrivers.find((x) => x.id === booking.driver_id);
-        if (dr?.vehicle_number && dr.vehicle_number !== "Unassigned") {
-          saveRideVehiclePlate(booking.id, dr.vehicle_number, booking.reference);
-        }
+          if (!copy.vehicle_model && metaEncoded.model) copy.vehicle_model = metaEncoded.model;
+          if (!copy.driver_type && metaEncoded.type) copy.driver_type = metaEncoded.type;
+        } catch (e) {}
       }
+      return copy;
     });
+  }
 
-    // Ensure approved driver applicants & partner operators exist in drivers panel
-    const newDrivers = [];
-    await Promise.all(
-      mergedApps.map(async (app) => {
-        if (app.status === "approved") {
-          const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
-          const alreadyExists = fetchedDrivers.some(
-            (dr) =>
-              (dr.phone && app.phone && dr.phone.replace(/\\D/g, "") === app.phone.replace(/\\D/g, "")) ||
-              (dr.full_name && app.full_name && dr.full_name.trim().toLowerCase() === app.full_name.trim().toLowerCase()),
-          );
-
-          if (!alreadyExists) {
-            const plate = app.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
-            const model = app.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
-            const photo = app.photo_url || "";
-            const metaObj = { photo, plate, model, type: isPartner ? "partner" : "company" };
-            const newDrRecord: any = {
-              full_name: app.full_name,
-              phone: app.phone || "",
-              city: app.city || "Bengaluru",
-              vehicle_number: plate,
-              vehicle_model: model,
-              rating: 5,
-              total_rides: 0,
-              is_online: false,
-            };
-
-            try {
-              const { data: createdDr } = await supabase.from("drivers").insert(newDrRecord).select().maybeSingle();
-              if (createdDr) {
-                const fullCreatedDr: Driver = { ...createdDr, driver_type: isPartner ? "partner" : "company", photo_url: photo };
-                newDrivers.push(fullCreatedDr);
-                if (photo) localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
-                hasUpdates = true;
-              }
-            } catch (e) {}
-          }
-        }
-      })
-    );
-
-    if (newDrivers.length > 0) {
-      fetchedDrivers.push(...newDrivers);
-    }
-    
-    if (hasUpdates || newDrivers.length > 0) {
-      setDrivers([...fetchedDrivers]);
+  async function fetchSummaryCounts() {
+    try {
+      const [
+        { count: totalB },
+        { count: activeB },
+        { count: completedB },
+        { count: pendingApps },
+        { count: newEnq },
+        { count: totalDr },
+        { count: onlineDr },
+      ] = await Promise.all([
+        supabase.from("bookings").select("id", { count: "exact", head: true }),
+        supabase
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["searching", "accepted", "arrived", "in_progress"]),
+        supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "completed"),
+        supabase.from("driver_applications").select("id", { count: "exact", head: true }).eq("status", "new"),
+        supabase.from("corporate_enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
+        supabase.from("drivers").select("id", { count: "exact", head: true }),
+        supabase.from("drivers").select("id", { count: "exact", head: true }).eq("is_online", true),
+      ]);
+      setSummaryCounts({
+        totalBookings: totalB ?? 0,
+        activeBookings: activeB ?? 0,
+        completedBookings: completedB ?? 0,
+        totalRevenue: (completedB ?? 0) * 850,
+        onlineDrivers: onlineDr ?? 0,
+        totalDrivers: totalDr ?? 0,
+        pendingApplications: pendingApps ?? 0,
+        newEnquiries: newEnq ?? 0,
+      });
+    } catch (err) {
+      console.error("Error fetching summary counts:", err);
     }
   }
-  // Stats
+
+  async function fetchBookings(force = false) {
+    if (loadedTabs.bookings && !force) return;
+    setTabLoading(true);
+    try {
+      const { data: b } = await supabase
+        .from("bookings")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      setBookings((b as Booking[]) ?? []);
+
+      if (drivers.length === 0) {
+        const { data: d } = await supabase
+          .from("drivers")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(300);
+        if (d) setDrivers(processDriversList(d as Driver[]));
+      }
+
+      setLoadedTabs((prev) => ({ ...prev, bookings: true }));
+    } catch (err) {
+      toast.error("Failed to load bookings");
+    } finally {
+      setTabLoading(false);
+    }
+  }
+
+  async function fetchApplications(force = false) {
+    if (loadedTabs.applications && !force) return;
+    setTabLoading(true);
+    try {
+      const { data: a } = await supabase
+        .from("driver_applications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setApplications(processApplicationsList((a as Application[]) ?? []));
+      setLoadedTabs((prev) => ({ ...prev, applications: true }));
+    } catch (err) {
+      toast.error("Failed to load driver applications");
+    } finally {
+      setTabLoading(false);
+    }
+  }
+
+  async function fetchDrivers(force = false) {
+    if (loadedTabs.drivers && !force) return;
+    setTabLoading(true);
+    try {
+      const { data: d } = await supabase
+        .from("drivers")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      setDrivers(processDriversList((d as Driver[]) ?? []));
+      setLoadedTabs((prev) => ({ ...prev, drivers: true }));
+    } catch (err) {
+      toast.error("Failed to load drivers");
+    } finally {
+      setTabLoading(false);
+    }
+  }
+
+  async function fetchEnquiries(force = false) {
+    if (loadedTabs.enquiries && !force) return;
+    setTabLoading(true);
+    try {
+      const { data: e } = await supabase
+        .from("corporate_enquiries")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setEnquiries((e as Enquiry[]) ?? []);
+      setLoadedTabs((prev) => ({ ...prev, enquiries: true }));
+    } catch (err) {
+      toast.error("Failed to load corporate enquiries");
+    } finally {
+      setTabLoading(false);
+    }
+  }
+
+  async function fetchFinanceData(force = false) {
+    if (loadedTabs.bookings && loadedTabs.drivers && !force) return;
+    setTabLoading(true);
+    try {
+      const [{ data: b }, { data: d }] = await Promise.all([
+        supabase.from("bookings").select("*").order("created_at", { ascending: false }).limit(300),
+        supabase.from("drivers").select("*").order("created_at", { ascending: false }).limit(300),
+      ]);
+      setBookings((b as Booking[]) ?? []);
+      setDrivers(processDriversList((d as Driver[]) ?? []));
+      setLoadedTabs((prev) => ({ ...prev, bookings: true, drivers: true }));
+    } catch (err) {
+      toast.error("Failed to load financial records");
+    } finally {
+      setTabLoading(false);
+    }
+  }
+
+  function handleSelectTab(tab: string) {
+    setActiveTab(tab);
+    navigate({
+      to: "/admin",
+      search: { tab },
+      replace: true,
+    });
+  }
+
+  async function loadCurrentTab(force = true) {
+    if (activeTab === "hub") {
+      await fetchSummaryCounts();
+    } else if (activeTab === "bookings") {
+      await fetchBookings(force);
+    } else if (activeTab === "applications") {
+      await fetchApplications(force);
+    } else if (activeTab === "drivers" || activeTab === "fleet") {
+      await fetchDrivers(force);
+    } else if (activeTab === "enquiries") {
+      await fetchEnquiries(force);
+    } else {
+      await fetchFinanceData(force);
+    }
+  }
+
+  const loadAll = () => loadCurrentTab(true);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    if (activeTab === "hub") {
+      fetchSummaryCounts();
+    } else if (activeTab === "bookings") {
+      fetchBookings();
+    } else if (activeTab === "applications") {
+      fetchApplications();
+    } else if (activeTab === "drivers" || activeTab === "fleet") {
+      fetchDrivers();
+    } else if (activeTab === "enquiries") {
+      fetchEnquiries();
+    } else {
+      fetchFinanceData();
+    }
+  }, [activeTab, role]);
+
+  function isTabReady(tab: string): boolean {
+    if (tab === "hub") return true;
+    if (tab === "bookings") return Boolean(loadedTabs.bookings);
+    if (tab === "applications") return Boolean(loadedTabs.applications);
+    if (tab === "drivers" || tab === "fleet") return Boolean(loadedTabs.drivers);
+    if (tab === "enquiries") return Boolean(loadedTabs.enquiries);
+    return Boolean(loadedTabs.bookings && loadedTabs.drivers);
+  }
+  // Stats with on-demand fallback
   const stats = {
-    totalBookings: bookings.length,
-    activeBookings: bookings.filter((b) =>
-      ["searching", "accepted", "arrived", "in_progress"].includes(b.status),
-    ).length,
-    completedBookings: bookings.filter((b) => b.status === "completed").length,
-    totalRevenue: bookings
-      .filter((b) => b.status === "completed")
-      .reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0),
-    onlineDrivers: drivers.filter((d) => d.is_online).length,
-    pendingApplications: applications.filter((a) => a.status === "new").length,
-    newEnquiries: enquiries.filter((e) => e.status === "new").length,
+    totalBookings: bookings.length || summaryCounts.totalBookings,
+    activeBookings: bookings.length
+      ? bookings.filter((b) =>
+          ["searching", "accepted", "arrived", "in_progress"].includes(b.status),
+        ).length
+      : summaryCounts.activeBookings,
+    completedBookings: bookings.length
+      ? bookings.filter((b) => b.status === "completed").length
+      : summaryCounts.completedBookings,
+    totalRevenue: bookings.length
+      ? bookings
+          .filter((b) => b.status === "completed")
+          .reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0)
+      : summaryCounts.totalRevenue,
+    onlineDrivers: drivers.length
+      ? drivers.filter((d) => d.is_online).length
+      : summaryCounts.onlineDrivers,
+    totalDrivers: drivers.length || summaryCounts.totalDrivers,
+    pendingApplications: applications.length
+      ? applications.filter((a) => a.status === "new").length
+      : summaryCounts.pendingApplications,
+    newEnquiries: enquiries.length
+      ? enquiries.filter((e) => e.status === "new").length
+      : summaryCounts.newEnquiries,
   };
 
   async function updateApplicationStatus(id: string, status: string, email?: string, appObj?: any) {
@@ -704,7 +739,7 @@ function AdminPage() {
     loadAll();
   }
 
-  if (authLoading || (loading && role === "admin")) {
+  if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
@@ -712,88 +747,370 @@ function AdminPage() {
     );
   }
 
+  const MODULES = [
+    {
+      id: "bookings",
+      title: "Bookings & Dispatch",
+      tagline: "Live Rides, Scheduled & Dispatch",
+      description: "Manage real-time customer ride requests, scheduled advance bookings, chauffeur assignments & OTPs.",
+      icon: Car,
+      badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badgeText: stats.activeBookings > 0 ? `${stats.activeBookings} Live Active` : `${stats.totalBookings} Total`,
+      iconColor: "text-amber-500",
+      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+    },
+    {
+      id: "live-map",
+      title: "Live Drivers Map",
+      tagline: "Real-time GPS Radar Tracking",
+      description: "Live radar view of all online chauffeurs, active trips, vehicle locations, and airport staging zones.",
+      icon: Radio,
+      badgeColor: "bg-primary/10 text-primary border-primary/20",
+      badgeText: `${stats.onlineDrivers} Chauffeurs Online`,
+      iconColor: "text-primary",
+      bgAccent: "hover:border-primary/50 hover:shadow-primary/5",
+    },
+    {
+      id: "applications",
+      title: "Driver Applications",
+      tagline: "KYC, Documents & Onboarding",
+      description: "Review new driver signups, commercial driving licences, Aadhaar cards, and approve partner EV drivers.",
+      icon: ShieldCheck,
+      badgeColor:
+        stats.pendingApplications > 0
+          ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+          : "bg-muted text-muted-foreground border-border",
+      badgeText:
+        stats.pendingApplications > 0
+          ? `${stats.pendingApplications} Pending Review`
+          : "All Reviewed",
+      iconColor: "text-amber-600",
+      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+    },
+    {
+      id: "fleet",
+      title: "Fleet & Bays",
+      tagline: "Airport Staging & Bay Allocation",
+      description: "Track Mahindra BE.6 & Tata Nexon EVs across airport terminal bays, charging status, and vehicle assignments.",
+      icon: ParkingSquare,
+      badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      badgeText: "Airport Charging Bays",
+      iconColor: "text-purple-600",
+      bgAccent: "hover:border-purple-500/50 hover:shadow-purple-500/5",
+    },
+    {
+      id: "cash",
+      title: "Cash Settlements",
+      tagline: "Daily Cash Reconciliation Desk",
+      description: "Verify daily cash collections made by drivers on cash trips, reconcile discrepancies, and record remittances.",
+      icon: Banknote,
+      badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      badgeText: "Cash Collection Audit",
+      iconColor: "text-emerald-600",
+      bgAccent: "hover:border-emerald-500/50 hover:shadow-emerald-500/5",
+    },
+    {
+      id: "commissions",
+      title: "Commission Ledger",
+      tagline: "Platform Splits & Partner Payouts",
+      description: "Automated 80/20 revenue splits between Orange platform and partner owner-drivers, payout ledgers & balances.",
+      icon: Percent,
+      badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      badgeText: "80/20 Partner Splits",
+      iconColor: "text-blue-600",
+      bgAccent: "hover:border-blue-500/50 hover:shadow-blue-500/5",
+    },
+    {
+      id: "gst",
+      title: "GST & Corporate Invoicing",
+      tagline: "HSN 9964 Invoices & Tax Reports",
+      description: "Generate compliant GST tax invoices for B2B corporate rides, monthly tax summaries, and customer statements.",
+      icon: FileSpreadsheet,
+      badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badgeText: "GST Tax Invoices",
+      iconColor: "text-amber-600",
+      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+    },
+    {
+      id: "drivers",
+      title: "Chauffeur Directory",
+      tagline: "Driver Profiles, Cars & Ratings",
+      description: "Comprehensive roster of all registered chauffeurs, assigned vehicles, ratings, compliance details and contact info.",
+      icon: Users,
+      badgeColor: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
+      badgeText: `${drivers.length || summaryCounts.totalDrivers} Chauffeurs`,
+      iconColor: "text-teal-600",
+      bgAccent: "hover:border-teal-500/50 hover:shadow-teal-500/5",
+    },
+    {
+      id: "enquiries",
+      title: "Corporate Enquiries",
+      tagline: "B2B Accounts & Enterprise Leads",
+      description: "Incoming corporate transit partnership enquiries, employee shuttle requests, and enterprise contract leads.",
+      icon: Building2,
+      badgeColor:
+        stats.newEnquiries > 0
+          ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+          : "bg-muted text-muted-foreground border-border",
+      badgeText: stats.newEnquiries > 0 ? `${stats.newEnquiries} New Inquiries` : "Corporate Leads",
+      iconColor: "text-indigo-600",
+      bgAccent: "hover:border-indigo-500/50 hover:shadow-indigo-500/5",
+    },
+  ];
+
+  const currentModule = MODULES.find((m) => m.id === activeTab);
+  const filteredModules = MODULES.filter((m) => {
+    if (!hubSearch.trim()) return true;
+    const q = hubSearch.toLowerCase();
+    return (
+      m.title.toLowerCase().includes(q) ||
+      m.tagline.toLowerCase().includes(q) ||
+      m.description.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-          Admin Dashboard
-        </p>
-        <h1 className="display-serif mt-2 text-4xl">Orange Operations</h1>
+        {activeTab === "hub" ? (
+          <div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                  Admin Command Center
+                </p>
+                <h1 className="display-serif mt-1 text-3xl sm:text-4xl">Orange Operations</h1>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Instant launchpad. Select any department to load records on-demand.
+                </p>
+              </div>
 
-        {/* KPIs */}
-        <div className="mt-8 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
-          <KpiCard
-            label="Total Bookings"
-            value={stats.totalBookings}
-            sub={`${stats.activeBookings} active`}
-            icon={Car}
-          />
-          <KpiCard
-            label="Revenue"
-            value={`₹${Math.round(stats.totalRevenue)}`}
-            sub={`${stats.completedBookings} completed`}
-            icon={BadgeCheck}
-          />
-          <KpiCard
-            label="Drivers Online"
-            value={stats.onlineDrivers}
-            sub={`of ${drivers.length} total`}
-            icon={Users}
-          />
-          <KpiCard
-            label="Orange Fleet"
-            value="Mahindra BE.6"
-            sub="Bay & battery tracking"
-            icon={ParkingSquare}
-          />
-          <KpiCard
-            label="Pending"
-            value={stats.pendingApplications + stats.newEnquiries}
-            sub={`${stats.pendingApplications} apps · ${stats.newEnquiries} enquiries`}
-            icon={Clock}
-          />
-        </div>
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search modules..."
+                    value={hubSearch}
+                    onChange={(e) => setHubSearch(e.target.value)}
+                    className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  {hubSearch && (
+                    <button
+                      onClick={() => setHubSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
-        {/* Main tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(val) => {
-            setActiveTab(val);
-            navigate({
-              to: "/admin",
-              search: { tab: val },
-              replace: true,
-            });
-          }}
-          className="mt-10"
-        >
-          <TabsList className="mb-6 flex flex-wrap gap-1">
-            <TabsTrigger value="bookings">
-              Bookings <CountBadge n={stats.activeBookings} />
-            </TabsTrigger>
-            <TabsTrigger value="live-map" className="gap-1.5 font-semibold text-primary">
-              <Radio className="size-3.5 text-primary animate-pulse" /> Live Drivers Map
-            </TabsTrigger>
-            <TabsTrigger value="fleet" className="gap-1.5 font-semibold">
-              <ParkingSquare className="size-3.5 text-primary" /> Fleet & Bays
-            </TabsTrigger>
-            <TabsTrigger value="cash" className="gap-1.5 font-semibold">
-              <Banknote className="size-3.5 text-emerald-600" /> Cash Settlements
-            </TabsTrigger>
-            <TabsTrigger value="commissions" className="gap-1.5 font-semibold">
-              <Percent className="size-3.5 text-blue-600" /> Commission Ledger
-            </TabsTrigger>
-            <TabsTrigger value="gst" className="gap-1.5 font-semibold">
-              <FileSpreadsheet className="size-3.5 text-amber-600" /> GST & Invoicing
-            </TabsTrigger>
-            <TabsTrigger value="drivers">Drivers</TabsTrigger>
-            <TabsTrigger value="applications">
-              Applications <CountBadge n={stats.pendingApplications} color="amber" />
-            </TabsTrigger>
-            <TabsTrigger value="enquiries">
-              Enquiries <CountBadge n={stats.newEnquiries} color="blue" />
-            </TabsTrigger>
-          </TabsList>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2.5 text-xs font-semibold gap-1.5 shrink-0"
+                  onClick={fetchSummaryCounts}
+                  title="Refresh counters"
+                >
+                  <RefreshCw className="size-3.5" />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* KPIs */}
+            <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <KpiCard
+                label="Total Bookings"
+                value={stats.totalBookings}
+                sub={`${stats.activeBookings} active`}
+                icon={Car}
+              />
+              <KpiCard
+                label="Revenue"
+                value={`₹${Math.round(stats.totalRevenue)}`}
+                sub={`${stats.completedBookings} completed`}
+                icon={BadgeCheck}
+              />
+              <KpiCard
+                label="Drivers Online"
+                value={stats.onlineDrivers}
+                sub={`of ${stats.totalDrivers || drivers.length} total`}
+                icon={Users}
+              />
+              <KpiCard
+                label="Orange Fleet"
+                value="Mahindra BE.6"
+                sub="Bay & battery tracking"
+                icon={ParkingSquare}
+              />
+              <KpiCard
+                label="Pending Items"
+                value={stats.pendingApplications + stats.newEnquiries}
+                sub={`${stats.pendingApplications} apps · ${stats.newEnquiries} enquiries`}
+                icon={Clock}
+              />
+            </div>
+
+            {/* Hub Module Grid */}
+            <div className="mt-9">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <LayoutGrid className="size-4 text-primary" />
+                  Operations Modules
+                </h2>
+                <span className="text-xs text-muted-foreground font-medium">
+                  {filteredModules.length} module{filteredModules.length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+                {filteredModules.map((mod) => (
+                  <div
+                    key={mod.id}
+                    onClick={() => handleSelectTab(mod.id)}
+                    className={`group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer ${mod.bgAccent}`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3.5">
+                        <div
+                          className={`p-2.5 rounded-xl bg-muted/60 group-hover:scale-105 transition-transform ${mod.iconColor}`}
+                        >
+                          <mod.icon className="size-5" />
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${mod.badgeColor}`}
+                        >
+                          {mod.badgeText}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                        <span>{mod.title}</span>
+                        <ArrowUpRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      </h3>
+                      <p className="text-[11px] font-semibold text-primary/80 mt-0.5">
+                        {mod.tagline}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                        {mod.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 pt-3 border-t border-border/80 flex items-center justify-between">
+                      <span className="text-xs font-bold text-primary group-hover:underline">
+                        Open Module →
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        Instant Load
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {/* Module Navigation Top Bar */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 sm:p-4 rounded-xl border border-border shadow-xs">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectTab("hub")}
+                  className="gap-2 font-bold text-xs h-8 hover:bg-muted"
+                >
+                  <ArrowLeft className="size-3.5" />
+                  Admin Hub
+                </Button>
+                <div className="h-4 w-px bg-border hidden sm:block" />
+                <span className="text-xs text-muted-foreground hidden sm:inline">Module:</span>
+                <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                  {currentModule?.title || activeTab}
+                </span>
+                {currentModule?.badgeText && (
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentModule.badgeColor}`}
+                  >
+                    {currentModule.badgeText}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Select
+                  value={activeTab}
+                  onValueChange={(val) => handleSelectTab(val)}
+                >
+                  <SelectTrigger className="h-8 w-44 text-xs font-medium">
+                    <SelectValue placeholder="Switch module..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hub">🏠 Admin Hub Overview</SelectItem>
+                    <SelectItem value="bookings">🚖 Bookings & Dispatch</SelectItem>
+                    <SelectItem value="live-map">📍 Live Drivers Map</SelectItem>
+                    <SelectItem value="fleet">🅿️ Fleet & Bays</SelectItem>
+                    <SelectItem value="cash">💵 Cash Settlements</SelectItem>
+                    <SelectItem value="commissions">📊 Commission Ledger</SelectItem>
+                    <SelectItem value="gst">🧾 GST & Invoicing</SelectItem>
+                    <SelectItem value="drivers">👤 Chauffeur Directory</SelectItem>
+                    <SelectItem value="applications">📋 Driver Applications</SelectItem>
+                    <SelectItem value="enquiries">🏢 Corporate Enquiries</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2.5 text-xs font-semibold gap-1.5"
+                  onClick={() => loadCurrentTab(true)}
+                  disabled={tabLoading}
+                  title="Refresh this tab data"
+                >
+                  <RefreshCw className={`size-3.5 ${tabLoading ? "animate-spin" : ""}`} />
+                  <span className="hidden md:inline">Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            {tabLoading && !isTabReady(activeTab) ? (
+              <div className="flex flex-col items-center justify-center py-24 bg-card rounded-xl border border-border shadow-xs my-6">
+                <Loader2 className="size-8 animate-spin text-primary mb-3" />
+                <p className="text-sm font-bold text-foreground">Loading {currentModule?.title || activeTab}...</p>
+                <p className="text-xs text-muted-foreground mt-1">Retrieving live records on demand</p>
+              </div>
+            ) : (
+              <Tabs
+                value={activeTab}
+                onValueChange={(val) => handleSelectTab(val)}
+                className="mt-2"
+              >
+                <TabsList className="mb-6 flex flex-wrap gap-1">
+                  <TabsTrigger value="bookings">
+                    Bookings <CountBadge n={stats.activeBookings} />
+                  </TabsTrigger>
+                  <TabsTrigger value="live-map" className="gap-1.5 font-semibold text-primary">
+                    <Radio className="size-3.5 text-primary animate-pulse" /> Live Drivers Map
+                  </TabsTrigger>
+                  <TabsTrigger value="fleet" className="gap-1.5 font-semibold">
+                    <ParkingSquare className="size-3.5 text-primary" /> Fleet & Bays
+                  </TabsTrigger>
+                  <TabsTrigger value="cash" className="gap-1.5 font-semibold">
+                    <Banknote className="size-3.5 text-emerald-600" /> Cash Settlements
+                  </TabsTrigger>
+                  <TabsTrigger value="commissions" className="gap-1.5 font-semibold">
+                    <Percent className="size-3.5 text-blue-600" /> Commission Ledger
+                  </TabsTrigger>
+                  <TabsTrigger value="gst" className="gap-1.5 font-semibold">
+                    <FileSpreadsheet className="size-3.5 text-amber-600" /> GST & Invoicing
+                  </TabsTrigger>
+                  <TabsTrigger value="drivers">Drivers</TabsTrigger>
+                  <TabsTrigger value="applications">
+                    Applications <CountBadge n={stats.pendingApplications} color="amber" />
+                  </TabsTrigger>
+                  <TabsTrigger value="enquiries">
+                    Enquiries <CountBadge n={stats.newEnquiries} color="blue" />
+                  </TabsTrigger>
+                </TabsList>
 
           {/* BOOKINGS */}
           <TabsContent value="bookings">
@@ -1422,6 +1739,9 @@ function AdminPage() {
             </TabErrorBoundary>
           </TabsContent>
         </Tabs>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
