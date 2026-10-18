@@ -26,8 +26,6 @@ import heroImage from "@/assets/orange-taxi-hero.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 import driverImage from "@/assets/orange-taxi-driver.jpg";
 import eveningImage from "@/assets/orange-taxi-evening.jpg";
-import { HomepageFareEstimator } from "@/components/homepage-fare-estimator";
-import { EcoImpactCounter } from "@/components/eco-impact-counter";
 import { WhatsAppConciergeFab } from "@/components/whatsapp-concierge-fab";
 
 export const Route = createFileRoute("/")({
@@ -228,13 +226,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Interactive Fare Estimator Section */}
-      <section className="relative z-20 -mt-14 sm:-mt-20 mb-16">
-        <div className="section-shell">
-          <HomepageFareEstimator />
-        </div>
-      </section>
-
       {/* In-Cab Amenities Showcase */}
       <section className="bg-background py-24 text-foreground border-y border-border dark:bg-night dark:text-white dark:border-white/10 md:py-32">
         <div className="section-shell">
@@ -265,13 +256,6 @@ function HomePage() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Live Eco-Impact Counters */}
-      <section className="py-16 md:py-20 border-b border-border bg-muted/20">
-        <div className="section-shell">
-          <EcoImpactCounter />
         </div>
       </section>
 
