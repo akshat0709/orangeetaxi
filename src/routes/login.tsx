@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/login")({
   validateSearch: z.object({
     redirect: z.string().optional(),
-    mode: z.enum(["signin", "signup", "forgot", "reset"]).optional(),
+    mode: z.enum(["signin", "signup", "forgot", "reset", "verify_otp"]).optional(),
     email: z.string().optional(),
   }),
   head: () => ({
@@ -63,11 +63,17 @@ type ResetValues = z.infer<typeof resetSchema>;
 
 const LOCKOUT_KEY = "@orange_web_lockout_time";
 const ATTEMPTS_KEY = "@orange_web_login_attempts";
+const OTP_LOCKOUT_KEY = "@orange_web_otp_lockout_time";
+const OTP_ATTEMPTS_KEY = "@orange_web_otp_attempts";
 
 function LoginPage() {
   const { redirect, mode: initialMode, email: queryEmail } = useSearch({ from: "/login" });
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">(initialMode ?? "signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset" | "verify_otp">(initialMode ?? "signin");
   const [resetEmail, setResetEmail] = useState<string>(queryEmail || "");
+  const [otpEmail, setOtpEmail] = useState<string>(queryEmail || "");
+  const [otpDigits, setOtpDigits] = useState<string>("");
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [otpLockoutRemaining, setOtpLockoutRemaining] = useState<number>(0);
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
@@ -78,7 +84,7 @@ function LoginPage() {
   const forgotForm = useForm<ForgotValues>({ resolver: zodResolver(forgotSchema) });
   const resetForm = useForm<ResetValues>({ resolver: zodResolver(resetSchema) });
 
-  // Cooldown countdown timer
+  // Cooldown countdown timer for login attempts
   useEffect(() => {
     const checkLockout = () => {
       try {
@@ -100,6 +106,38 @@ function LoginPage() {
     const interval = setInterval(checkLockout, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // OTP Lockout timer (max 4-5 attempts in 1 min)
+  useEffect(() => {
+    const checkOtpLockout = () => {
+      try {
+        const stored = localStorage.getItem(OTP_LOCKOUT_KEY);
+        if (stored) {
+          const diff = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+          if (diff > 0) {
+            setOtpLockoutRemaining(diff);
+          } else {
+            setOtpLockoutRemaining(0);
+            localStorage.removeItem(OTP_LOCKOUT_KEY);
+          }
+        } else {
+          setOtpLockoutRemaining(0);
+        }
+      } catch {}
+    };
+    checkOtpLockout();
+    const interval = setInterval(checkOtpLockout, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 30-second Resend OTP Cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   // Detect recovery link tokens from email & resolve verified user email
   useEffect(() => {
@@ -385,14 +423,99 @@ function LoginPage() {
     }
 
     if (data.user && !data.session) {
-      toast.success("Check your email to confirm your account, then sign in.");
-      setMode("signin");
+      setOtpEmail(values.email.trim());
+      setResendCooldown(30);
+      setOtpDigits("");
+      setMode("verify_otp");
+      toast.success("We have sent a 4-digit verification code to your email.");
       setSubmitting(false);
       return;
     }
     toast.success("Account created! Welcome to Orange Taxi.");
     const destination = redirect ?? (values.role === "driver" ? "/driver-console" : "/book");
     navigate({ to: destination as any });
+  }
+
+  async function handleVerifyOtp(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (otpLockoutRemaining > 0) {
+      toast.error(`Too many failed attempts. Please wait ${otpLockoutRemaining} second${otpLockoutRemaining === 1 ? "" : "s"}.`);
+      return;
+    }
+    const cleanToken = otpDigits.trim();
+    if (cleanToken.length !== 4) {
+      toast.error("Please enter the complete 4-digit verification code.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: otpEmail.trim(),
+        token: cleanToken,
+        type: "signup",
+      });
+
+      if (error) {
+        try {
+          const storedAttempts = localStorage.getItem(OTP_ATTEMPTS_KEY);
+          let attempts = storedAttempts ? parseInt(storedAttempts, 10) : 0;
+          attempts++;
+          if (attempts >= 5) {
+            const lockoutUntil = Date.now() + 60 * 1000;
+            localStorage.setItem(OTP_LOCKOUT_KEY, lockoutUntil.toString());
+            localStorage.setItem(OTP_ATTEMPTS_KEY, "0");
+            setOtpLockoutRemaining(60);
+            toast.error("Verification locked for 1 minute due to 5 unsuccessful attempts.");
+          } else {
+            localStorage.setItem(OTP_ATTEMPTS_KEY, attempts.toString());
+            toast.error(`${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining)`);
+          }
+        } catch {
+          toast.error(error.message);
+        }
+        setSubmitting(false);
+        return;
+      }
+
+      try {
+        localStorage.removeItem(OTP_ATTEMPTS_KEY);
+        localStorage.removeItem(OTP_LOCKOUT_KEY);
+      } catch {}
+
+      toast.success("Email verified successfully! Welcome to Orange Taxi.");
+      const destination = redirect ?? "/book";
+      navigate({ to: destination as any });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify code.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (resendCooldown > 0 || !otpEmail) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: otpEmail.trim(),
+      });
+      if (error) {
+        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
+          setOtpLockoutRemaining(60);
+          toast.error("Too many resend requests. Please wait 60 seconds before trying again.");
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
+      setResendCooldown(30);
+      toast.success("New 4-digit verification code sent to your email!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to resend verification code.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleForgotPassword(values: ForgotValues) {
@@ -455,32 +578,140 @@ function LoginPage() {
 
           <div className="mt-10 rounded-2xl border border-border bg-background p-8 shadow-soft">
             {/* Tab toggle */}
-            <div className="flex rounded-xl border border-border bg-muted p-1">
-              <button
-                type="button"
-                onClick={() => setMode("signin")}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                  mode === "signin" || mode === "forgot" || mode === "reset"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {mode === "forgot" ? "Reset Password" : mode === "reset" ? "Set New Password" : "Sign In"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("signup")}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                  mode === "signup"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
+            {mode !== "verify_otp" && (
+              <div className="flex rounded-xl border border-border bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setMode("signin")}
+                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                    mode === "signin" || mode === "forgot" || mode === "reset"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {mode === "forgot" ? "Reset Password" : mode === "reset" ? "Set New Password" : "Sign In"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                    mode === "signup"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
 
-            {mode === "signin" ? (
+            {mode === "verify_otp" ? (
+              <div>
+                <div className="text-center">
+                  <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <ShieldCheck className="size-6 text-primary" />
+                  </div>
+                  <h3 className="mt-3 text-xl font-bold tracking-tight">Verify Your Email</h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    We sent a 4-digit code to{" "}
+                    <span className="font-semibold text-foreground">{otpEmail || "your email"}</span>. Enter it below to complete registration.
+                  </p>
+                </div>
+
+                {otpLockoutRemaining > 0 && (
+                  <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive text-center">
+                    Verification locked for 1 minute due to 5 unsuccessful attempts. Please wait {otpLockoutRemaining}s.
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
+                  <div className="flex justify-center gap-3">
+                    {[0, 1, 2, 3].map((index) => (
+                      <input
+                        key={index}
+                        id={`otp-input-${index}`}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={1}
+                        value={otpDigits[index] || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, "");
+                          const newOtp = otpDigits.split("");
+                          if (val) {
+                            newOtp[index] = val[val.length - 1];
+                            const combined = newOtp.join("").slice(0, 4);
+                            setOtpDigits(combined);
+                            if (index < 3) {
+                              document.getElementById(`otp-input-${index + 1}`)?.focus();
+                            }
+                          } else {
+                            newOtp[index] = "";
+                            setOtpDigits(newOtp.join(""));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+                            document.getElementById(`otp-input-${index - 1}`)?.focus();
+                          }
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 4);
+                          if (pasted) {
+                            setOtpDigits(pasted);
+                            const nextIndex = Math.min(pasted.length, 3);
+                            document.getElementById(`otp-input-${nextIndex}`)?.focus();
+                          }
+                        }}
+                        className="size-14 text-center text-2xl font-bold rounded-xl border border-border bg-muted/40 focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        disabled={submitting || otpLockoutRemaining > 0}
+                        autoFocus={index === 0}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 px-1">
+                    <span>Didn't receive code?</span>
+                    <button
+                      type="button"
+                      disabled={resendCooldown > 0 || submitting}
+                      onClick={handleResendOtp}
+                      className="font-semibold text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : "Resend Code"}
+                    </button>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    disabled={submitting || otpDigits.length !== 4 || otpLockoutRemaining > 0}
+                  >
+                    {submitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : otpLockoutRemaining > 0 ? (
+                      `Locked (${otpLockoutRemaining}s)`
+                    ) : (
+                      <>
+                        Verify & Continue <ArrowRight className="size-4" />
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setMode("signup")}
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      ← Incorrect email? Back to Sign Up
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : mode === "signin" ? (
               <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="mt-8 space-y-5">
                 {lockoutRemaining > 0 && (
                   <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
@@ -824,15 +1055,17 @@ function LoginPage() {
             )}
           </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-              className="font-semibold text-primary hover:underline"
-            >
-              {mode === "signin" ? "Sign up" : "Sign in"}
-            </button>
-          </p>
+          {mode !== "verify_otp" && (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+              <button
+                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+                className="font-semibold text-primary hover:underline"
+              >
+                {mode === "signin" ? "Sign up" : "Sign in"}
+              </button>
+            </p>
+          )}
 
           <div className="mt-8 pt-4 border-t border-border/60 text-center text-xs text-muted-foreground flex items-center justify-center gap-3">
             <Link to="/privacy" target="_blank" className="hover:text-foreground underline">
