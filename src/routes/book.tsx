@@ -718,6 +718,7 @@ function PassengerPage() {
         estimated_fare: Math.round(fareBreakdown.total),
         payment_method: paymentMethod,
         payment_status: transactionId ? "paid" : "pending",
+        payment_made: transactionId ? "yes" : "no",
         status: isAdvanceBooking ? "scheduled" : "searching",
         scheduled_at: scheduledIso,
         ride_otp: otp,
@@ -732,11 +733,15 @@ function PassengerPage() {
         .select("id, reference")
         .single();
 
-      if (error && error.message && error.message.includes("payment_intent_id")) {
-        console.warn("Retrying booking insert without payment_intent_id due to schema cache:", error.message);
+      if (error && error.message && (error.message.includes("payment_intent_id") || error.message.includes("payment_made"))) {
+        console.warn("Retrying booking insert without extra fields:", error.message);
+        const safePayload: any = { ...bookingPayload };
+        if (error.message.includes("payment_made")) {
+          delete safePayload.payment_made;
+        }
         const retryResult = await supabase
           .from("bookings")
-          .insert(bookingPayload)
+          .insert(safePayload)
           .select("id, reference")
           .single();
         data = retryResult.data;
@@ -2450,19 +2455,34 @@ function Step4Confirmed({
                     image: "https://orange-taxi.com/pwa-512x512.png",
                     handler: async function (response: any) {
                       // Update booking payment method to UPI/Online
-                      await supabase
-                        .from("bookings")
-                        .update({
-                          payment_method: "upi",
-                          payment_status: "paid_online",
-                        })
-                        .eq("id", currentBooking.id);
+                      try {
+                        const { error: updErr } = await supabase
+                          .from("bookings")
+                          .update({
+                            payment_method: "upi",
+                            payment_status: "paid_online",
+                            payment_made: "yes",
+                          })
+                          .eq("id", currentBooking.id);
+                        if (updErr && updErr.message && updErr.message.includes("payment_made")) {
+                          await supabase
+                            .from("bookings")
+                            .update({
+                              payment_method: "upi",
+                              payment_status: "paid_online",
+                            })
+                            .eq("id", currentBooking.id);
+                        }
+                      } catch (err) {
+                        console.warn("Booking payment status update failed:", err);
+                      }
 
                       // Optimistically update local state
                       setCurrentBooking((prev) => ({
                         ...prev,
                         payment_method: "upi",
                         payment_status: "paid_online",
+                        payment_made: "yes",
                       }));
                       toast.success("Payment successful! The driver has been notified.");
                     },
@@ -2472,7 +2492,7 @@ function Step4Confirmed({
                   rzp.open();
                 }}
               >
-                Switch to Online Payment (Razorpay)
+                Switch to Online Payment (UPI / Card)
               </Button>
               <p className="text-center text-[10px] text-muted-foreground mt-2">
                 Pay securely via UPI / Card while your ride is in progress.
