@@ -1269,6 +1269,44 @@ function DriverConsolePage() {
 
   const currentCashHolding = Math.max(0, totalCashCollected - totalCashSubmitted);
 
+  // Monthly Ride Milestone Calculation for Company Employed Chauffeurs:
+  // 150 rides a month: 1000 extra
+  // 200 rides a month: 1500 more (cumulative 2,500)
+  // 250 rides a month: 2000 more (cumulative 4,500)
+  const now = new Date();
+  const currentMonthName = now.toLocaleString("en-IN", { month: "long" });
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const monthlyRides = recentRides.filter((r) => {
+    const timeStr = r.completed_at || r.created_at;
+    if (!timeStr) return false;
+    return new Date(timeStr) >= startOfMonth;
+  });
+  const monthlyCompletedRides = monthlyRides.length;
+
+  let monthlyBonusEarned = 0;
+  if (monthlyCompletedRides >= 250) {
+    monthlyBonusEarned = 1000 + 1500 + 2000;
+  } else if (monthlyCompletedRides >= 200) {
+    monthlyBonusEarned = 1000 + 1500;
+  } else if (monthlyCompletedRides >= 150) {
+    monthlyBonusEarned = 1000;
+  }
+
+  let nextMilestoneRides = 150;
+  let nextMilestoneReward = 1000;
+  if (monthlyCompletedRides >= 250) {
+    nextMilestoneRides = 250;
+    nextMilestoneReward = 0;
+  } else if (monthlyCompletedRides >= 200) {
+    nextMilestoneRides = 250;
+    nextMilestoneReward = 2000;
+  } else if (monthlyCompletedRides >= 150) {
+    nextMilestoneRides = 200;
+    nextMilestoneReward = 1500;
+  }
+  const ridesToNextMilestone = Math.max(0, nextMilestoneRides - monthlyCompletedRides);
+  const monthlyMilestonePercent = Math.min(100, Math.max(0, (monthlyCompletedRides / 250) * 100));
+
   async function handleSubmitUpiDeposit() {
     const amt = Number(depositAmount);
     if (!amt || amt <= 0) {
@@ -2795,7 +2833,158 @@ function DriverConsolePage() {
                 )}
               </div>
             ) : (
-              <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
+              <>
+                {/* Company Chauffeur Monthly Milestone Progress Bar Card */}
+                <div className="mb-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-background to-primary/5 p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                          Company Fleet Chauffeur
+                        </span>
+                        <span className="text-xs text-muted-foreground">• Fixed Monthly Salary</span>
+                      </div>
+                      <h3 className="mt-1 text-lg font-bold text-foreground">
+                        {currentMonthName} Ride Milestones & Bonus
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        No daily bank payout. Your fixed monthly salary and performance bonuses are credited directly on the 1st of every month.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-primary/20 bg-background/80 p-3 sm:text-right">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase">
+                        Current Month Bonus
+                      </p>
+                      <p className="text-2xl font-mono font-bold text-primary">
+                        +₹{monthlyBonusEarned.toLocaleString("en-IN")}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">Extra on Salary</p>
+                    </div>
+                  </div>
+
+                  {/* Summary count */}
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-3xl font-extrabold text-foreground font-mono">
+                        {monthlyCompletedRides}
+                      </span>
+                      <span className="ml-2 text-xs font-semibold text-muted-foreground">
+                        completed rides in {currentMonthName}
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-primary">
+                      {monthlyCompletedRides >= 250 ? (
+                        <span className="text-emerald-600 font-bold">🎉 Maximum milestone reached (+₹4,500 total bonus)</span>
+                      ) : (
+                        <span>{ridesToNextMilestone} more rides to unlock +₹{nextMilestoneReward.toLocaleString("en-IN")} bonus</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Progress Bar with Milestone Pins & X-Axis */}
+                  <div className="relative mt-4 pt-2 pb-6">
+                    {/* Track */}
+                    <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${monthlyMilestonePercent}%` }}
+                      />
+                    </div>
+
+                    {/* Milestone Marker Pins */}
+                    {/* 150 rides = 60% */}
+                    <div
+                      className="absolute top-1 -translate-x-1/2 flex flex-col items-center"
+                      style={{ left: "60%" }}
+                    >
+                      <div
+                        className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                          monthlyCompletedRides >= 150
+                            ? "bg-emerald-500 border-background text-white"
+                            : "bg-background border-muted-foreground/40 text-muted-foreground"
+                        }`}
+                      >
+                        {monthlyCompletedRides >= 150 ? <Check className="size-3" /> : <span className="size-1.5 rounded-full bg-muted-foreground/40" />}
+                      </div>
+                    </div>
+
+                    {/* 200 rides = 80% */}
+                    <div
+                      className="absolute top-1 -translate-x-1/2 flex flex-col items-center"
+                      style={{ left: "80%" }}
+                    >
+                      <div
+                        className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                          monthlyCompletedRides >= 200
+                            ? "bg-emerald-500 border-background text-white"
+                            : "bg-background border-muted-foreground/40 text-muted-foreground"
+                        }`}
+                      >
+                        {monthlyCompletedRides >= 200 ? <Check className="size-3" /> : <span className="size-1.5 rounded-full bg-muted-foreground/40" />}
+                      </div>
+                    </div>
+
+                    {/* 250 rides = 100% */}
+                    <div
+                      className="absolute top-1 -translate-x-1/2 flex flex-col items-center"
+                      style={{ left: "100%" }}
+                    >
+                      <div
+                        className={`size-5 rounded-full border-2 flex items-center justify-center ${
+                          monthlyCompletedRides >= 250
+                            ? "bg-emerald-500 border-background text-white"
+                            : "bg-background border-muted-foreground/40 text-muted-foreground"
+                        }`}
+                      >
+                        {monthlyCompletedRides >= 250 ? <Check className="size-3" /> : <span className="size-1.5 rounded-full bg-muted-foreground/40" />}
+                      </div>
+                    </div>
+
+                    {/* X-AXIS LABELS */}
+                    <div className="relative mt-2 flex justify-between text-xs text-muted-foreground font-semibold">
+                      <div className="text-left">
+                        <p>0</p>
+                        <p className="text-[10px] text-muted-foreground/70">Base</p>
+                      </div>
+
+                      <div
+                        className="absolute -translate-x-1/2 text-center"
+                        style={{ left: "60%" }}
+                      >
+                        <p className={monthlyCompletedRides >= 150 ? "text-primary font-bold" : ""}>
+                          150 Rides
+                        </p>
+                        <p className={monthlyCompletedRides >= 150 ? "text-emerald-600 font-bold text-[10px]" : "text-[10px]"}>
+                          +₹1,000
+                        </p>
+                      </div>
+
+                      <div
+                        className="absolute -translate-x-1/2 text-center"
+                        style={{ left: "80%" }}
+                      >
+                        <p className={monthlyCompletedRides >= 200 ? "text-primary font-bold" : ""}>
+                          200 Rides
+                        </p>
+                        <p className={monthlyCompletedRides >= 200 ? "text-emerald-600 font-bold text-[10px]" : "text-[10px]"}>
+                          +₹1.5k
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className={monthlyCompletedRides >= 250 ? "text-primary font-bold" : ""}>
+                          250 Rides
+                        </p>
+                        <p className={monthlyCompletedRides >= 250 ? "text-emerald-600 font-bold text-[10px]" : "text-[10px]"}>
+                          +₹2k
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-900/60 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="grid size-10 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50">
@@ -2902,6 +3091,7 @@ function DriverConsolePage() {
                   </div>
                 )}
               </div>
+              </>
             )}
 
             {/* Today's breakdown */}
