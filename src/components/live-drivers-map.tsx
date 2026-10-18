@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   APIProvider,
-  Map,
+  Map as GoogleMap,
   Marker,
   useMap,
 } from "@vis.gl/react-google-maps";
@@ -19,8 +19,14 @@ function createDriverMarkerIcon(status: "available" | "on_trip" | "offline", isS
 
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Size(size, size) : undefined,
-    anchor: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Point(size / 2, size / 2) : undefined,
+    scaledSize:
+      typeof window !== "undefined" && window.google?.maps?.Size
+        ? new window.google.maps.Size(size, size)
+        : undefined,
+    anchor:
+      typeof window !== "undefined" && window.google?.maps?.Point
+        ? new window.google.maps.Point(size / 2, size / 2)
+        : undefined,
   };
 }
 import {
@@ -112,19 +118,19 @@ export function LiveDriversMap({
 
   // Active bookings map for fast O(1) lookup
   const activeBookingsByDriver = useMemo(() => {
-    const map = new Map<string, Booking>();
+    const bookingMap: Record<string, Booking> = {};
     bookings.forEach((b) => {
       if (b.driver_id && ["accepted", "arrived", "in_progress"].includes(b.status)) {
-        map.set(b.driver_id, b);
+        bookingMap[b.driver_id] = b;
       }
     });
-    return map;
+    return bookingMap;
   }, [bookings]);
 
   // Compute status and location for each driver
   const enrichedDrivers = useMemo(() => {
     return drivers.map((d, index) => {
-      const activeRide = activeBookingsByDriver.get(d.id);
+      const activeRide = activeBookingsByDriver[d.id];
       let derivedStatus: "available" | "on_trip" | "offline" = "offline";
 
       if (d.is_online) {
@@ -411,7 +417,7 @@ export function LiveDriversMap({
         <div className="lg:col-span-8 flex flex-col gap-3">
           <div className="relative w-full rounded-xl border border-border overflow-hidden bg-card h-[620px] shadow-sm">
             <APIProvider apiKey={apiKey} libraries={["places", "geometry"]}>
-              <Map
+              <GoogleMap
                 id="orange-taxi-admin-live-radar"
                 defaultCenter={defaultCenter}
                 defaultZoom={13}
@@ -443,7 +449,7 @@ export function LiveDriversMap({
                     />
                   );
                 })}
-              </Map>
+              </GoogleMap>
             </APIProvider>
 
             {/* Floating Live Legend Overlay */}
