@@ -463,7 +463,7 @@ function LoginPage() {
       setResendCooldown(30);
       setOtpDigits("");
       setMode("verify_otp");
-      toast.success("Verification code sent to your email! You can also click the confirmation link in the email.");
+      toast.success("We have sent a 6-digit verification code to your email! You can also click the confirmation link in the email.");
       setSubmitting(false);
       return;
     }
@@ -479,8 +479,8 @@ function LoginPage() {
       return;
     }
     const cleanToken = otpDigits.trim();
-    if (cleanToken.length < 4 || cleanToken.length > 8) {
-      toast.error("Please enter the complete verification code (4 or 6 digits).");
+    if (cleanToken.length !== 6) {
+      toast.error("Please enter the complete 6-digit verification code.");
       return;
     }
     setSubmitting(true);
@@ -669,7 +669,7 @@ function LoginPage() {
                   </div>
                   <h3 className="mt-3 text-xl font-bold tracking-tight">Verify Your Email</h3>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    We sent a verification code to{" "}
+                    We sent a 6-digit verification code to{" "}
                     <span className="font-semibold text-foreground">{otpEmail || "your email"}</span>. Enter the code below or click the confirmation link in your email.
                   </p>
                 </div>
@@ -747,7 +747,7 @@ function LoginPage() {
                     type="submit"
                     className="w-full"
                     size="lg"
-                    disabled={submitting || otpDigits.length < 4 || otpLockoutRemaining > 0}
+                    disabled={submitting || otpDigits.length !== 6 || otpLockoutRemaining > 0}
                   >
                     {submitting ? (
                       <Loader2 className="size-4 animate-spin" />
