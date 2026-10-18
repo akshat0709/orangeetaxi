@@ -16,20 +16,26 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Download,
   FileSpreadsheet,
+  Filter,
   LayoutGrid,
   Loader2,
+  Maximize2,
   MoreHorizontal,
   ParkingSquare,
   Phone,
   PhoneCall,
   MessageSquare,
   RefreshCw,
+  RotateCw,
   Search,
   Users,
   Wallet,
   X,
   Zap,
+  ZoomIn,
+  ZoomOut,
   Building2,
   Handshake,
   Percent,
@@ -212,6 +218,164 @@ function AdminPage() {
   const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
   const [tabLoading, setTabLoading] = useState(false);
   const [hubSearch, setHubSearch] = useState("");
+  const [bookingSearch, setBookingSearch] = useState("");
+  const [bookingDateFilter, setBookingDateFilter] = useState("all");
+  const [appSearch, setAppSearch] = useState("");
+  const [appStatusFilter, setAppStatusFilter] = useState("all");
+  const [autoRefreshRate, setAutoRefreshRate] = useState(0); // 0 = off, 15, 30, 60
+  const [autoRefreshCountdown, setAutoRefreshCountdown] = useState(0);
+  const [lightboxDoc, setLightboxDoc] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    app?: Application;
+    zoom: number;
+    rotation: number;
+  }>({
+    isOpen: false,
+    title: "",
+    url: "",
+    app: undefined,
+    zoom: 1,
+    rotation: 0,
+  });
+
+  function openLightbox(title: string, url: string, app?: Application) {
+    setLightboxDoc({
+      isOpen: true,
+      title,
+      url,
+      app,
+      zoom: 1,
+      rotation: 0,
+    });
+  }
+
+  function closeLightbox() {
+    setLightboxDoc((prev) => ({ ...prev, isOpen: false }));
+  }
+
+  function matchesDateFilter(dateStr?: string | null, filter = "all"): boolean {
+    if (filter === "all" || !dateStr) return true;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return true;
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (filter === "today") {
+      return d >= startOfToday;
+    }
+    if (filter === "yesterday") {
+      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      return d >= startOfYesterday && d < startOfToday;
+    }
+    if (filter === "week") {
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      return d >= startOfWeek;
+    }
+    if (filter === "month") {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return d >= startOfMonth;
+    }
+    return true;
+  }
+
+  function exportToCsv(filename: string, headers: string[], rows: (string | number)[][]) {
+    const escapeCsv = (val: string | number) => {
+      const str = String(val ?? "");
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvContent = [
+      headers.map(escapeCsv).join(","),
+      ...rows.map((row) => row.map(escapeCsv).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && lightboxDoc.isOpen) {
+        closeLightbox();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lightboxDoc.isOpen]);
+
+  useEffect(() => {
+    if (autoRefreshRate === 0) return;
+    setAutoRefreshCountdown(autoRefreshRate);
+
+    const interval = setInterval(() => {
+      setAutoRefreshCountdown((prev) => {
+        if (prev <= 1) {
+          loadCurrentTab(true);
+          return autoRefreshRate;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefreshRate, activeTab]);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    const bookingsCh = supabase
+      .channel("admin-rt-bookings")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        (payload) => {
+          if (activeTab === "bookings") {
+            fetchBookings(true);
+          }
+          fetchSummaryCounts();
+          if (payload.eventType === "INSERT") {
+            toast.info(`New Ride Request: ${(payload.new as any)?.reference || ""}`);
+          }
+        },
+      )
+      .subscribe();
+
+    const appsCh = supabase
+      .channel("admin-rt-apps")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "driver_applications" },
+        (payload) => {
+          if (activeTab === "applications") {
+            fetchApplications(true);
+          }
+          fetchSummaryCounts();
+          if (payload.eventType === "INSERT") {
+            toast.info(`New Driver Application: ${(payload.new as any)?.full_name || ""}`);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingsCh);
+      supabase.removeChannel(appsCh);
+    };
+  }, [activeTab, role]);
+
   const [summaryCounts, setSummaryCounts] = useState({
     totalBookings: 0,
     activeBookings: 0,
@@ -869,6 +1033,116 @@ function AdminPage() {
     );
   });
 
+  const filteredBookings = bookings.filter((b) => {
+    if (bookingStatusFilter === "scheduled" && b.status !== "scheduled") return false;
+    if (
+      bookingStatusFilter === "active" &&
+      !["searching", "accepted", "arrived", "in_progress"].includes(b.status)
+    )
+      return false;
+    if (bookingStatusFilter === "completed" && b.status !== "completed") return false;
+    if (bookingStatusFilter === "cancelled" && b.status !== "cancelled") return false;
+
+    if (!matchesDateFilter(b.created_at, bookingDateFilter)) return false;
+
+    if (!bookingSearch.trim()) return true;
+    const q = bookingSearch.toLowerCase();
+    const dr = drivers.find((d) => d.id === b.driver_id);
+    return (
+      b.reference?.toLowerCase().includes(q) ||
+      b.ride_otp?.toLowerCase().includes(q) ||
+      b.pickup_area?.toLowerCase().includes(q) ||
+      b.drop_area?.toLowerCase().includes(q) ||
+      b.vehicle_name?.toLowerCase().includes(q) ||
+      dr?.full_name?.toLowerCase().includes(q) ||
+      dr?.vehicle_number?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredApplications = applications.filter((app) => {
+    if (appStatusFilter !== "all" && app.status !== appStatusFilter) return false;
+    if (!appSearch.trim()) return true;
+    const q = appSearch.toLowerCase();
+    return (
+      app.full_name?.toLowerCase().includes(q) ||
+      app.phone?.toLowerCase().includes(q) ||
+      app.email?.toLowerCase().includes(q) ||
+      app.city?.toLowerCase().includes(q) ||
+      app.licence_number?.toLowerCase().includes(q) ||
+      app.aadhaar_number?.toLowerCase().includes(q) ||
+      app.vehicle_number?.toLowerCase().includes(q)
+    );
+  });
+
+  function exportBookingsCsv() {
+    const headers = [
+      "Booking Reference",
+      "Created Date & Time",
+      "Status",
+      "Pickup Address",
+      "Drop Address",
+      "Vehicle Type",
+      "Estimated Fare (INR)",
+      "Final Fare (INR)",
+      "Payment Method",
+      "Ride OTP",
+      "Assigned Driver",
+      "Driver Vehicle Plate",
+    ];
+    const rows = filteredBookings.map((b) => {
+      const dr = drivers.find((d) => d.id === b.driver_id);
+      return [
+        b.reference,
+        b.created_at ? new Date(b.created_at).toLocaleString("en-IN") : "",
+        b.status,
+        b.pickup_area,
+        b.drop_area,
+        b.vehicle_name,
+        Math.round(b.estimated_fare || 0),
+        Math.round(b.final_fare ?? b.estimated_fare ?? 0),
+        b.payment_method || "cash",
+        b.ride_otp || "",
+        dr?.full_name || (b.driver_id ? "Assigned" : "Unassigned"),
+        dr?.vehicle_number || "",
+      ];
+    });
+    exportToCsv("orange_bookings_report", headers, rows);
+    toast.success(`Exported ${rows.length} bookings to CSV`);
+  }
+
+  function exportApplicationsCsv() {
+    const headers = [
+      "Full Name",
+      "Phone",
+      "Email",
+      "City",
+      "Licence Number",
+      "Aadhaar Number",
+      "Experience (Years)",
+      "Driver Model",
+      "Vehicle Model",
+      "Vehicle Number",
+      "Status",
+      "Applied Date",
+    ];
+    const rows = filteredApplications.map((a) => [
+      a.full_name,
+      a.phone,
+      a.email,
+      a.city,
+      a.licence_number,
+      a.aadhaar_number || "N/A",
+      a.experience_years,
+      a.owns_vehicle || a.driver_type === "partner" ? "Partner Owner-Operator" : "Company Driver",
+      a.vehicle_model || "",
+      a.vehicle_number || "",
+      a.status,
+      a.created_at ? new Date(a.created_at).toLocaleDateString("en-IN") : "",
+    ]);
+    exportToCsv("orange_driver_applications", headers, rows);
+    toast.success(`Exported ${rows.length} applications to CSV`);
+  }
+
   return (
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
@@ -1058,6 +1332,37 @@ function AdminPage() {
                     <SelectItem value="enquiries">🏢 Corporate Enquiries</SelectItem>
                   </SelectContent>
                 </Select>
+                {/* Live Sync Status & Auto Refresh */}
+                <div className="flex items-center gap-1.5 bg-muted/60 px-2 py-1 rounded-lg border border-border">
+                  <span className="relative flex size-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Live</span>
+
+                  <div className="h-3 w-px bg-border mx-0.5" />
+
+                  <Select
+                    value={String(autoRefreshRate)}
+                    onValueChange={(val) => setAutoRefreshRate(Number(val))}
+                  >
+                    <SelectTrigger className="h-6 w-24 text-[10px] font-semibold border-0 bg-transparent shadow-none px-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0" className="text-xs">Auto: Off</SelectItem>
+                      <SelectItem value="15" className="text-xs">Auto: 15s</SelectItem>
+                      <SelectItem value="30" className="text-xs">Auto: 30s</SelectItem>
+                      <SelectItem value="60" className="text-xs">Auto: 60s</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {autoRefreshRate > 0 && (
+                    <span className="text-[10px] font-mono font-bold text-muted-foreground mr-1">
+                      {autoRefreshCountdown}s
+                    </span>
+                  )}
+                </div>
+
                 <Button
                   size="sm"
                   variant="outline"
@@ -1115,15 +1420,69 @@ function AdminPage() {
           {/* BOOKINGS */}
           <TabsContent value="bookings">
             <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border px-4 py-3 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-base font-semibold text-foreground">All Bookings</h2>
+              <div className="border-b border-border p-4 flex flex-col gap-3.5">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-base font-bold text-foreground">All Bookings</h2>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      ({filteredBookings.length} of {bookings.length})
+                    </span>
+                  </div>
+
+                  {/* Actions & Omni-Search */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search ref, OTP, customer, route..."
+                        value={bookingSearch}
+                        onChange={(e) => setBookingSearch(e.target.value)}
+                        className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      {bookingSearch && (
+                        <button
+                          onClick={() => setBookingSearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={exportBookingsCsv}
+                      className="h-8 px-2.5 text-xs font-semibold gap-1.5 shrink-0"
+                      title="Export filtered bookings to CSV"
+                    >
+                      <Download className="size-3.5 text-primary" />
+                      <span>Export CSV</span>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => fetchBookings(true)}
+                      className="h-8 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5 shrink-0"
+                      title="Reload bookings data"
+                    >
+                      <RefreshCw className={`size-3.5 ${tabLoading ? "animate-spin" : ""}`} />
+                      <span className="hidden sm:inline">Refresh</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Filters Row: Status + Date */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 border-t border-border/60">
+                  {/* Status Pills */}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {[
                       { id: "all", label: "All", count: bookings.length },
                       {
                         id: "scheduled",
-                        label: "Scheduled Advance",
+                        label: "Scheduled",
                         count: bookings.filter((b) => b.status === "scheduled").length,
                       },
                       {
@@ -1149,12 +1508,12 @@ function AdminPage() {
                         type="button"
                         size="sm"
                         variant={bookingStatusFilter === f.id ? "default" : "outline"}
-                        className="h-8 px-2.5 text-xs font-semibold gap-1.5"
+                        className="h-7 px-2 text-xs font-semibold gap-1.5"
                         onClick={() => setBookingStatusFilter(f.id)}
                       >
                         <span>{f.label}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-medium ${
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
                             bookingStatusFilter === f.id
                               ? "bg-primary-foreground/20 text-primary-foreground"
                               : "bg-muted text-muted-foreground"
@@ -1164,20 +1523,37 @@ function AdminPage() {
                         </span>
                       </Button>
                     ))}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={loadAll}
-                      className="h-8 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5 ml-1"
-                      title="Reload bookings data"
-                    >
-                      <RefreshCw className="size-3.5" />
-                      <span>Refresh</span>
-                    </Button>
+                  </div>
+
+                  {/* Pre-set Quick Date Filters */}
+                  <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border">
+                    <span className="text-[10px] font-bold text-muted-foreground px-2 flex items-center gap-1">
+                      <Calendar className="size-3" /> Date:
+                    </span>
+                    {[
+                      { id: "all", label: "All Time" },
+                      { id: "today", label: "Today" },
+                      { id: "yesterday", label: "Yesterday" },
+                      { id: "week", label: "This Week" },
+                      { id: "month", label: "This Month" },
+                    ].map((df) => (
+                      <button
+                        key={df.id}
+                        onClick={() => setBookingDateFilter(df.id)}
+                        className={`h-6 px-2 rounded-md text-[10px] font-bold transition-all ${
+                          bookingDateFilter === df.id
+                            ? "bg-background text-foreground shadow-xs font-extrabold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {df.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="overflow-x-auto hidden lg:block">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
@@ -1201,18 +1577,7 @@ function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {bookings
-                      .filter((b) => {
-                        if (bookingStatusFilter === "scheduled") return b.status === "scheduled";
-                        if (bookingStatusFilter === "active")
-                          return ["searching", "accepted", "arrived", "in_progress"].includes(
-                            b.status,
-                          );
-                        if (bookingStatusFilter === "completed") return b.status === "completed";
-                        if (bookingStatusFilter === "cancelled") return b.status === "cancelled";
-                        return true;
-                      })
-                      .map((b) => (
+                    {filteredBookings.map((b) => (
                         <tr key={b.id} className="hover:bg-muted/30">
                           <td className="px-4 py-3.5 align-middle font-mono text-xs font-bold">{b.reference}</td>
                           <td className="px-4 py-3.5 align-middle text-xs max-w-[280px]">
@@ -1390,7 +1755,7 @@ function AdminPage() {
                                     })
                                     .eq("id", b.id);
                                   toast.success("Booking cancelled");
-                                  loadAll();
+                                  fetchBookings(true);
                                 }}
                               >
                                 Cancel
@@ -1401,8 +1766,112 @@ function AdminPage() {
                       ))}
                   </tbody>
                 </table>
-                {bookings.length === 0 && (
-                  <p className="p-8 text-center text-sm text-muted-foreground">No bookings yet.</p>
+                {filteredBookings.length === 0 && (
+                  <p className="p-8 text-center text-sm text-muted-foreground">No bookings found matching filters.</p>
+                )}
+              </div>
+
+              {/* Mobile / Tablet Responsive Ride Cards */}
+              <div className="lg:hidden divide-y divide-border">
+                {filteredBookings.length === 0 ? (
+                  <p className="p-8 text-center text-sm text-muted-foreground">No bookings found matching filters.</p>
+                ) : (
+                  filteredBookings.map((b) => {
+                    const dr = drivers.find((d) => d.id === b.driver_id);
+                    return (
+                      <div key={b.id} className="p-4 space-y-3 bg-card/40 hover:bg-muted/20 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-foreground">{b.reference}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {b.status.replace("_", " ")}
+                            </span>
+                          </div>
+                          <span className="font-bold text-sm text-primary font-mono">
+                            ₹{Math.round(b.estimated_fare)}
+                          </span>
+                        </div>
+
+                        {/* Route & Time */}
+                        <div className="space-y-1.5 text-xs bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                          <div className="flex items-start gap-2">
+                            <span className="size-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                            <span className="text-muted-foreground leading-snug">{b.pickup_area}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="size-2 rounded-full bg-primary mt-1 shrink-0" />
+                            <span className="text-foreground font-medium leading-snug">{b.drop_area}</span>
+                          </div>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="flex items-center justify-between text-xs pt-1">
+                          <span className="text-muted-foreground font-medium">{b.vehicle_name}</span>
+                          {b.ride_otp && (
+                            <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 text-xs">
+                              OTP: {b.ride_otp}
+                            </span>
+                          )}
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {b.created_at ? new Date(b.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+
+                        {/* Driver & Quick Actions */}
+                        <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            {b.status === "searching" || (b.status === "scheduled" && !b.driver_id) ? (
+                              <Select onValueChange={(v) => assignDriver(b.id, v)}>
+                                <SelectTrigger className="h-7 w-full text-xs">
+                                  <SelectValue placeholder={b.status === "scheduled" ? "Pre-assign Chauffeur" : "Assign Chauffeur"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {drivers.map((d) => (
+                                    <SelectItem key={d.id} value={d.id} className="text-xs">
+                                      {d.full_name} ({d.vehicle_number || "No Plate"})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">Chauffeur: </span>
+                                <strong className="text-foreground">{dr?.full_name || "Assigned"}</strong>
+                                {dr?.vehicle_number && (
+                                  <span className="ml-1 font-mono text-[11px] text-muted-foreground">({dr.vehicle_number})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {["searching", "scheduled", "accepted", "arrived", "in_progress"].includes(b.status) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                              onClick={async () => {
+                                await supabase
+                                  .from("bookings")
+                                  .update({
+                                    status: "cancelled",
+                                    cancelled_at: new Date().toISOString(),
+                                  })
+                                  .eq("id", b.id);
+                                toast.success("Booking cancelled");
+                                fetchBookings(true);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -1411,13 +1880,77 @@ function AdminPage() {
           {/* DRIVER APPLICATIONS */}
           <TabsContent value="applications">
             <div className="space-y-4">
-              {applications.length === 0 && (
+              {/* Applications Control Bar: Omni-Search, Status Filter Pills & CSV Export */}
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+                {/* Omni Search */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search applicant name, phone, email, DL, Aadhaar, vehicle..."
+                    value={appSearch}
+                    onChange={(e) => setAppSearch(e.target.value)}
+                    className="pl-9 pr-8 text-xs h-9"
+                  />
+                  {appSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setAppSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Status Filter Pills & Export */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center rounded-lg border border-border bg-muted/40 p-1 text-xs font-medium">
+                    {[
+                      { key: "all", label: "All", count: applications.length },
+                      { key: "new", label: "New", count: applications.filter((a) => a.status === "new").length },
+                      { key: "approved", label: "Approved", count: applications.filter((a) => a.status === "approved").length },
+                      { key: "rejected", label: "Rejected", count: applications.filter((a) => a.status === "rejected").length },
+                    ].map((pill) => (
+                      <button
+                        key={pill.key}
+                        type="button"
+                        onClick={() => setAppStatusFilter(pill.key)}
+                        className={`rounded-md px-2.5 py-1 transition-colors ${
+                          appStatusFilter === pill.key
+                            ? "bg-background font-bold text-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {pill.label} ({pill.count})
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportApplicationsCsv}
+                    className="h-9 gap-1.5 text-xs font-semibold"
+                    title="Export filtered driver applications to CSV"
+                  >
+                    <Download className="size-3.5" />
+                    <span>Export CSV</span>
+                  </Button>
+                </div>
+              </div>
+
+              {filteredApplications.length === 0 && (
                 <EmptyState
-                  title="No applications yet"
-                  text="Driver applications from /drive will appear here."
+                  title={applications.length === 0 ? "No applications yet" : "No matching applications"}
+                  text={
+                    applications.length === 0
+                      ? "Driver applications from /drive will appear here."
+                      : "Try adjusting your search query or status filter."
+                  }
                 />
               )}
-              {applications.map((app) => {
+              {filteredApplications.map((app) => {
                 const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
 
                 return (
@@ -1428,18 +1961,31 @@ function AdminPage() {
                         {/* Driver Mandatory Photo Preview */}
                         <div className="relative shrink-0">
                           {app.photo_url ? (
-                            <img
-                              src={app.photo_url}
-                              alt={app.full_name}
-                              className="size-16 rounded-xl object-cover border-2 border-primary/40 shadow-sm"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const s = sanitizeDocumentUrl(app.photo_url);
+                                if (s) openLightbox(`Driver Photo — ${app.full_name}`, s, app);
+                              }}
+                              className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
+                              title="Click to inspect photo in lightbox"
+                            >
+                              <img
+                                src={app.photo_url}
+                                alt={app.full_name}
+                                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <ZoomIn className="size-4 text-white" />
+                              </div>
+                            </button>
                           ) : (
                             <div className="size-16 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl">
                               {app.full_name.charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span
-                            className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold"
+                            className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold pointer-events-none"
                             title="Submitted Driver Photo"
                           >
                             ✓
@@ -1530,26 +2076,60 @@ function AdminPage() {
                               <div className="mt-3 flex gap-4">
                                 {safePhoto && (
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-xs font-semibold">Photo</span>
-                                    <a href={safePhoto} target="_blank" rel="noreferrer noopener">
+                                    <div className="flex items-center justify-between text-xs font-semibold gap-2">
+                                      <span>Photo</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => openLightbox(`Driver Photo — ${app.full_name}`, safePhoto, app)}
+                                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                      >
+                                        <Maximize2 className="size-3" /> Zoom
+                                      </button>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => openLightbox(`Driver Photo — ${app.full_name}`, safePhoto, app)}
+                                      className="group relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
+                                      title="Open in KYC Lightbox"
+                                    >
                                       <img
                                         src={safePhoto}
                                         alt="Photo"
-                                        className="h-20 w-20 rounded-md object-cover border"
+                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                                       />
-                                    </a>
+                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ZoomIn className="size-4 text-white" />
+                                      </div>
+                                    </button>
                                   </div>
                                 )}
                                 {safeDl && (
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-xs font-semibold">Driving Licence</span>
-                                    <a href={safeDl} target="_blank" rel="noreferrer noopener">
+                                    <div className="flex items-center justify-between text-xs font-semibold gap-2">
+                                      <span>Driving Licence</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => openLightbox(`Driving Licence — ${app.full_name} (${app.licence_number})`, safeDl, app)}
+                                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                      >
+                                        <Maximize2 className="size-3" /> Inspect
+                                      </button>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => openLightbox(`Driving Licence — ${app.full_name} (${app.licence_number})`, safeDl, app)}
+                                      className="group relative h-20 w-32 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
+                                      title="Open in KYC Lightbox"
+                                    >
                                       <img
                                         src={safeDl}
                                         alt="DL"
-                                        className="h-20 w-32 rounded-md object-cover border"
+                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                                       />
-                                    </a>
+                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ZoomIn className="size-4 text-white" />
+                                      </div>
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -1743,6 +2323,262 @@ function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Feature 3: KYC Document Lightbox Modal */}
+      {lightboxDoc.isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-white/10 bg-zinc-950 text-white shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Lightbox Header Bar */}
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-zinc-900/90">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileSpreadsheet className="size-4 text-primary shrink-0" />
+                <h3 className="text-sm font-bold text-white truncate">{lightboxDoc.title}</h3>
+              </div>
+
+              {/* Lightbox View Controls */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center rounded-lg bg-zinc-800/80 p-1 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLightboxDoc((prev) => ({
+                        ...prev,
+                        zoom: Math.max(0.5, Number((prev.zoom - 0.25).toFixed(2))),
+                      }))
+                    }
+                    className="p-1.5 hover:bg-zinc-700 rounded text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    title="Zoom Out (-25%)"
+                  >
+                    <ZoomOut className="size-4" />
+                  </button>
+                  <span className="px-2 text-xs font-mono font-medium text-zinc-300 min-w-[44px] text-center">
+                    {Math.round(lightboxDoc.zoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLightboxDoc((prev) => ({
+                        ...prev,
+                        zoom: Math.min(3, Number((prev.zoom + 0.25).toFixed(2))),
+                      }))
+                    }
+                    className="p-1.5 hover:bg-zinc-700 rounded text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                    title="Zoom In (+25%)"
+                  >
+                    <ZoomIn className="size-4" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxDoc((prev) => ({
+                      ...prev,
+                      rotation: (prev.rotation + 90) % 360,
+                    }))
+                  }
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title="Rotate 90 degrees clockwise"
+                >
+                  <RotateCw className="size-3.5" />
+                  <span className="hidden sm:inline">Rotate 90°</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxDoc((prev) => ({
+                      ...prev,
+                      zoom: 1,
+                      rotation: 0,
+                    }))
+                  }
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title="Reset Zoom & Rotation"
+                >
+                  Reset
+                </button>
+
+                <a
+                  href={lightboxDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 border border-white/10 text-zinc-300 hover:text-white transition-colors"
+                  title="Open Raw Original in New Tab"
+                >
+                  <Maximize2 className="size-4" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={closeLightbox}
+                  className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 hover:text-white transition-colors ml-1 cursor-pointer"
+                  title="Close (Esc)"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Lightbox Body: Document Viewer & Applicant Inspector Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 flex-1 min-h-0 overflow-hidden bg-zinc-950">
+              {/* Document Display Area */}
+              <div className="lg:col-span-2 relative flex items-center justify-center p-4 bg-zinc-900/50 overflow-auto min-h-[350px] max-h-[60vh] lg:max-h-[75vh]">
+                <img
+                  src={lightboxDoc.url}
+                  alt={lightboxDoc.title}
+                  style={{
+                    transform: `scale(${lightboxDoc.zoom}) rotate(${lightboxDoc.rotation}deg)`,
+                    transition: "transform 0.2s cubic-bezier(0.2, 0, 0, 1)",
+                    maxHeight: "85%",
+                    maxWidth: "85%",
+                  }}
+                  className="rounded-lg object-contain shadow-2xl select-none"
+                />
+              </div>
+
+              {/* Inspector Panel */}
+              <div className="border-t lg:border-t-0 lg:border-l border-white/10 p-4 sm:p-5 flex flex-col justify-between overflow-y-auto max-h-[35vh] lg:max-h-[75vh] bg-zinc-900/80">
+                {lightboxDoc.app ? (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                            STATUS_BADGE[lightboxDoc.app.status] ?? "bg-zinc-800 text-zinc-300"
+                          }`}
+                        >
+                          {lightboxDoc.app.status.toUpperCase()}
+                        </span>
+                        <span className="text-xs text-zinc-400">
+                          Applied: {new Date(lightboxDoc.app.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h4 className="mt-2 text-lg font-bold text-white">{lightboxDoc.app.full_name}</h4>
+                      <p className="text-xs text-primary font-medium">
+                        {lightboxDoc.app.owns_vehicle || lightboxDoc.app.driver_type === "partner"
+                          ? "Partner Owner-Operator"
+                          : "Company Fleet Chauffeur"}
+                      </p>
+                    </div>
+
+                    {/* Contact & Verification Grid */}
+                    <div className="rounded-xl bg-zinc-800/60 border border-white/5 p-3 space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Mobile Phone:</span>
+                        <span className="font-mono text-zinc-200">{lightboxDoc.app.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Email:</span>
+                        <span className="text-zinc-200 truncate max-w-[170px]" title={lightboxDoc.app.email}>
+                          {lightboxDoc.app.email}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">City / Base:</span>
+                        <span className="text-zinc-200">{lightboxDoc.app.city}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Driving Licence:</span>
+                        <span className="font-mono font-bold text-primary">{lightboxDoc.app.licence_number}</span>
+                      </div>
+                      {lightboxDoc.app.aadhaar_number && (
+                        <div className="flex justify-between">
+                          <span className="text-zinc-400">Aadhaar (UIDAI):</span>
+                          <span className="font-mono text-zinc-200">{lightboxDoc.app.aadhaar_number}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Experience:</span>
+                        <span className="text-zinc-200">{lightboxDoc.app.experience_years} years</span>
+                      </div>
+                      {lightboxDoc.app.vehicle_number && (
+                        <div className="flex justify-between">
+                          <span className="text-zinc-400">Vehicle Reg:</span>
+                          <span className="font-mono font-bold text-emerald-400 uppercase">
+                            {lightboxDoc.app.vehicle_number}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Direct Phone / WhatsApp Connect */}
+                    {lightboxDoc.app.phone && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <a
+                          href={`tel:${lightboxDoc.app.phone.replace(/\s+/g, "")}`}
+                          className="inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-white/10"
+                        >
+                          <PhoneCall className="size-3.5 text-emerald-400" />
+                          <span>Call Chauffeur</span>
+                        </a>
+                        <a
+                          href={`https://api.whatsapp.com/send?phone=${lightboxDoc.app.phone.replace(/\D/g, "")}&text=${encodeURIComponent(
+                            `Hello ${lightboxDoc.app.full_name}, this is Orange Taxi Fleet Operations regarding your verification documents.`,
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-1.5 h-8 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-xs font-semibold text-emerald-300 border border-emerald-500/30"
+                        >
+                          <MessageSquare className="size-3.5" />
+                          <span>WhatsApp</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* One-Click Approval / Rejection in Inspector */}
+                    {lightboxDoc.app.status === "new" ? (
+                      <div className="pt-2 border-t border-white/10 flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1 text-xs"
+                          onClick={() => {
+                            updateApplicationStatus(lightboxDoc.app!.id, "rejected");
+                            closeLightbox();
+                          }}
+                        >
+                          <X className="size-3.5" /> Reject KYC
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
+                          onClick={() => {
+                            updateApplicationStatus(
+                              lightboxDoc.app!.id,
+                              "approved",
+                              lightboxDoc.app!.email,
+                              lightboxDoc.app,
+                            );
+                            closeLightbox();
+                          }}
+                        >
+                          <CheckCircle className="size-3.5" /> Approve KYC
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-zinc-800/40 p-2.5 text-center text-xs text-zinc-400">
+                        Application has been marked as{" "}
+                        <strong className="text-zinc-200 uppercase">{lightboxDoc.app.status}</strong>.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center text-zinc-400 text-xs">
+                    <p>Single Document Lightbox</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
