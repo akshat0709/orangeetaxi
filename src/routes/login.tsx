@@ -37,6 +37,7 @@ const signUpSchema = z.object({
   phone: z.string().min(7, "Enter a valid phone number"),
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  role: z.enum(["customer", "driver"]).default("customer"),
   agreePrivacy: z.boolean().refine((val) => val === true, {
     message: "You must review and agree to the Privacy Policy to create an account",
   }),
@@ -80,7 +81,12 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
-  const signUpForm = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema) });
+  const signUpForm = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      role: "customer",
+    },
+  });
   const forgotForm = useForm<ForgotValues>({ resolver: zodResolver(forgotSchema) });
   const resetForm = useForm<ResetValues>({ resolver: zodResolver(resetSchema) });
 
@@ -199,7 +205,13 @@ function LoginPage() {
         const search = typeof window !== "undefined" ? window.location.search || "" : "";
         if (hash.includes("type=signup") || search.includes("type=signup") || mode === "verify_otp") {
           toast.success("Email verified successfully! Welcome to Orange Taxi.");
-          const dest = redirect ?? "/book";
+          let role = session.user.user_metadata?.role;
+          if (!role) {
+            try {
+              role = localStorage.getItem("@orange_signup_role") || "customer";
+            } catch {}
+          }
+          const dest = redirect ?? (role === "driver" ? "/drive#join" : "/book");
           navigate({ to: dest as any });
         }
       }
@@ -215,7 +227,14 @@ function LoginPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             toast.success("Email verified successfully! Welcome to Orange Taxi.");
-            navigate({ to: (redirect ?? "/book") as any });
+            let role = session.user.user_metadata?.role;
+            if (!role) {
+              try {
+                role = localStorage.getItem("@orange_signup_role") || "customer";
+              } catch {}
+            }
+            const dest = redirect ?? (role === "driver" ? "/drive#join" : "/book");
+            navigate({ to: dest as any });
           }
         });
       }
@@ -427,6 +446,9 @@ function LoginPage() {
     setSubmitting(true);
     const cleanPhone = (values.phone || "").trim();
     const consentTimestamp = new Date().toISOString();
+    try {
+      localStorage.setItem("@orange_signup_role", values.role);
+    } catch {}
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -434,7 +456,7 @@ function LoginPage() {
         data: {
           full_name: values.fullName,
           phone: cleanPhone,
-          role: "customer",
+          role: values.role,
           consent_privacy_policy_at: consentTimestamp,
           consent_version: "2.4",
         },
@@ -453,9 +475,20 @@ function LoginPage() {
           id: data.user.id,
           full_name: values.fullName,
           phone: cleanPhone,
+          role: values.role,
           updated_at: consentTimestamp,
         });
       } catch (e) {}
+
+      // 2. If registering as driver, insert role in user_roles
+      if (values.role === "driver") {
+        try {
+          await supabase.from("user_roles").upsert(
+            { user_id: data.user.id, role: "driver" },
+            { onConflict: "user_id,role" }
+          );
+        } catch (e) {}
+      }
     }
 
     if (data.user && !data.session) {
@@ -468,7 +501,7 @@ function LoginPage() {
       return;
     }
     toast.success("Account created! Welcome to Orange Taxi.");
-    const destination = redirect ?? (values.role === "driver" ? "/driver-console" : "/book");
+    const destination = redirect ?? (values.role === "driver" ? "/drive#join" : "/book");
     navigate({ to: destination as any });
   }
 
@@ -531,8 +564,13 @@ function LoginPage() {
         localStorage.removeItem(OTP_LOCKOUT_KEY);
       } catch {}
 
+      let signupRole = "customer";
+      try {
+        signupRole = localStorage.getItem("@orange_signup_role") || "customer";
+      } catch {}
+
       toast.success("Email verified successfully! Welcome to Orange Taxi.");
-      const destination = redirect ?? "/book";
+      const destination = redirect ?? (signupRole === "driver" ? "/drive#join" : "/book");
       navigate({ to: destination as any });
     } catch (err: any) {
       toast.error(err.message || "Failed to verify code.");
@@ -996,12 +1034,45 @@ function LoginPage() {
               </form>
             ) : (
               <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="mt-8 space-y-5">
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-center justify-between">
-                  <span>Looking to drive for Orange?</span>
-                  <Link to="/drive" className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80">
-                    Apply on Driver Portal &rarr;
-                  </Link>
+                <div className="grid grid-cols-2 gap-3 pb-1">
+                  <label
+                    className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold transition-all ${
+                      signUpForm.watch("role") === "customer"
+                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      value="customer"
+                      className="sr-only"
+                      {...signUpForm.register("role")}
+                    />
+                    <span>Ride with Orange</span>
+                  </label>
+
+                  <label
+                    className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border p-3 text-sm font-semibold transition-all ${
+                      signUpForm.watch("role") === "driver"
+                        ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/30"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      value="driver"
+                      className="sr-only"
+                      {...signUpForm.register("role")}
+                    />
+                    <span>Drive for Orange</span>
+                  </label>
                 </div>
+
+                {signUpForm.watch("role") === "driver" && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground leading-relaxed">
+                    🚕 <strong>Chauffeur Registration:</strong> Create your account first, then you will be redirected to complete your driver application with your driving licence.
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">

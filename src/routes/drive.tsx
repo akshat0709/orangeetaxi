@@ -23,7 +23,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -535,6 +535,25 @@ function DriverApplicationForm() {
       vehicle_year: "2025",
     },
   });
+
+  // Prepopulate form if driver already created an account and is logged in
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        if (user.email && !form.getValues("email")) {
+          form.setValue("email", user.email);
+        }
+        const metaName = user.user_metadata?.full_name;
+        if (metaName && !form.getValues("full_name")) {
+          form.setValue("full_name", metaName);
+        }
+        const metaPhone = user.user_metadata?.phone;
+        if (metaPhone && !form.getValues("phone")) {
+          form.setValue("phone", metaPhone);
+        }
+      }
+    });
+  }, [form]);
 
   const ownsVehicle = form.watch("owns_vehicle");
   const driverType = form.watch("driver_type");
