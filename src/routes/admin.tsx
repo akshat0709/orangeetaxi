@@ -211,13 +211,26 @@ const STATUS_BADGE: Record<string, string> = {
 function AdminPage() {
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch();
 
+  const [activeTab, setActiveTab] = useState(() => search?.tab || "hub");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({});
   const [tabLoading, setTabLoading] = useState(false);
+  const [summaryCounts, setSummaryCounts] = useState({
+    totalBookings: 0,
+    activeBookings: 0,
+    completedBookings: 0,
+    totalRevenue: 0,
+    onlineDrivers: 0,
+    totalDrivers: 0,
+    pendingApplications: 0,
+    newEnquiries: 0,
+  });
   const [hubSearch, setHubSearch] = useState("");
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingDateFilter, setBookingDateFilter] = useState("all");
@@ -316,81 +329,6 @@ function AdminPage() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [lightboxDoc.isOpen]);
-
-  useEffect(() => {
-    if (autoRefreshRate === 0) return;
-    setAutoRefreshCountdown(autoRefreshRate);
-
-    const interval = setInterval(() => {
-      setAutoRefreshCountdown((prev) => {
-        if (prev <= 1) {
-          loadCurrentTab(true);
-          return autoRefreshRate;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [autoRefreshRate, activeTab]);
-
-  useEffect(() => {
-    if (role !== "admin") return;
-
-    const bookingsCh = supabase
-      .channel("admin-rt-bookings")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bookings" },
-        (payload) => {
-          if (activeTab === "bookings") {
-            fetchBookings(true);
-          }
-          fetchSummaryCounts();
-          if (payload.eventType === "INSERT") {
-            toast.info(`New Ride Request: ${(payload.new as any)?.reference || ""}`);
-          }
-        },
-      )
-      .subscribe();
-
-    const appsCh = supabase
-      .channel("admin-rt-apps")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "driver_applications" },
-        (payload) => {
-          if (activeTab === "applications") {
-            fetchApplications(true);
-          }
-          fetchSummaryCounts();
-          if (payload.eventType === "INSERT") {
-            toast.info(`New Driver Application: ${(payload.new as any)?.full_name || ""}`);
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(bookingsCh);
-      supabase.removeChannel(appsCh);
-    };
-  }, [activeTab, role]);
-
-  const [summaryCounts, setSummaryCounts] = useState({
-    totalBookings: 0,
-    activeBookings: 0,
-    completedBookings: 0,
-    totalRevenue: 0,
-    onlineDrivers: 0,
-    totalDrivers: 0,
-    pendingApplications: 0,
-    newEnquiries: 0,
-  });
-
-  const search = Route.useSearch();
-  const [activeTab, setActiveTab] = useState(() => search?.tab || "hub");
-  const [bookingStatusFilter, setBookingStatusFilter] = useState("all");
 
   useEffect(() => {
     if (search?.tab && search.tab !== activeTab) {
@@ -686,6 +624,66 @@ function AdminPage() {
     } else {
       fetchFinanceData();
     }
+  }, [activeTab, role]);
+
+  useEffect(() => {
+    if (autoRefreshRate === 0) return;
+    setAutoRefreshCountdown(autoRefreshRate);
+
+    const interval = setInterval(() => {
+      setAutoRefreshCountdown((prev) => {
+        if (prev <= 1) {
+          loadCurrentTab(true);
+          return autoRefreshRate;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefreshRate, activeTab]);
+
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    const bookingsCh = supabase
+      .channel("admin-rt-bookings")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        (payload) => {
+          if (activeTab === "bookings") {
+            fetchBookings(true);
+          }
+          fetchSummaryCounts();
+          if (payload.eventType === "INSERT") {
+            toast.info(`New Ride Request: ${(payload.new as any)?.reference || ""}`);
+          }
+        },
+      )
+      .subscribe();
+
+    const appsCh = supabase
+      .channel("admin-rt-apps")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "driver_applications" },
+        (payload) => {
+          if (activeTab === "applications") {
+            fetchApplications(true);
+          }
+          fetchSummaryCounts();
+          if (payload.eventType === "INSERT") {
+            toast.info(`New Driver Application: ${(payload.new as any)?.full_name || ""}`);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingsCh);
+      supabase.removeChannel(appsCh);
+    };
   }, [activeTab, role]);
 
   function isTabReady(tab: string): boolean {
