@@ -187,17 +187,39 @@ function LoginPage() {
       } catch {}
     }
 
-    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authSub } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY" || (session?.user && mode === "reset")) {
         setMode("reset");
         if (session?.user?.email) {
           setResetEmail(session.user.email);
         }
         toast.info("Please enter your new password below to update it in the database.");
+      } else if (event === "SIGNED_IN" && session?.user) {
+        const hash = typeof window !== "undefined" ? window.location.hash || "" : "";
+        const search = typeof window !== "undefined" ? window.location.search || "" : "";
+        if (hash.includes("type=signup") || search.includes("type=signup") || mode === "verify_otp") {
+          toast.success("Email verified successfully! Welcome to Orange Taxi.");
+          const dest = redirect ?? "/book";
+          navigate({ to: dest as any });
+        }
       }
     });
 
     fetchRecoveryEmail();
+
+    // Check if user landed from confirmation email link
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (hash.includes("type=signup") || search.includes("type=signup")) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            toast.success("Email verified successfully! Welcome to Orange Taxi.");
+            navigate({ to: (redirect ?? "/book") as any });
+          }
+        });
+      }
+    }
 
     return () => {
       authSub?.subscription?.unsubscribe();
@@ -228,6 +250,20 @@ function LoginPage() {
           metadata: { email: values.email.toLowerCase(), reason: error.message },
         });
       } catch {}
+
+      if (error.message?.toLowerCase().includes("email not confirmed")) {
+        setOtpEmail(values.email.trim());
+        setResendCooldown(30);
+        setOtpDigits("");
+        setMode("verify_otp");
+        supabase.auth.resend({
+          type: "signup",
+          email: values.email.trim(),
+        }).catch(() => {});
+        toast.info("Please verify your email address. A verification code has been sent to your email.");
+        setSubmitting(false);
+        return;
+      }
 
       if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
         setLockoutRemaining(60);
@@ -427,7 +463,7 @@ function LoginPage() {
       setResendCooldown(30);
       setOtpDigits("");
       setMode("verify_otp");
-      toast.success("We have sent a 4-digit verification code to your email.");
+      toast.success("Verification code sent to your email! You can also click the confirmation link in the email.");
       setSubmitting(false);
       return;
     }
@@ -443,17 +479,30 @@ function LoginPage() {
       return;
     }
     const cleanToken = otpDigits.trim();
-    if (cleanToken.length !== 4) {
-      toast.error("Please enter the complete 4-digit verification code.");
+    if (cleanToken.length < 4 || cleanToken.length > 8) {
+      toast.error("Please enter the complete verification code (4 or 6 digits).");
       return;
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
+      let { data, error } = await supabase.auth.verifyOtp({
         email: otpEmail.trim(),
         token: cleanToken,
         type: "signup",
       });
+
+      if (error) {
+        // Fallback: try type "email" if "signup" failed
+        const retry = await supabase.auth.verifyOtp({
+          email: otpEmail.trim(),
+          token: cleanToken,
+          type: "email",
+        });
+        if (!retry.error) {
+          data = retry.data;
+          error = null;
+        }
+      }
 
       if (error) {
         try {
@@ -496,10 +545,17 @@ function LoginPage() {
     if (resendCooldown > 0 || !otpEmail) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.resend({
+      let { error } = await supabase.auth.resend({
         type: "signup",
         email: otpEmail.trim(),
       });
+      if (error) {
+        const retry = await supabase.auth.resend({
+          type: "email_change",
+          email: otpEmail.trim(),
+        });
+        if (!retry.error) error = null;
+      }
       if (error) {
         if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
           setOtpLockoutRemaining(60);
@@ -510,7 +566,7 @@ function LoginPage() {
         return;
       }
       setResendCooldown(30);
-      toast.success("New 4-digit verification code sent to your email!");
+      toast.success("Verification code sent to your email!");
     } catch (err: any) {
       toast.error(err.message || "Failed to resend verification code.");
     } finally {
@@ -613,8 +669,8 @@ function LoginPage() {
                   </div>
                   <h3 className="mt-3 text-xl font-bold tracking-tight">Verify Your Email</h3>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    We sent a 4-digit code to{" "}
-                    <span className="font-semibold text-foreground">{otpEmail || "your email"}</span>. Enter it below to complete registration.
+                    We sent a verification code to{" "}
+                    <span className="font-semibold text-foreground">{otpEmail || "your email"}</span>. Enter the code below or click the confirmation link in your email.
                   </p>
                 </div>
 
@@ -625,8 +681,8 @@ function LoginPage() {
                 )}
 
                 <form onSubmit={handleVerifyOtp} className="mt-6 space-y-5">
-                  <div className="flex justify-center gap-3">
-                    {[0, 1, 2, 3].map((index) => (
+                  <div className="flex justify-center gap-2 sm:gap-3">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
                       <input
                         key={index}
                         id={`otp-input-${index}`}
@@ -640,9 +696,9 @@ function LoginPage() {
                           const newOtp = otpDigits.split("");
                           if (val) {
                             newOtp[index] = val[val.length - 1];
-                            const combined = newOtp.join("").slice(0, 4);
+                            const combined = newOtp.join("").slice(0, 6);
                             setOtpDigits(combined);
-                            if (index < 3) {
+                            if (index < 5) {
                               document.getElementById(`otp-input-${index + 1}`)?.focus();
                             }
                           } else {
@@ -657,18 +713,22 @@ function LoginPage() {
                         }}
                         onPaste={(e) => {
                           e.preventDefault();
-                          const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 4);
+                          const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 6);
                           if (pasted) {
                             setOtpDigits(pasted);
-                            const nextIndex = Math.min(pasted.length, 3);
+                            const nextIndex = Math.min(pasted.length, 5);
                             document.getElementById(`otp-input-${nextIndex}`)?.focus();
                           }
                         }}
-                        className="size-14 text-center text-2xl font-bold rounded-xl border border-border bg-muted/40 focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                        className="size-11 sm:size-13 text-center text-xl sm:text-2xl font-bold rounded-xl border border-border bg-muted/40 focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                         disabled={submitting || otpLockoutRemaining > 0}
                         autoFocus={index === 0}
                       />
                     ))}
+                  </div>
+
+                  <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 text-center text-[11px] text-muted-foreground">
+                    Tip: You can also click the <strong>Confirm your mail</strong> link directly in the email to activate your account.
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 px-1">
@@ -687,7 +747,7 @@ function LoginPage() {
                     type="submit"
                     className="w-full"
                     size="lg"
-                    disabled={submitting || otpDigits.length !== 4 || otpLockoutRemaining > 0}
+                    disabled={submitting || otpDigits.length < 4 || otpLockoutRemaining > 0}
                   >
                     {submitting ? (
                       <Loader2 className="size-4 animate-spin" />
