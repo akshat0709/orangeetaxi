@@ -934,14 +934,14 @@ function ProfilePage() {
                   value={bookings.length.toString()}
                 />
                 <StatCard
-                  icon={<Star className="size-5 text-primary" />}
-                  label="Total Spent"
-                  value={`₹${Math.round(totalSpent).toLocaleString("en-IN")}`}
+                  icon={<Check className="size-5 text-primary" />}
+                  label="Completed Trips"
+                  value={completedRides.length.toString()}
                 />
                 <StatCard
-                  icon={<Navigation className="size-5 text-primary" />}
-                  label="Avg Fare"
-                  value={completedRides.length > 0 ? `₹${Math.round(avgFare)}` : "—"}
+                  icon={<Calendar className="size-5 text-primary" />}
+                  label="Scheduled Rides"
+                  value={bookings.filter((b) => b.status === "scheduled").length.toString()}
                 />
                 <StatCard
                   icon={<Clock className="size-5 text-primary" />}

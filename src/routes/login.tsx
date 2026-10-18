@@ -32,16 +32,22 @@ const signInSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-const signUpSchema = z.object({
-  fullName: z.string().min(2, "Enter your full name"),
-  phone: z.string().min(7, "Enter a valid phone number"),
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["customer", "driver"]).default("customer"),
-  agreePrivacy: z.boolean().refine((val) => val === true, {
-    message: "You must review and agree to the Privacy Policy to create an account",
-  }),
-});
+const signUpSchema = z
+  .object({
+    fullName: z.string().min(2, "Enter your full name"),
+    phone: z.string().min(7, "Enter a valid phone number"),
+    email: z.string().email("Enter a valid email"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm your password"),
+    role: z.enum(["customer", "driver"]).default("customer"),
+    agreePrivacy: z.boolean().refine((val) => val === true, {
+      message: "You must review and agree to the Privacy Policy to create an account",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 const forgotSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -76,6 +82,7 @@ function LoginPage() {
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [otpLockoutRemaining, setOtpLockoutRemaining] = useState<number>(0);
   const [showPass, setShowPass] = useState(false);
+  const [showSignUpConfirmPass, setShowSignUpConfirmPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
   const navigate = useNavigate();
@@ -1141,6 +1148,31 @@ function LoginPage() {
                   {signUpForm.formState.errors.password && (
                     <p className="mt-1 text-xs text-destructive">
                       {signUpForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="su-cpass">Confirm Password</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="su-cpass"
+                      type={showSignUpConfirmPass ? "text" : "password"}
+                      placeholder="Re-enter your password"
+                      className="pr-10"
+                      {...signUpForm.register("confirmPassword")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpConfirmPass((p) => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showSignUpConfirmPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                  {signUpForm.formState.errors.confirmPassword && (
+                    <p className="mt-1 text-xs text-destructive">
+                      {signUpForm.formState.errors.confirmPassword.message}
                     </p>
                   )}
                 </div>
