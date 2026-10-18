@@ -529,7 +529,7 @@ export function RideChatSheet({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Response Chips (Uber / Ola Style) */}
+        {/* Quick Response Chips */}
         <div className="border-t border-border/70 bg-card/40 p-2">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
             <button
