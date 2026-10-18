@@ -30,6 +30,52 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+function crossSubdomainStorage() {
+  if (typeof window === "undefined") return undefined;
+
+  const isOrangeDomain = window.location.hostname.endsWith("orange-taxi.com");
+  const cookieDomain = isOrangeDomain ? "; domain=.orange-taxi.com" : "";
+
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        const name = encodeURIComponent(key) + "=";
+        const cookies = document.cookie.split(";");
+        for (let c of cookies) {
+          c = c.trim();
+          if (c.indexOf(name) === 0) {
+            return decodeURIComponent(c.substring(name.length));
+          }
+        }
+      } catch {}
+
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        const secure = window.location.protocol === "https:" ? "; Secure" : "";
+        document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; path=/; max-age=2592000; SameSite=Lax${cookieDomain}${secure}`;
+      } catch {}
+
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    },
+    removeItem: (key: string): void => {
+      try {
+        document.cookie = `${encodeURIComponent(key)}=; path=/; max-age=0${cookieDomain}`;
+      } catch {}
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    },
+  };
+}
+
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
@@ -52,7 +98,7 @@ function createSupabaseClient() {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
     auth: {
-      storage: brokeredPreviewStorage(),
+      storage: crossSubdomainStorage() || brokeredPreviewStorage(),
       persistSession: true,
       autoRefreshToken: true,
     },

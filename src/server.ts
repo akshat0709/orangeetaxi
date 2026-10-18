@@ -571,15 +571,89 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const url = new URL(request.url);
+      const host = url.hostname.toLowerCase();
 
-      // Canonical host and HTTPS enforcement for search crawlers
+      // Subdomain and domain detection
+      const isBookingsSubdomain =
+        host === "bookings.orange-taxi.com" ||
+        host === "bookings.localhost" ||
+        url.searchParams.get("__subdomain") === "bookings";
+
+      const isAdminSubdomain =
+        host === "admin.orange-taxi.com" ||
+        host === "admin.localhost" ||
+        url.searchParams.get("__subdomain") === "admin";
+
+      const isMainDomain =
+        host === "orange-taxi.com" ||
+        host === "www.orange-taxi.com";
+
+      // 1. Canonical host and HTTPS enforcement for search crawlers
       if (
-        url.hostname === "www.orange-taxi.com" ||
-        (url.protocol === "http:" && url.hostname === "orange-taxi.com")
+        host === "www.orange-taxi.com" ||
+        (url.protocol === "http:" && (isMainDomain || isBookingsSubdomain || isAdminSubdomain))
       ) {
         url.protocol = "https:";
-        url.hostname = "orange-taxi.com";
+        if (host === "www.orange-taxi.com") {
+          url.hostname = "orange-taxi.com";
+        }
         return Response.redirect(url.toString(), 301);
+      }
+
+      // 2. Subdomain: bookings.orange-taxi.com
+      if (isBookingsSubdomain) {
+        // Root / on bookings immediately directs to the booking engine /book
+        if (url.pathname === "/") {
+          url.pathname = "/book";
+          return Response.redirect(url.toString(), 302);
+        }
+
+        // If visiting a flagship marketing route on bookings subdomain, redirect to main site
+        const marketingRoutes = [
+          "/about",
+          "/drive",
+          "/business",
+          "/electric",
+          "/experience",
+          "/contact",
+          "/support",
+          "/terms",
+          "/privacy",
+        ];
+        if (marketingRoutes.includes(url.pathname)) {
+          const mainTarget = new URL(url.pathname + url.search, "https://orange-taxi.com");
+          return Response.redirect(mainTarget.toString(), 302);
+        }
+      }
+
+      // 3. Subdomain: admin.orange-taxi.com
+      if (isAdminSubdomain) {
+        // Root / on admin immediately directs to /admin
+        if (url.pathname === "/") {
+          url.pathname = "/admin";
+          return Response.redirect(url.toString(), 302);
+        }
+      }
+
+      // 4. Main Domain: orange-taxi.com (Flagship Marketing Showcase)
+      if (isMainDomain) {
+        // Direct /book requests to the dedicated bookings subdomain
+        if (url.pathname === "/book") {
+          const bookingTarget = new URL("/book" + url.search, "https://bookings.orange-taxi.com");
+          return Response.redirect(bookingTarget.toString(), 301);
+        }
+
+        // Direct /admin requests to the dedicated admin subdomain
+        if (url.pathname === "/admin") {
+          const adminTarget = new URL("/admin" + url.search, "https://admin.orange-taxi.com");
+          return Response.redirect(adminTarget.toString(), 301);
+        }
+
+        // Direct /track requests to the dedicated bookings tracking
+        if (url.pathname === "/track") {
+          const trackTarget = new URL("/track" + url.search, "https://bookings.orange-taxi.com");
+          return Response.redirect(trackTarget.toString(), 301);
+        }
       }
 
       if (url.pathname === "/sitemap.xml") {
