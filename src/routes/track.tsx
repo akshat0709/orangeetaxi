@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import {
@@ -170,9 +169,12 @@ function TrackPage() {
       try {
         let bData: any = null;
         try {
-          const { data: rpcData, error: rpcErr } = await (supabase as any).rpc("get_public_tracking_status", {
-            _ref: cleanRef,
-          });
+          const { data: rpcData, error: rpcErr } = await (supabase as any).rpc(
+            "get_public_tracking_status",
+            {
+              _ref: cleanRef,
+            },
+          );
           if (rpcData && !rpcErr) {
             bData = rpcData;
             if (rpcData.driver) {
@@ -579,9 +581,19 @@ function TrackPage() {
 
             {/* Live Interactive Map */}
             <div className="rounded-2xl border border-border overflow-hidden shadow-lg bg-card">
-              <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8"} libraries={["routes", "geometry"]}>
+              <APIProvider
+                apiKey={
+                  import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+                  "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8"
+                }
+                libraries={["routes", "geometry"]}
+              >
                 <LiveRideMap
-                  pickup={{ name: booking.pickup_area, lat: pickupCoords.lat, lng: pickupCoords.lng }}
+                  pickup={{
+                    name: booking.pickup_area,
+                    lat: pickupCoords.lat,
+                    lng: pickupCoords.lng,
+                  }}
                   drop={{ name: booking.drop_area, lat: dropCoords.lat, lng: dropCoords.lng }}
                   driver={
                     driver

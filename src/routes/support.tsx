@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -285,11 +284,8 @@ function SupportPage() {
                 </h4>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Your ticket ref is{" "}
-                  <strong className="text-foreground">
-                    {docketNumber || "OG-TKT-RECORDED"}
-                  </strong>
-                  . Our Grievance Officer will review your submission and acknowledge within 24
-                  hours.
+                  <strong className="text-foreground">{docketNumber || "OG-TKT-RECORDED"}</strong>.
+                  Our Grievance Officer will review your submission and acknowledge within 24 hours.
                 </p>
                 <Button
                   className="mt-5"

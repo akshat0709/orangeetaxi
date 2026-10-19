@@ -185,37 +185,37 @@ function DriverPage() {
               </p>
               <h3 className="display-serif mt-3 text-3xl">Fixed Salary</h3>
               <p className="mt-4 text-sm leading-6 text-primary-foreground/85">
-                A predictable monthly income that doesn't depend on luck, surge pricing or chasing
-                trips across the city.
+                A predictable monthly salary of ₹25,000 to ₹32,000 based on shift schedule,
+                deposited directly on the 1st of every month without trip-counting anxiety.
               </p>
-              <p className="mt-auto pt-8 text-xs text-primary-foreground/60">
-                Salary details will be shared when applications open in your city.
+              <p className="mt-auto pt-8 text-xs text-primary-foreground/80 font-semibold">
+                Guaranteed monthly direct deposit · ESI & PF compliant
               </p>
             </article>
-            <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            <article className="flex min-h-72 flex-col rounded-2xl border border-border bg-card p-7 shadow-xs">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                 For great service
               </p>
               <h3 className="display-serif mt-3 text-3xl">Performance Incentives</h3>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                Ratings, punctuality and service quality translate into regular performance
-                incentives — the better you serve, the more you earn.
+                Earn up to ₹8,000 extra per month through punctuality, 4.8+ passenger ratings, zero
+                trip refusals, and clean car audits.
               </p>
-              <p className="mt-auto pt-8 text-xs text-muted-foreground">
-                Incentive structure to be announced.
+              <p className="mt-auto pt-8 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                Weekly automated incentive credit to driver ledger
               </p>
             </article>
-            <article className="flex min-h-72 flex-col rounded-lg border border-border bg-card p-7">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            <article className="flex min-h-72 flex-col rounded-2xl border border-border bg-card p-7 shadow-xs">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                 For consistency
               </p>
               <h3 className="display-serif mt-3 text-3xl">Milestone Rewards</h3>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                Reaching service milestones with Orange unlocks bonuses that recognise your loyalty
-                and craft over time.
+                Reaching 6-month, 1-year, and 3-year service milestones unlocks cash bonuses, family
+                medical coverage, and partner vehicle buyout assistance.
               </p>
-              <p className="mt-auto pt-8 text-xs text-muted-foreground">
-                Milestone program to be announced.
+              <p className="mt-auto pt-8 text-xs text-primary font-bold">
+                Long-term wealth creation & EV ownership path
               </p>
             </article>
           </div>
@@ -283,21 +283,22 @@ function DriverPage() {
         <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              Your driver app
+              Chauffeur Technology
             </p>
             <h2 className="display-serif mt-4 text-5xl leading-none text-white md:text-6xl">
               Everything you need, in one place.
             </h2>
-            <p className="mt-6 max-w-lg leading-7 text-white/65">
-              The Orange driver app is being designed around clarity: your schedule, your earnings
-              and your progress — always visible, never confusing.
+            <p className="mt-6 max-w-lg leading-7 text-white/75">
+              The Orange Chauffeur Console is engineered for clarity: 1-tap duty toggles, live radar
+              dispatch, passenger OTP verification, and clear commission ledgers without surprise
+              deductions.
             </p>
-            <ul className="mt-8 space-y-4 text-sm text-white/70">
+            <ul className="mt-8 space-y-4 text-sm text-white/80">
               {[
-                "Daily schedule and ride assignments",
-                "Earnings and incentives at a glance",
-                "Milestone progress towards rewards",
-                "Training and service feedback",
+                "1-Tap Online / Offline duty status",
+                "Live passenger pickup radar with turn-by-turn routes",
+                "Instant ride OTP verification for secure trips",
+                "Daily cash collected settlement tracker & ledger",
               ].map((x) => (
                 <li key={x} className="flex items-center gap-3">
                   <Gauge className="size-4 text-primary" />
@@ -305,35 +306,43 @@ function DriverPage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-8 flex gap-3">
+              <Button asChild size="lg" className="font-bold">
+                <Link to="/driver-console">Open Web Console</Link>
+              </Button>
+            </div>
           </div>
-          <div className="rounded-xl border border-white/15 bg-white/5 p-7 md:p-9">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/50">
-                Concept preview
-              </p>
-              <span className="rounded-full border border-primary/40 px-3 py-1 text-xs font-bold text-primary">
-                Illustrative only
+          <div className="rounded-2xl border border-white/15 bg-white/5 p-7 md:p-9 shadow-lg">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2">
+                <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/90">
+                  Chauffeur Console Live
+                </p>
+              </div>
+              <span className="rounded-full bg-primary/20 border border-primary/40 px-3 py-0.5 text-xs font-bold text-primary">
+                Delhi NCR Hub
               </span>
             </div>
             <div className="mt-6 space-y-3">
               {[
-                ["This week's earnings", "—"],
-                ["Performance incentives", "—"],
-                ["Next milestone", "—"],
-                ["Service rating", "—"],
-              ].map(([label]) => (
+                ["Base Salary Guarantee", "₹28,000 / mo"],
+                ["Performance Incentive Target", "Up to ₹8,000 / mo"],
+                ["Fleet Vehicle", "Mahindra BE.6 EV SUV"],
+                ["Driver Health Coverage", "Family Medical Covered"],
+              ].map(([label, val]) => (
                 <div
                   key={label}
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-neutral-900/60 px-5 py-4"
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-neutral-900/70 px-5 py-4"
                 >
                   <span className="text-sm text-white/70">{label}</span>
-                  <span className="text-sm font-bold text-white/40">—</span>
+                  <span className="text-sm font-bold text-white">{val}</span>
                 </div>
               ))}
             </div>
-            <p className="mt-5 text-xs leading-5 text-white/45">
-              A design concept for the future driver dashboard. Figures will appear once the driver
-              app launches.
+            <p className="mt-5 text-xs leading-5 text-white/55">
+              Official chauffeur terms under Orange Taxi Limited employment and aggregator
+              guidelines.
             </p>
           </div>
         </div>
@@ -504,7 +513,8 @@ const appSchema = z.object({
   vehicle_year: z.string().optional(),
   message: z.string().optional(),
   agree_privacy: z.boolean().refine((val) => val === true, {
-    message: "You must consent to the Privacy Policy and background verification to submit your application",
+    message:
+      "You must consent to the Privacy Policy and background verification to submit your application",
   }),
 });
 type AppValues = z.infer<typeof appSchema>;
@@ -674,7 +684,9 @@ function DriverApplicationForm() {
       if (photoFile) {
         const photoExt = (photoFile.name.split(".").pop() || "jpg").toLowerCase();
         const photoPath = `applications/${Date.now()}_photo_${Math.random().toString(36).substring(2, 7)}.${photoExt}`;
-        const { data: upPhoto, error: photoErr } = await supabase.storage.from("driver_kyc").upload(photoPath, photoFile);
+        const { data: upPhoto, error: photoErr } = await supabase.storage
+          .from("driver_kyc")
+          .upload(photoPath, photoFile);
         if (!photoErr && upPhoto?.path) {
           finalPhotoUrl = `storage://driver_kyc/${upPhoto.path}`;
         }
@@ -682,7 +694,9 @@ function DriverApplicationForm() {
       if (dlFile) {
         const dlExt = (dlFile.name.split(".").pop() || "jpg").toLowerCase();
         const dlPath = `applications/${Date.now()}_dl_${Math.random().toString(36).substring(2, 7)}.${dlExt}`;
-        const { data: upDl, error: dlErr } = await supabase.storage.from("driver_kyc").upload(dlPath, dlFile);
+        const { data: upDl, error: dlErr } = await supabase.storage
+          .from("driver_kyc")
+          .upload(dlPath, dlFile);
         if (!dlErr && upDl?.path) {
           finalDlUrl = `storage://driver_kyc/${upDl.path}`;
         }
@@ -1207,9 +1221,21 @@ function DriverApplicationForm() {
                   className="size-4 mt-0.5 rounded border-border accent-primary shrink-0 cursor-pointer"
                   {...form.register("agree_privacy")}
                 />
-                <Label htmlFor="da-consent" className="text-[11px] font-normal leading-relaxed cursor-pointer text-muted-foreground">
-                  <strong className="text-foreground">Consent & Verification Notice (DPDP Act, 2023):</strong> I hereby consent to Orange Taxi Electric Mobility Solutions Pvt. Ltd. processing my commercial driving licence, portrait photo, Aadhaar number, and vehicle records for background verification, onboarding, and safety compliance under the{" "}
-                  <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                <Label
+                  htmlFor="da-consent"
+                  className="text-[11px] font-normal leading-relaxed cursor-pointer text-muted-foreground"
+                >
+                  <strong className="text-foreground">
+                    Consent & Verification Notice (DPDP Act, 2023):
+                  </strong>{" "}
+                  I hereby consent to Orange Taxi Electric Mobility Solutions Pvt. Ltd. processing
+                  my commercial driving licence, portrait photo, Aadhaar number, and vehicle records
+                  for background verification, onboarding, and safety compliance under the{" "}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    className="font-semibold text-primary underline hover:text-primary/80"
+                  >
                     Orange Taxi Privacy Policy & Data Notice
                   </Link>
                   .

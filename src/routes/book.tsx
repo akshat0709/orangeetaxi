@@ -389,9 +389,29 @@ function PassengerPage() {
   const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
   const [liveRideStatus, setLiveRideStatus] = useState<string>("searching");
 
+  // Read URL query params (e.g. from HomepageFareEstimator)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const urlPickup = sp.get("pickup");
+      const urlDrop = sp.get("drop");
+      if (urlPickup) {
+        const decoded = decodeURIComponent(urlPickup);
+        setPickupGPS({ name: decoded, lat: 28.6139, lng: 77.209 });
+      }
+      if (urlDrop) {
+        const decoded = decodeURIComponent(urlDrop);
+        setDropGPS({ name: decoded, lat: 28.5562, lng: 77.1 });
+      }
+    } catch {}
+  }, []);
+
   // Auto-acquire user GPS for instant zero-click pickup on page load
   useEffect(() => {
     if (typeof window === "undefined" || !navigator.geolocation) return;
+    // If URL already supplied an explicit pickup location, preserve it
+    if (window.location.search.includes("pickup=")) return;
 
     let isMounted = true;
     setLocatingGPS(true);
@@ -733,7 +753,11 @@ function PassengerPage() {
         .select("id, reference")
         .single();
 
-      if (error && error.message && (error.message.includes("payment_intent_id") || error.message.includes("payment_made"))) {
+      if (
+        error &&
+        error.message &&
+        (error.message.includes("payment_intent_id") || error.message.includes("payment_made"))
+      ) {
         console.warn("Retrying booking insert without extra fields:", error.message);
         const safePayload: any = { ...bookingPayload };
         if (error.message.includes("payment_made")) {

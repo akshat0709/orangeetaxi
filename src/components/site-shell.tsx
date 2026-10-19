@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { Link, useRouter } from "@tanstack/react-router";
 import { Download, LogOut, Menu, Moon, MoveUpRight, Settings, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -133,10 +131,14 @@ export function SiteHeader() {
                         <Link to="/admin">⚙️ Admin Dashboard</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" search={{ tab: "fleet" }}>⚡ Fleet & Bays</Link>
+                        <Link to="/admin" search={{ tab: "fleet" }}>
+                          ⚡ Fleet & Bays
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" search={{ tab: "cash" }}>💵 Cash Settlements</Link>
+                        <Link to="/admin" search={{ tab: "cash" }}>
+                          💵 Cash Settlements
+                        </Link>
                       </DropdownMenuItem>
                     </>
                   )}
@@ -163,10 +165,19 @@ export function SiteHeader() {
             !loading && (
               <div className="flex items-center gap-2 ml-1">
                 <Button asChild variant="ghost" size="sm" className="h-8 text-xs px-2.5">
-                  <Link to="/login" search={{ mode: "signin" }}>Sign In</Link>
+                  <Link to="/login" search={{ mode: "signin" }}>
+                    Sign In
+                  </Link>
                 </Button>
-                <Button asChild variant="outline" size="sm" className="h-8 text-xs px-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground font-semibold">
-                  <Link to="/login" search={{ mode: "signup" }}>Sign Up</Link>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs px-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
+                >
+                  <Link to="/login" search={{ mode: "signup" }}>
+                    Sign Up
+                  </Link>
                 </Button>
                 <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-xs">
                   <Link to="/book">
@@ -280,7 +291,12 @@ export function SiteHeader() {
                     </Button>
                   </SheetClose>
                   <SheetClose asChild>
-                    <Button asChild variant="ghost" size="lg" className="w-full border border-border">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="lg"
+                      className="w-full border border-border"
+                    >
                       <Link to="/book">
                         Book a Ride <MoveUpRight className="ml-1 size-4" />
                       </Link>

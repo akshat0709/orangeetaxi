@@ -1,18 +1,22 @@
-// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   BatteryCharging,
   BriefcaseBusiness,
   Check,
+  CheckCircle2,
   Droplets,
   Leaf,
   MonitorPlay,
   Music2,
   Newspaper,
+  ShieldCheck,
   Snowflake,
   Sparkles,
   UserRoundCheck,
+  Zap,
+  Plane,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -27,11 +31,13 @@ import interiorImage from "@/assets/orange-taxi-interior.jpg";
 import driverImage from "@/assets/orange-taxi-driver.jpg";
 import eveningImage from "@/assets/orange-taxi-evening.jpg";
 import { WhatsAppConciergeFab } from "@/components/whatsapp-concierge-fab";
+import { HomepageFareEstimator } from "@/components/homepage-fare-estimator";
+import { EcoImpactCounter } from "@/components/eco-impact-counter";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Orange Taxi — Premium Electric Cab Service" },
+      { title: "Orange Taxi — Premium Electric Cab Service in Delhi NCR" },
       {
         name: "description",
         content:
@@ -48,210 +54,205 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Orange Taxi — Premium Electric Cab Service" },
-      {
-        name: "twitter:description",
-        content: "India's premier zero-emission electric taxi service with Mahindra BE.6 SUVs.",
-      },
-      { name: "twitter:image", content: "https://orange-taxi.com/be6-exterior.jpg" },
     ],
   }),
   component: HomePage,
 });
 
-const features = [
+const IN_CAB_AMENITIES = [
+  {
+    icon: Snowflake,
+    title: "Pre-Cooled AC at 22°C",
+    text: "Never step into a hot cab or dispute AC settings. Cabins are cooled 10 minutes prior to arrival.",
+    badge: "100% Guaranteed",
+  },
   {
     icon: MonitorPlay,
-    title: "LED Entertainment Screens",
-    text: "In-seat HD screens to keep you entertained throughout your journey.",
+    title: "In-Seat HD Entertainment",
+    text: "Passenger touchscreens with movies, news, live radar navigation, and flight delay updates.",
+    badge: "Rear Seat Touchscreen",
   },
   {
     icon: Music2,
-    title: "Premium Music System",
-    text: "Best-in-class audio system for a seamless, immersive ride experience.",
+    title: "Studio Sound System",
+    text: "Acoustically tuned multi-speaker sound stage. Pair your playlist or choose Quiet Ride mode.",
+    badge: "Quiet Serenity",
   },
   {
     icon: Newspaper,
     title: "Daily Newspapers",
-    text: "Stay informed with the latest newspapers provided fresh every day.",
+    text: "Fresh national and business print editions provided daily in rear seat pockets.",
+    badge: "Fresh Daily",
   },
   {
     icon: Droplets,
     title: "Complimentary Water",
-    text: "A little refreshment, waiting when you arrive.",
-  },
-  {
-    icon: Snowflake,
-    title: "Pre-Cooled Cabin",
-    text: "Step into a comfortable car, not a hot one.",
+    text: "A chilled, sealed bottle of mineral water waiting for every passenger in door holders.",
+    badge: "Hygienic Hydration",
   },
   {
     icon: UserRoundCheck,
-    title: "Professional Drivers",
-    text: "Trained, courteous and committed to better service.",
-  },
-  {
-    icon: Sparkles,
-    title: "Mahindra BE.6 Fleet",
-    text: "India's finest electric SUV — in signature Orange, exclusively for you.",
+    title: "Disciplined Chauffeurs",
+    text: "Salaried professionals trained in hospitality, defensive driving, and zero cancellation conduct.",
+    badge: "Police Verified",
   },
 ];
-const amenities = [
-  {
-    icon: MonitorPlay,
-    title: "LED Entertainment",
-    text: "Immersive in-seat HD screens for movies, music videos and more.",
-    bg: "bg-[#0d0d1a]",
-    accent: "text-blue-400",
-  },
-  {
-    icon: Music2,
-    title: "Premium Acoustics",
-    text: "Best-in-class music system. Your playlist sounds better in an Orange.",
-    bg: "bg-[#1a0a00]",
-    accent: "text-orange-400",
-  },
-  {
-    icon: Newspaper,
-    title: "Daily Newspapers",
-    text: "Fresh newspapers every morning. Stay informed, seamlessly.",
-    bg: "bg-[#071207]",
-    accent: "text-green-400",
-  },
+
+const MOMENTS = [
+  "Your signature orange Mahindra BE.6 arrives clean and pre-cooled.",
+  "Your chauffeur greets you professionally and assists with luggage.",
+  "Chilled water and fresh morning newspapers are waiting at your seat.",
+  "In-seat HD touchscreen lights up with trip duration and live route radar.",
+  "Silent electric propulsion ensures a smooth, whisper-quiet commute.",
+  "You arrive on time, relaxed, with automated GST tax invoice emailed.",
 ];
-const moments = [
-  "Your car arrives clean and ready.",
-  "Your driver greets you professionally.",
-  "A bottle of water is waiting.",
-  "The cabin is cool and comfortable.",
-  "Your journey is quiet and smooth.",
-  "You arrive feeling taken care of.",
-];
-const faqs = [
+
+const FAQS = [
   [
     "What is Orange Taxi?",
-    "Orange Taxi is a premium electric ride service featuring an exclusive fleet of Mahindra BE.6 SUVs in signature orange, designed around comfort, thoughtful hospitality and everyday value.",
+    "Orange Taxi is India's premier zero-emission electric cab service operating an exclusive fleet of Mahindra BE.6 electric SUVs in Delhi NCR, featuring guaranteed pre-cooled AC, zero driver cancellations, and in-seat hospitality.",
   ],
   [
     "What vehicles does Orange Taxi use?",
-    "We operate an exclusive fleet of Mahindra BE.6 electric SUVs in signature orange — equipped with LED entertainment screens, premium audio systems and daily newspapers.",
+    "We operate an exclusive fleet of brand-new Mahindra BE.6 electric SUVs in signature orange, equipped with dual-zone climate control, rear passenger HD screens, and 5-Star Bharat NCAP safety architecture.",
   ],
   [
-    "Are all Orange Taxi vehicles electric?",
-    "Yes. Every Orange ride is 100% electric — quieter, smoother and greener.",
+    "Are all Orange Taxi rides 100% electric?",
+    "Yes. Every single ride is 100% battery electric (BEV) with zero tailpipe emissions, actively reducing urban carbon and PM2.5 pollution in Delhi NCR.",
   ],
   [
-    "What in-cab features can I expect?",
-    "Every ride includes LED entertainment screens, a premium music system and fresh daily newspapers — making your journey as enjoyable as the destination.",
+    "How does the Zero Cancellation Guarantee work?",
+    "Once an Orange chauffeur accepts your reservation, they are contractually prohibited from cancelling. In rare cases of vehicle maintenance, our central control tower automatically reassigns an equal or superior EV immediately.",
   ],
   [
-    "How is Orange Taxi different from regular cabs?",
-    "We bring together a premium Mahindra BE.6 SUV, professional driver and luxury in-cab amenities in every journey.",
-  ],
-  [
-    "How much does an Orange ride cost?",
-    "Fares will be shown clearly before you confirm a ride. We aim to make premium service accessible for regular journeys.",
+    "How are Orange Taxi fares calculated?",
+    "Fares start at ₹99 base fare (including 2 km), then ₹18 per kilometer thereafter (minimum fare ₹149). Fares are shown transparently upfront before booking, with no hidden surge pricing on advance scheduled rides.",
   ],
   [
     "Where is Orange Taxi available?",
-    "Currently serving Delhi, Gurugram, Noida, Ghaziabad and Faridabad — including IGI Airport.",
+    "We currently serve New Delhi, South Delhi, Gurugram (Cyber City, Golf Course Road), Noida, Ghaziabad, Faridabad, and dedicated priority pickup bays at Delhi IGI Airport (T1, T2, T3).",
   ],
   [
-    "How can I become an Orange driver?",
-    "Visit our Drive With Us page to learn about the role and register your interest.",
-  ],
-  [
-    "Do you offer corporate transportation?",
-    "Yes. Orange for Business is designed for employee travel, airport transfers, guest transport and centralized ride management.",
+    "Do you offer corporate billing and business accounts?",
+    "Yes. Orange for Business provides centralized monthly GST-compliant invoicing (SAC 9964 with 100% Input Tax Credit), employee commute portals, and priority airport transfers.",
   ],
 ];
 
 function HomePage() {
   const { t } = useTranslation();
+
   return (
     <>
-      <section className="relative min-h-[calc(100svh-8rem)] overflow-hidden bg-night text-white">
+      {/* Hero Section */}
+      <section className="relative min-h-[calc(100svh-4.5rem)] overflow-hidden bg-night text-white flex items-center">
         <img
           src={heroImage}
           alt="Mahindra BE.6 orange electric SUV on a premium city boulevard"
           width={1920}
           height={1280}
           fetchPriority="high"
-          className="absolute inset-0 size-full object-cover object-[62%_center]"
+          className="absolute inset-0 size-full object-cover object-[62%_center] opacity-80"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_84%,transparent)_35%,transparent_72%)]" />
-        <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
-          <div className="max-w-2xl ">
-            <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-              Mahindra BE.6 · Exclusive Fleet
-            </p>
-            <h1 className="display-serif text-[clamp(2.85rem,7vw,6.8rem)] leading-[0.92] text-white">
-              Premium rides.
-              <br />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_88%,transparent)_45%,transparent_78%)]" />
+
+        <div className="section-shell relative z-10 py-16 md:py-24">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary backdrop-blur-md">
+              <Sparkles className="size-3.5" /> Mahindra BE.6 · Exclusive Electric Fleet
+            </div>
+
+            <h1 className="display-serif mt-6 text-[clamp(2.8rem,6.5vw,5.8rem)] leading-[0.94] text-white">
+              Premium rides. <br />
               <span className="text-primary">Without the premium price.</span>
             </h1>
-            <p className="mt-7 max-w-xl text-base leading-7 text-white/80 md:text-lg">
-              India's finest electric SUV — with LED screens, premium audio and daily newspapers —
-              designed to make every journey extraordinary.
+
+            <p className="mt-6 max-w-xl text-base leading-7 text-white/80 md:text-lg">
+              Step into an acoustically silent electric SUV with pre-cooled AC, in-seat HD screens,
+              and daily newspapers. Designed to make every journey in Delhi NCR extraordinary.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3 sm:flex-row sm:items-center">
-              <Button asChild size="lg" className="shadow-md font-bold">
+
+            <div className="mt-8 flex flex-wrap items-center gap-3.5">
+              <Button asChild size="lg" className="shadow-lg font-bold">
                 <Link to="/book">
-                  Book a Ride <ArrowRight className="ml-1.5 size-4" />
+                  Book an Orange Ride <ArrowRight className="ml-1.5 size-4" />
                 </Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                className="bg-white text-neutral-900 hover:bg-white/90 shadow-sm font-semibold"
-              >
-                <Link to="/login" search={{ mode: "signup" }}>
-                  Sign Up
+              <Button asChild size="lg" variant="light" className="font-semibold">
+                <Link to="/login" search={{ mode: "signup" as any }}>
+                  Create Account
                 </Link>
               </Button>
               <Button
                 asChild
                 size="lg"
                 variant="outline"
-                className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white"
+                className="bg-transparent border-white/25 text-white hover:bg-white/10 hover:text-white"
               >
-                <Link to="/experience">Explore Experience</Link>
+                <Link to="/experience">In-Cab Hospitality</Link>
               </Button>
+            </div>
+
+            {/* Quick Guarantees Bar */}
+            <div className="mt-10 flex flex-wrap items-center gap-6 border-t border-white/15 pt-6 text-xs text-white/70">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="size-4 text-emerald-400" />
+                <span>Zero Driver Cancellations</span>
+              </div>
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="size-4 text-emerald-400" />
+                <span>Guaranteed Pre-Cooled AC</span>
+              </div>
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="size-4 text-emerald-400" />
+                <span>100% Electric (Zero Emissions)</span>
+              </div>
             </div>
           </div>
         </div>
-        <div className="absolute bottom-0 right-0 hidden border-l border-t border-white/20 bg-night/70 px-7 py-5 backdrop-blur-md md:block">
-          <p className="text-xs uppercase tracking-[0.14em] text-white/50">Exclusive fleet</p>
-          <p className="mt-1 text-sm font-semibold text-white">Mahindra BE.6 · Signature Orange</p>
+
+        <div className="absolute bottom-0 right-0 hidden border-l border-t border-white/20 bg-night/80 px-7 py-5 backdrop-blur-md md:block">
+          <p className="text-xs uppercase tracking-[0.14em] text-white/50">
+            Exclusive Delhi NCR Fleet
+          </p>
+          <p className="mt-1 text-sm font-semibold text-white">
+            Mahindra BE.6 · Signature Orange EV
+          </p>
+        </div>
+      </section>
+
+      {/* Upfront Interactive Fare Estimator Section */}
+      <section className="py-16 md:py-20 bg-background border-b border-border">
+        <div className="section-shell">
+          <HomepageFareEstimator />
         </div>
       </section>
 
       {/* In-Cab Amenities Showcase */}
-      <section className="bg-background py-24 text-foreground border-y border-border dark:bg-night dark:text-white dark:border-white/10 md:py-32">
+      <section className="bg-card/50 py-20 text-foreground border-b border-border md:py-28">
         <div className="section-shell">
           <SectionIntro
-            eyebrow="What's inside every Orange"
+            eyebrow="Signature In-Cab Hospitality"
             title="The experience starts the moment you sit down."
-            copy="Every Mahindra BE.6 in our fleet is fitted with the finest amenities to make your journey as enjoyable as your destination."
+            copy="Every Mahindra BE.6 in our fleet is fitted with premium amenities to make your travel as restful and productive as your destination."
           />
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
-            {amenities.map(({ icon: Icon, title, text, bg, accent }) => (
+
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {IN_CAB_AMENITIES.map(({ icon: Icon, title, text, badge }) => (
               <article
                 key={title}
-                className={`rounded-2xl border border-border bg-card p-8 flex flex-col gap-6 min-h-64 shadow-sm dark:${bg} dark:border-white/10`}
+                className="rounded-2xl border border-border bg-card p-7 flex flex-col justify-between shadow-xs transition-all hover:border-primary/40 hover:shadow-sm"
               >
-                <span
-                  className={`grid size-12 place-items-center rounded-full bg-primary/10 text-primary dark:bg-white/10 ${accent}`}
-                >
-                  <Icon className="size-6" />
-                </span>
                 <div>
-                  <h3 className={`text-xl font-bold text-card-foreground dark:${accent}`}>
-                    {title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground dark:text-white/70">
-                    {text}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="grid size-12 place-items-center rounded-xl bg-primary/10 text-primary">
+                      <Icon className="size-6" />
+                    </span>
+                    <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+                      {badge}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-card-foreground mt-5">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
                 </div>
               </article>
             ))}
@@ -259,189 +260,92 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="py-24 md:py-32">
+      {/* Live Eco Impact Counter Section */}
+      <section className="py-16 md:py-20 border-b border-border">
         <div className="section-shell">
-          <SectionIntro
-            eyebrow="The Orange difference"
-            title="More than a ride."
-            copy="It's the little things that make a journey feel different."
-          />
-          <div className="mt-14 grid border-y border-border md:grid-cols-2 lg:grid-cols-4">
-            {features.slice(0, 4).map(({ icon: Icon, title, text }, i) => (
-              <article
-                key={title}
-                className="border-b border-border p-6 last:border-b-0 md:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0"
-              >
-                <span className="grid size-11 place-items-center rounded-full bg-warm text-primary">
-                  <Icon className="size-5" />
-                </span>
-                <p className="mt-12 text-xs text-muted-foreground">0{i + 1}</p>
-                <h3 className="mt-3 text-lg font-bold">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
-              </article>
-            ))}
-          </div>
+          <EcoImpactCounter />
         </div>
       </section>
 
-      <section className="bg-warm py-24 md:py-32">
+      {/* The Orange Experience Flow */}
+      <section className="bg-warm/60 py-20 md:py-28 border-b border-border">
         <div className="section-shell grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <SectionIntro
-              eyebrow="The Orange experience"
-              title="The premium experience, made everyday."
-              copy="From the moment your car arrives to the moment you step out, every detail is considered."
+              eyebrow="The Orange Experience"
+              title="The premium standard, made everyday."
+              copy="From the moment your car arrives to the moment you step out, every detail is engineered for calm."
             />
             <ol className="mt-10 grid gap-1">
-              {moments.map((m, i) => (
+              {MOMENTS.map((m, i) => (
                 <li
                   key={m}
                   className="grid grid-cols-[2.5rem_1fr] items-center border-t border-border py-4 text-sm"
                 >
-                  <span className="text-xs text-primary">0{i + 1}</span>
-                  <span className="font-semibold">{m}</span>
+                  <span className="text-xs font-bold text-primary">0{i + 1}</span>
+                  <span className="font-semibold text-foreground">{m}</span>
                 </li>
               ))}
             </ol>
           </div>
-          <figure className="overflow-hidden rounded-[var(--radius-xl)] shadow-soft">
+          <figure className="overflow-hidden rounded-3xl border border-border shadow-soft">
             <img
               src={interiorImage}
               alt="Mahindra BE.6 luxury interior with LED screen and premium audio"
               width={1408}
               height={1056}
               loading="lazy"
-              className="aspect-[4/3] size-full object-cover transition-transform duration-700 hover:scale-[1.02]"
+              className="aspect-[4/3] size-full object-cover transition-transform duration-700 hover:scale-105"
             />
           </figure>
         </div>
       </section>
 
-      <section className="py-24 md:py-32">
-        <div className="section-shell">
-          <SectionIntro
-            eyebrow="Everyday value"
-            title="Premium shouldn't mean overpriced."
-            copy="Orange is designed to bring the care and comfort of a premium service into the rhythm of everyday travel."
-          />
-          <div className="mt-14 grid items-stretch gap-4 lg:grid-cols-3">
-            <Comparison
-              title="Everyday Cab"
-              label="Gets you there"
-              items={["Basic transportation", "Standard service"]}
-            />
-            <Comparison
-              featured
-              title="Orange Taxi"
-              label="Premium experience · Accessible price"
-              items={[
-                "Mahindra BE.6 Electric SUV",
-                "LED Entertainment Screen",
-                "Premium Music System",
-                "Daily Newspapers",
-                "Professional Driver",
-              ]}
-            />
-            <Comparison
-              title="Luxury Chauffeur"
-              label="An occasional indulgence"
-              items={["Premium experience", "Significantly higher price"]}
-            />
-          </div>
-          <p className="mt-7 text-center text-xs text-muted-foreground">
-            Illustrative service comparison only. Fares vary by journey and location.
-          </p>
-        </div>
-      </section>
-
-      <section className="bg-sage py-24 md:py-32">
-        <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
-          <figure className="relative overflow-hidden rounded-[var(--radius-xl)]">
+      {/* Airport Priority Transfers Spotlight */}
+      <section className="py-20 md:py-28 bg-card border-b border-border">
+        <div className="section-shell grid lg:grid-cols-2 gap-12 items-center">
+          <div className="order-2 lg:order-1 overflow-hidden rounded-3xl border border-border shadow-soft">
             <img
-              src={heroImage}
-              alt="Mahindra BE.6 orange electric SUV on a premium city road"
-              width={1920}
-              height={1280}
-              loading="lazy"
-              className="aspect-[5/4] size-full object-cover object-[65%_center]"
-            />
-            <figcaption className="absolute bottom-5 left-5 rounded-full bg-background/90 px-4 py-2 text-xs font-bold text-sage-foreground backdrop-blur">
-              100% electric · Mahindra BE.6
-            </figcaption>
-          </figure>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sage-foreground">
-              Electric by nature
-            </p>
-            <h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">
-              Quiet rides.
-              <br />
-              Cleaner cities.
-            </h2>
-            <p className="mt-6 max-w-lg leading-7 text-sage-foreground">
-              Every Orange ride is powered by the Mahindra BE.6 — giving you a quieter, smoother,
-              emission-free journey.
-            </p>
-            <div className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-sage-foreground/15">
-              {[
-                [BatteryCharging, "100% Electric Fleet"],
-                [Sparkles, "Quiet & Smooth"],
-                [Leaf, "Lower Emissions"],
-                [ArrowRight, "Mahindra BE.6 Exclusive"],
-              ].map(([I, t]) => {
-                const Icon = I as typeof Leaf;
-                return (
-                  <div key={t as string} className="bg-sage p-5">
-                    <Icon className="size-5" />
-                    <p className="mt-5 text-sm font-bold">{t as string}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-card py-24 text-card-foreground border-b border-border dark:bg-night dark:text-white dark:border-white/10 md:py-32">
-        <div className="section-shell">
-          <SectionIntro
-            eyebrow="Our fleet"
-            title="Meet your Orange."
-            copy="The Mahindra BE.6 — India's finest electric SUV, in signature orange, exclusively for you."
-          />
-          <div className="mt-14 grid overflow-hidden rounded-xl border border-border bg-background dark:border-white/15 dark:bg-card lg:grid-cols-[1.35fr_0.65fr]">
-            <img
-              src={heroImage}
-              alt="Mahindra BE.6 orange electric SUV at night"
+              src={eveningImage}
+              alt="Orange Taxi waiting at Delhi IGI Airport Terminal Bay"
               width={1920}
               height={1200}
               loading="lazy"
-              className="h-full min-h-[26rem] w-full object-cover"
+              className="w-full aspect-[4/3] object-cover"
             />
-            <div className="flex flex-col p-7 md:p-10">
-              <p className="text-xs uppercase tracking-[0.16em] text-primary">Mahindra BE.6</p>
-              <h3 className="display-serif mt-3 text-4xl text-foreground dark:text-white">
-                Signature Orange EV SUV
-              </h3>
-              <ul className="mt-8 space-y-4 text-sm text-muted-foreground dark:text-white/75">
-                {[
-                  "LED Entertainment Screen",
-                  "Premium Music System",
-                  "Daily Newspapers",
-                  "Complimentary Water",
-                  "Pre-cooled Cabin",
-                  "Professional Driver",
-                  "Zero Emissions · 100% Electric",
-                ].map((x) => (
-                  <li key={x} className="flex items-center gap-3">
-                    <Check className="size-4 text-primary" />
-                    {x}
-                  </li>
-                ))}
-              </ul>
-              <Button asChild className="mt-10 lg:mt-auto">
+          </div>
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <Plane className="size-3.5" /> Airport Transfers
+            </div>
+            <h2 className="display-serif mt-4 text-3xl sm:text-4xl font-bold leading-tight">
+              Dedicated pickup bays at Delhi IGI Airport (T1, T2, T3).
+            </h2>
+            <p className="mt-4 text-sm sm:text-base text-muted-foreground leading-relaxed">
+              Never wait in chaotic taxi queues or deal with surging fares after a flight. Our
+              chauffeurs monitor your live flight number, adjust for arrival delays, and provide 45
+              minutes of complimentary waiting time post touchdown.
+            </p>
+
+            <div className="mt-6 space-y-3 text-xs font-semibold">
+              <div className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-background">
+                <CheckCircle2 className="size-4 text-primary shrink-0" />
+                Live flight delay tracking & automated chauffeur adjustment
+              </div>
+              <div className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-background">
+                <CheckCircle2 className="size-4 text-primary shrink-0" />
+                45 minutes complimentary waiting time post landing
+              </div>
+              <div className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-background">
+                <CheckCircle2 className="size-4 text-primary shrink-0" />
+                Chauffeur meets you at arrival terminal pillar with luggage assistance
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Button asChild size="lg" className="font-bold">
                 <Link to="/book">
-                  Book Your Orange <ArrowRight />
+                  Book Airport Transfer <ArrowRight className="ml-1.5 size-4" />
                 </Link>
               </Button>
             </div>
@@ -449,37 +353,90 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="py-24 md:py-32">
+      {/* Enterprise Mobility Spotlight */}
+      <section className="bg-primary py-20 text-primary-foreground md:py-24">
+        <div className="section-shell grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary-foreground">
+              <BriefcaseBusiness className="size-3.5" /> Orange for Business
+            </div>
+            <h2 className="display-serif mt-5 text-4xl sm:text-5xl font-bold leading-tight">
+              Elevate your corporate travel with 100% electric luxury.
+            </h2>
+            <p className="mt-5 text-base sm:text-lg text-primary-foreground/90 max-w-lg leading-relaxed">
+              Consolidated monthly GST tax invoices, contracted zero-surge pricing, and audited
+              Scope 3 ESG carbon offset reporting for forward-thinking enterprises.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild variant="charcoal" size="lg" className="font-bold shadow-md">
+                <Link to="/business">
+                  Explore Corporate Mobility <ArrowRight className="ml-1.5 size-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <Link to="/talk-to-orange">Talk to Business Desk</Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+            {[
+              "100% GST Tax Invoices (SAC 9964)",
+              "Contracted Flat Per-KM Rates",
+              "VIP Guest & Investor Transfers",
+              "Automated Cost-Center Tagging",
+              "Quarterly ESG Carbon Reports",
+              "24x7 Priority Travel Desk",
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="rounded-xl bg-primary-foreground/10 p-5 border border-primary-foreground/15"
+              >
+                <span className="text-xs font-mono opacity-60">0{i + 1}</span>
+                <p className="mt-2 text-sm font-bold">{feature}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Chauffeur Standard */}
+      <section className="py-20 md:py-28 border-b border-border">
         <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
           <div>
             <SectionIntro
-              eyebrow="The people behind every ride"
-              title="Great rides start with great people."
-              copy="We work with professionally trained drivers and focus on the kind of consistent service that earns your trust, journey after journey."
+              eyebrow="The People Behind Every Journey"
+              title="Great rides start with disciplined people."
+              copy="We hire salaried professional chauffeurs with background checks, healthcare, and performance rewards. Because they are treated with respect, they take pride in serving you."
             />
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-8 flex flex-wrap gap-2.5">
               {[
-                "Professional training",
-                "Customer-first service",
-                "Safety-focused driving",
-                "Service standards",
-                "Fair performance model",
+                "Police & Identity Verified",
+                "Hospitality Trained",
+                "Defensive Driving Certified",
+                "Zero Cancellation Guarantee",
+                "Fair Salaried Compensation",
               ].map((x) => (
                 <span
                   key={x}
-                  className="rounded-full border border-border px-4 py-2 text-xs font-semibold"
+                  className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-2xs"
                 >
                   {x}
                 </span>
               ))}
             </div>
-            <Button asChild variant="charcoal" size="lg" className="mt-9">
+            <Button asChild variant="outline" size="lg" className="mt-8 font-semibold">
               <Link to="/drive">
-                Drive With Orange <ArrowRight />
+                Drive With Orange <ArrowRight className="ml-1.5 size-4" />
               </Link>
             </Button>
           </div>
-          <figure className="overflow-hidden rounded-[var(--radius-xl)]">
+          <figure className="overflow-hidden rounded-3xl border border-border shadow-soft">
             <img
               src={driverImage}
               alt="Professional Orange Taxi driver beside a Mahindra BE.6 orange electric car"
@@ -492,75 +449,17 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="bg-primary py-20 text-primary-foreground md:py-24">
-        <div className="section-shell grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-end">
-          <div>
-            <BriefcaseBusiness className="size-8" />
-            <h2 className="display-serif mt-7 text-5xl leading-none md:text-6xl">
-              Better rides for your business.
-            </h2>
-            <p className="mt-5 max-w-lg leading-7 text-primary-foreground/80">
-              Give your employees, clients and guests the luxury of a Mahindra BE.6 Orange ride —
-              with LED entertainment and premium audio.
-            </p>
-            <Button asChild variant="charcoal" size="lg" className="mt-8">
-              <Link to="/talk-to-orange">
-                Talk to Orange <ArrowRight />
-              </Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-px border border-primary-foreground/25 sm:grid-cols-3">
-            {[
-              "Corporate bookings",
-              "Employee transportation",
-              "Airport transfers",
-              "Client transportation",
-              "Centralized billing",
-              "Ride management",
-            ].map((x, i) => (
-              <div key={x} className="min-h-28 p-5">
-                <span className="text-xs text-primary-foreground/50">0{i + 1}</span>
-                <p className="mt-4 text-sm font-bold">{x}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 md:py-28">
-        <div className="section-shell">
-          <SectionIntro eyebrow="Simple from the start" title="How it works." />
-          <div className="mt-12 grid border-y border-border md:grid-cols-3">
-            {[
-              ["01", "Book", "Choose where you're going."],
-              ["02", "Ride", "Your Mahindra BE.6 arrives."],
-              ["03", "Enjoy", "Sink back. Screen on. Music playing."],
-            ].map(([n, t, d]) => (
-              <div
-                key={n}
-                className="border-b border-border py-8 md:border-b-0 md:border-r md:px-8 md:first:pl-0 md:last:border-r-0"
-              >
-                <span className="display-serif text-5xl text-primary">{n}</span>
-                <h3 className="mt-8 text-xl font-bold">{t}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-
-      <section className="py-24 md:py-32">
+      {/* Questions & FAQs Accordion */}
+      <section className="py-20 md:py-28 bg-card/40">
         <div className="section-shell grid gap-12 lg:grid-cols-[0.7fr_1.3fr]">
-          <SectionIntro eyebrow="Good to know" title="Questions, answered." />
+          <SectionIntro eyebrow="Common Inquiries" title="Everything you need to know." />
           <Accordion type="single" collapsible className="border-t border-border">
-            {faqs.map(([q, a], i) => (
+            {FAQS.map(([q, a], i) => (
               <AccordionItem key={q} value={`faq-${i}`}>
-                <AccordionTrigger className="py-6 text-left text-base hover:no-underline">
+                <AccordionTrigger className="py-5 text-left text-base font-semibold hover:no-underline">
                   {q}
                 </AccordionTrigger>
-                <AccordionContent className="max-w-2xl pb-6 leading-7 text-muted-foreground">
+                <AccordionContent className="max-w-2xl pb-6 leading-7 text-sm text-muted-foreground">
                   {a}
                 </AccordionContent>
               </AccordionItem>
@@ -569,34 +468,29 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-background py-28 text-foreground border-t border-border dark:bg-night dark:text-white md:py-40">
-        <img
-          src={heroImage}
-          alt="Mahindra BE.6 orange electric SUV ready for an evening journey"
-          width={1920}
-          height={1200}
-          loading="lazy"
-          className="absolute inset-0 size-full object-cover"
-        />
-        <div className="absolute inset-0 bg-background/85 dark:bg-night/70" />
-        <div className="section-shell relative">
-          <div className="max-w-2xl">
-            <h2 className="display-serif text-5xl leading-none text-foreground dark:text-white md:text-7xl">
-              Your next ride deserves a little more.
-            </h2>
-            <p className="mt-6 text-muted-foreground dark:text-white/80">
-              Mahindra BE.6 · LED Entertainment · Premium Audio · Daily Newspapers.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg">
-                <Link to="/book">
-                  Book Your Orange <ArrowRight />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/drive">Drive With Orange</Link>
-              </Button>
-            </div>
+      {/* Final Callout Banner */}
+      <section className="relative overflow-hidden bg-night py-24 text-white text-center">
+        <div className="section-shell max-w-2xl relative z-10">
+          <h2 className="display-serif text-4xl sm:text-5xl font-normal leading-tight">
+            Your next ride deserves a little more.
+          </h2>
+          <p className="mt-4 text-base text-white/75">
+            Mahindra BE.6 · Guaranteed Pre-Cooled AC · Zero Cancellations · Delhi NCR.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3.5">
+            <Button asChild size="lg" className="font-bold shadow-md">
+              <Link to="/book">
+                Book an Orange Ride <ArrowRight className="ml-1.5 size-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="bg-transparent border-white/20 text-white hover:bg-white/10"
+            >
+              <Link to="/drive">Drive With Us</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -620,47 +514,23 @@ function SectionIntro({
 }) {
   return (
     <div>
-      <p className={`text-xs font-bold uppercase tracking-[0.18em] text-primary`}>{eyebrow}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
       <h2
-        className={`display-serif mt-4 text-5xl leading-none md:text-6xl ${light ? "text-white" : "text-foreground"}`}
+        className={`display-serif mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight ${
+          light ? "text-white" : "text-foreground"
+        }`}
       >
         {title}
       </h2>
       {copy && (
         <p
-          className={`mt-5 max-w-xl leading-7 ${light ? "text-white/75" : "text-muted-foreground"}`}
+          className={`mt-4 max-w-xl text-sm sm:text-base leading-relaxed ${
+            light ? "text-white/75" : "text-muted-foreground"
+          }`}
         >
           {copy}
         </p>
       )}
     </div>
-  );
-}
-function Comparison({
-  title,
-  label,
-  items,
-  featured = false,
-}: {
-  title: string;
-  label: string;
-  items: string[];
-  featured?: boolean;
-}) {
-  return (
-    <article
-      className={`flex min-h-72 flex-col rounded-lg border p-7 ${featured ? "border-primary bg-primary text-primary-foreground shadow-brand-lg lg:-translate-y-4" : "border-border bg-card"}`}
-    >
-      <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-60">{label}</p>
-      <h3 className="display-serif mt-3 text-3xl">{title}</h3>
-      <ul className="mt-auto space-y-3 pt-10 text-sm">
-        {items.map((x) => (
-          <li key={x} className="flex gap-3">
-            <Check className="size-4 shrink-0" />
-            {x}
-          </li>
-        ))}
-      </ul>
-    </article>
   );
 }

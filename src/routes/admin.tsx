@@ -199,7 +199,8 @@ const STATUS_BADGE: Record<string, string> = {
   accepted: "bg-primary/10 text-primary border border-primary/20",
   arrived: "bg-primary/10 text-primary border border-primary/20",
   in_progress: "bg-primary/10 text-primary border border-primary/20",
-  completed: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+  completed:
+    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
   cancelled: "bg-destructive/10 text-destructive border border-destructive/20",
   new: "bg-muted text-muted-foreground border border-border",
   reviewed: "bg-muted text-foreground border border-border",
@@ -460,9 +461,18 @@ function AdminPage() {
           .from("bookings")
           .select("id", { count: "exact", head: true })
           .in("status", ["searching", "accepted", "arrived", "in_progress"]),
-        supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "completed"),
-        supabase.from("driver_applications").select("id", { count: "exact", head: true }).eq("status", "new"),
-        supabase.from("corporate_enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
+        supabase
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "completed"),
+        supabase
+          .from("driver_applications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "new"),
+        supabase
+          .from("corporate_enquiries")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "new"),
         supabase.from("drivers").select("id", { count: "exact", head: true }),
         supabase.from("drivers").select("id", { count: "exact", head: true }).eq("is_online", true),
       ]);
@@ -648,19 +658,15 @@ function AdminPage() {
 
     const bookingsCh = supabase
       .channel("admin-rt-bookings")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bookings" },
-        (payload) => {
-          if (activeTab === "bookings") {
-            fetchBookings(true);
-          }
-          fetchSummaryCounts();
-          if (payload.eventType === "INSERT") {
-            toast.info(`New Ride Request: ${(payload.new as any)?.reference || ""}`);
-          }
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, (payload) => {
+        if (activeTab === "bookings") {
+          fetchBookings(true);
+        }
+        fetchSummaryCounts();
+        if (payload.eventType === "INSERT") {
+          toast.info(`New Ride Request: ${(payload.new as any)?.reference || ""}`);
+        }
+      })
       .subscribe();
 
     const appsCh = supabase
@@ -915,10 +921,14 @@ function AdminPage() {
       id: "bookings",
       title: "Bookings & Dispatch",
       tagline: "Live Rides, Scheduled & Dispatch",
-      description: "Manage real-time customer ride requests, scheduled advance bookings, chauffeur assignments & OTPs.",
+      description:
+        "Manage real-time customer ride requests, scheduled advance bookings, chauffeur assignments & OTPs.",
       icon: Car,
       badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      badgeText: stats.activeBookings > 0 ? `${stats.activeBookings} Live Active` : `${stats.totalBookings} Total`,
+      badgeText:
+        stats.activeBookings > 0
+          ? `${stats.activeBookings} Live Active`
+          : `${stats.totalBookings} Total`,
       iconColor: "text-amber-500",
       bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
     },
@@ -926,7 +936,8 @@ function AdminPage() {
       id: "live-map",
       title: "Live Drivers Map",
       tagline: "Real-time GPS Radar Tracking",
-      description: "Live radar view of all online chauffeurs, active trips, vehicle locations, and airport staging zones.",
+      description:
+        "Live radar view of all online chauffeurs, active trips, vehicle locations, and airport staging zones.",
       icon: Radio,
       badgeColor: "bg-primary/10 text-primary border-primary/20",
       badgeText: `${stats.onlineDrivers} Chauffeurs Online`,
@@ -937,7 +948,8 @@ function AdminPage() {
       id: "applications",
       title: "Driver Applications",
       tagline: "KYC, Documents & Onboarding",
-      description: "Review new driver signups, commercial driving licences, Aadhaar cards, and approve partner EV drivers.",
+      description:
+        "Review new driver signups, commercial driving licences, Aadhaar cards, and approve partner EV drivers.",
       icon: ShieldCheck,
       badgeColor:
         stats.pendingApplications > 0
@@ -954,7 +966,8 @@ function AdminPage() {
       id: "fleet",
       title: "Fleet & Bays",
       tagline: "Airport Staging & Bay Allocation",
-      description: "Track Mahindra BE.6 & Tata Nexon EVs across airport terminal bays, charging status, and vehicle assignments.",
+      description:
+        "Track Mahindra BE.6 & Tata Nexon EVs across airport terminal bays, charging status, and vehicle assignments.",
       icon: ParkingSquare,
       badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
       badgeText: "Airport Charging Bays",
@@ -965,7 +978,8 @@ function AdminPage() {
       id: "cash",
       title: "Cash Settlements",
       tagline: "Daily Cash Reconciliation Desk",
-      description: "Verify daily cash collections made by drivers on cash trips, reconcile discrepancies, and record remittances.",
+      description:
+        "Verify daily cash collections made by drivers on cash trips, reconcile discrepancies, and record remittances.",
       icon: Banknote,
       badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
       badgeText: "Cash Collection Audit",
@@ -976,7 +990,8 @@ function AdminPage() {
       id: "commissions",
       title: "Commission Ledger",
       tagline: "Platform Splits & Partner Payouts",
-      description: "Automated 80/20 revenue splits between Orange platform and partner owner-drivers, payout ledgers & balances.",
+      description:
+        "Automated 80/20 revenue splits between Orange platform and partner owner-drivers, payout ledgers & balances.",
       icon: Percent,
       badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
       badgeText: "80/20 Partner Splits",
@@ -987,7 +1002,8 @@ function AdminPage() {
       id: "gst",
       title: "GST & Corporate Invoicing",
       tagline: "HSN 9964 Invoices & Tax Reports",
-      description: "Generate compliant GST tax invoices for B2B corporate rides, monthly tax summaries, and customer statements.",
+      description:
+        "Generate compliant GST tax invoices for B2B corporate rides, monthly tax summaries, and customer statements.",
       icon: FileSpreadsheet,
       badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
       badgeText: "GST Tax Invoices",
@@ -998,7 +1014,8 @@ function AdminPage() {
       id: "drivers",
       title: "Chauffeur Directory",
       tagline: "Driver Profiles, Cars & Ratings",
-      description: "Comprehensive roster of all registered chauffeurs, assigned vehicles, ratings, compliance details and contact info.",
+      description:
+        "Comprehensive roster of all registered chauffeurs, assigned vehicles, ratings, compliance details and contact info.",
       icon: Users,
       badgeColor: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
       badgeText: `${drivers.length || summaryCounts.totalDrivers} Chauffeurs`,
@@ -1009,7 +1026,8 @@ function AdminPage() {
       id: "enquiries",
       title: "Corporate Enquiries",
       tagline: "B2B Accounts & Enterprise Leads",
-      description: "Incoming corporate transit partnership enquiries, employee shuttle requests, and enterprise contract leads.",
+      description:
+        "Incoming corporate transit partnership enquiries, employee shuttle requests, and enterprise contract leads.",
       icon: Building2,
       badgeColor:
         stats.newEnquiries > 0
@@ -1311,10 +1329,7 @@ function AdminPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Select
-                  value={activeTab}
-                  onValueChange={(val) => handleSelectTab(val)}
-                >
+                <Select value={activeTab} onValueChange={(val) => handleSelectTab(val)}>
                   <SelectTrigger className="h-8 w-44 text-xs font-medium">
                     <SelectValue placeholder="Switch module..." />
                   </SelectTrigger>
@@ -1337,7 +1352,9 @@ function AdminPage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Live</span>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Live
+                  </span>
 
                   <div className="h-3 w-px bg-border mx-0.5" />
 
@@ -1349,10 +1366,18 @@ function AdminPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0" className="text-xs">Auto: Off</SelectItem>
-                      <SelectItem value="15" className="text-xs">Auto: 15s</SelectItem>
-                      <SelectItem value="30" className="text-xs">Auto: 30s</SelectItem>
-                      <SelectItem value="60" className="text-xs">Auto: 60s</SelectItem>
+                      <SelectItem value="0" className="text-xs">
+                        Auto: Off
+                      </SelectItem>
+                      <SelectItem value="15" className="text-xs">
+                        Auto: 15s
+                      </SelectItem>
+                      <SelectItem value="30" className="text-xs">
+                        Auto: 30s
+                      </SelectItem>
+                      <SelectItem value="60" className="text-xs">
+                        Auto: 60s
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   {autoRefreshRate > 0 && (
@@ -1379,8 +1404,12 @@ function AdminPage() {
             {tabLoading && !isTabReady(activeTab) ? (
               <div className="flex flex-col items-center justify-center py-24 bg-card rounded-xl border border-border shadow-xs my-6">
                 <Loader2 className="size-8 animate-spin text-primary mb-3" />
-                <p className="text-sm font-bold text-foreground">Loading {currentModule?.title || activeTab}...</p>
-                <p className="text-xs text-muted-foreground mt-1">Retrieving live records on demand</p>
+                <p className="text-sm font-bold text-foreground">
+                  Loading {currentModule?.title || activeTab}...
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Retrieving live records on demand
+                </p>
               </div>
             ) : (
               <Tabs
@@ -1416,908 +1445,1012 @@ function AdminPage() {
                   </TabsTrigger>
                 </TabsList>
 
-          {/* BOOKINGS */}
-          <TabsContent value="bookings">
-            <div className="rounded-xl border border-border bg-background overflow-hidden">
-              <div className="border-b border-border p-4 flex flex-col gap-3.5">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-base font-bold text-foreground">All Bookings</h2>
-                    <span className="text-xs text-muted-foreground font-mono">
-                      ({filteredBookings.length} of {bookings.length})
-                    </span>
-                  </div>
+                {/* BOOKINGS */}
+                <TabsContent value="bookings">
+                  <div className="rounded-xl border border-border bg-background overflow-hidden">
+                    <div className="border-b border-border p-4 flex flex-col gap-3.5">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h2 className="text-base font-bold text-foreground">All Bookings</h2>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            ({filteredBookings.length} of {bookings.length})
+                          </span>
+                        </div>
 
-                  {/* Actions & Omni-Search */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative w-full sm:w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                      <input
-                        type="text"
-                        placeholder="Search ref, OTP, customer, route..."
-                        value={bookingSearch}
-                        onChange={(e) => setBookingSearch(e.target.value)}
-                        className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      {bookingSearch && (
-                        <button
-                          onClick={() => setBookingSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={exportBookingsCsv}
-                      className="h-8 px-2.5 text-xs font-semibold gap-1.5 shrink-0"
-                      title="Export filtered bookings to CSV"
-                    >
-                      <Download className="size-3.5 text-primary" />
-                      <span>Export CSV</span>
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => fetchBookings(true)}
-                      className="h-8 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5 shrink-0"
-                      title="Reload bookings data"
-                    >
-                      <RefreshCw className={`size-3.5 ${tabLoading ? "animate-spin" : ""}`} />
-                      <span className="hidden sm:inline">Refresh</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Filters Row: Status + Date */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 border-t border-border/60">
-                  {/* Status Pills */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {[
-                      { id: "all", label: "All", count: bookings.length },
-                      {
-                        id: "scheduled",
-                        label: "Scheduled",
-                        count: bookings.filter((b) => b.status === "scheduled").length,
-                      },
-                      {
-                        id: "active",
-                        label: "Live / Searching",
-                        count: bookings.filter((b) =>
-                          ["searching", "accepted", "arrived", "in_progress"].includes(b.status),
-                        ).length,
-                      },
-                      {
-                        id: "completed",
-                        label: "Completed",
-                        count: bookings.filter((b) => b.status === "completed").length,
-                      },
-                      {
-                        id: "cancelled",
-                        label: "Cancelled",
-                        count: bookings.filter((b) => b.status === "cancelled").length,
-                      },
-                    ].map((f) => (
-                      <Button
-                        key={f.id}
-                        type="button"
-                        size="sm"
-                        variant={bookingStatusFilter === f.id ? "default" : "outline"}
-                        className="h-7 px-2 text-xs font-semibold gap-1.5"
-                        onClick={() => setBookingStatusFilter(f.id)}
-                      >
-                        <span>{f.label}</span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
-                            bookingStatusFilter === f.id
-                              ? "bg-primary-foreground/20 text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {f.count}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-
-                  {/* Pre-set Quick Date Filters */}
-                  <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border">
-                    <span className="text-[10px] font-bold text-muted-foreground px-2 flex items-center gap-1">
-                      <Calendar className="size-3" /> Date:
-                    </span>
-                    {[
-                      { id: "all", label: "All Time" },
-                      { id: "today", label: "Today" },
-                      { id: "yesterday", label: "Yesterday" },
-                      { id: "week", label: "This Week" },
-                      { id: "month", label: "This Month" },
-                    ].map((df) => (
-                      <button
-                        key={df.id}
-                        onClick={() => setBookingDateFilter(df.id)}
-                        className={`h-6 px-2 rounded-md text-[10px] font-bold transition-all ${
-                          bookingDateFilter === df.id
-                            ? "bg-background text-foreground shadow-xs font-extrabold"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {df.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              {/* Desktop Table View */}
-              <div className="overflow-x-auto hidden lg:block">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      {[
-                        "Ref",
-                        "Route & Time",
-                        "Vehicle",
-                        "Fare",
-                        "Status",
-                        "Driver",
-                        "OTP",
-                        "Actions",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-4 py-3.5 text-left text-xs font-semibold text-muted-foreground"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredBookings.map((b) => (
-                        <tr key={b.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3.5 align-middle font-mono text-xs font-bold">{b.reference}</td>
-                          <td className="px-4 py-3.5 align-middle text-xs max-w-[280px]">
-                            <div
-                              className="font-medium text-foreground truncate"
-                              title={`${b.pickup_area} → ${b.drop_area}`}
-                            >
-                              {formatCompactArea(b.pickup_area)} → {formatCompactArea(b.drop_area)}
-                            </div>
-                            {b.status === "scheduled" && (
-                              <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-primary">
-                                <Calendar className="size-3 text-primary shrink-0" />
-                                <span>
-                                  {b.scheduled_at
-                                    ? new Date(b.scheduled_at).toLocaleDateString("en-IN", {
-                                        weekday: "short",
-                                        day: "numeric",
-                                        month: "short",
-                                        hour: "numeric",
-                                        minute: "2-digit",
-                                        hour12: true,
-                                      })
-                                    : "Advance Booking"}
-                                </span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle text-xs text-muted-foreground">
-                            {b.vehicle_name}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle font-semibold text-primary">
-                            ₹{Math.round(b.estimated_fare)}
-                          </td>
-                          <td className="px-4 py-3.5 align-middle">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}
-                            >
-                              {b.status.replace("_", " ")}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 align-middle">
-                            {b.status === "searching" ||
-                            (b.status === "scheduled" && !b.driver_id) ? (
-                              <Select onValueChange={(v) => assignDriver(b.id, v)}>
-                                <SelectTrigger className="h-8 w-48 text-xs">
-                                  <SelectValue
-                                    placeholder={
-                                      b.status === "scheduled"
-                                        ? "Pre-assign Chauffeur"
-                                        : "Assign driver"
-                                    }
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(() => {
-                                    let pickupLat = 0;
-                                    let pickupLng = 0;
-                                    if (b.pickup_address && b.pickup_address.includes(",")) {
-                                      const parts = b.pickup_address.split(",");
-                                      pickupLat = parseFloat(parts[0]);
-                                      pickupLng = parseFloat(parts[1]);
-                                    }
-
-                                    const sortedDrivers = [...drivers].sort((d1, d2) => {
-                                      if (!pickupLat || !pickupLng) return 0;
-                                      const dist1 =
-                                        d1.current_lat && d1.current_lng
-                                          ? getDistance(
-                                              pickupLat,
-                                              pickupLng,
-                                              d1.current_lat,
-                                              d1.current_lng,
-                                            )
-                                          : Infinity;
-                                      const dist2 =
-                                        d2.current_lat && d2.current_lng
-                                          ? getDistance(
-                                              pickupLat,
-                                              pickupLng,
-                                              d2.current_lat,
-                                              d2.current_lng,
-                                            )
-                                          : Infinity;
-                                      return dist1 - dist2;
-                                    });
-
-                                    return sortedDrivers.map((d) => {
-                                      let distLabel = "";
-                                      if (
-                                        pickupLat &&
-                                        pickupLng &&
-                                        d.current_lat &&
-                                        d.current_lng
-                                      ) {
-                                        const dist = getDistance(
-                                          pickupLat,
-                                          pickupLng,
-                                          d.current_lat,
-                                          d.current_lng,
-                                        );
-                                        distLabel = ` - ${dist.toFixed(1)}km away`;
-                                      }
-                                      return (
-                                        <SelectItem key={d.id} value={d.id}>
-                                          {d.full_name} ·{" "}
-                                          {d.vehicle_number && d.vehicle_number !== "Unassigned"
-                                            ? d.vehicle_number
-                                            : "No plate"}{" "}
-                                          {d.is_online ? `(Online${distLabel})` : "(Offline)"}
-                                        </SelectItem>
-                                      );
-                                    });
-                                  })()}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">
-                                {b.driver_id
-                                  ? (() => {
-                                      const d = drivers.find((dr) => dr.id === b.driver_id);
-                                      const ridePlate = getBookingVehiclePlate(b, d);
-                                      return d ? (
-                                        <span className="flex flex-col space-y-0.5 leading-snug">
-                                          <span className="font-semibold text-foreground">
-                                            {d.full_name}
-                                          </span>
-                                          {d.phone && (
-                                            <span className="text-[11px] font-mono text-muted-foreground">
-                                              📞 {d.phone}
-                                            </span>
-                                          )}
-                                          <span className="font-mono text-[11px] font-bold text-primary">
-                                            {ridePlate}
-                                          </span>
-                                        </span>
-                                      ) : (
-                                        <span className="flex flex-col space-y-0.5 leading-snug">
-                                          <span className="font-semibold text-foreground">
-                                            Assigned
-                                          </span>
-                                          <span className="font-mono text-[11px] font-bold text-primary">
-                                            {ridePlate}
-                                          </span>
-                                        </span>
-                                      );
-                                    })()
-                                  : "—"}
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="px-4 py-3.5 align-middle">
-                            <span className="font-mono text-sm font-bold text-primary">
-                              {b.ride_otp || "—"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 align-middle">
-                            {[
-                              "searching",
-                              "scheduled",
-                              "accepted",
-                              "arrived",
-                              "in_progress",
-                            ].includes(b.status) && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                                onClick={async () => {
-                                  await supabase
-                                    .from("bookings")
-                                    .update({
-                                      status: "cancelled",
-                                      cancelled_at: new Date().toISOString(),
-                                    })
-                                    .eq("id", b.id);
-                                  toast.success("Booking cancelled");
-                                  fetchBookings(true);
-                                }}
+                        {/* Actions & Omni-Search */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="relative w-full sm:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                            <input
+                              type="text"
+                              placeholder="Search ref, OTP, customer, route..."
+                              value={bookingSearch}
+                              onChange={(e) => setBookingSearch(e.target.value)}
+                              className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                            {bookingSearch && (
+                              <button
+                                onClick={() => setBookingSearch("")}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
                               >
-                                Cancel
-                              </Button>
+                                ✕
+                              </button>
                             )}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-                {filteredBookings.length === 0 && (
-                  <p className="p-8 text-center text-sm text-muted-foreground">No bookings found matching filters.</p>
-                )}
-              </div>
+                          </div>
 
-              {/* Mobile / Tablet Responsive Ride Cards */}
-              <div className="lg:hidden divide-y divide-border">
-                {filteredBookings.length === 0 ? (
-                  <p className="p-8 text-center text-sm text-muted-foreground">No bookings found matching filters.</p>
-                ) : (
-                  filteredBookings.map((b) => {
-                    const dr = drivers.find((d) => d.id === b.driver_id);
-                    return (
-                      <div key={b.id} className="p-4 space-y-3 bg-card/40 hover:bg-muted/20 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-foreground">{b.reference}</span>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={exportBookingsCsv}
+                            className="h-8 px-2.5 text-xs font-semibold gap-1.5 shrink-0"
+                            title="Export filtered bookings to CSV"
+                          >
+                            <Download className="size-3.5 text-primary" />
+                            <span>Export CSV</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => fetchBookings(true)}
+                            className="h-8 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5 shrink-0"
+                            title="Reload bookings data"
+                          >
+                            <RefreshCw className={`size-3.5 ${tabLoading ? "animate-spin" : ""}`} />
+                            <span className="hidden sm:inline">Refresh</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Filters Row: Status + Date */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 border-t border-border/60">
+                        {/* Status Pills */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {[
+                            { id: "all", label: "All", count: bookings.length },
+                            {
+                              id: "scheduled",
+                              label: "Scheduled",
+                              count: bookings.filter((b) => b.status === "scheduled").length,
+                            },
+                            {
+                              id: "active",
+                              label: "Live / Searching",
+                              count: bookings.filter((b) =>
+                                ["searching", "accepted", "arrived", "in_progress"].includes(
+                                  b.status,
+                                ),
+                              ).length,
+                            },
+                            {
+                              id: "completed",
+                              label: "Completed",
+                              count: bookings.filter((b) => b.status === "completed").length,
+                            },
+                            {
+                              id: "cancelled",
+                              label: "Cancelled",
+                              count: bookings.filter((b) => b.status === "cancelled").length,
+                            },
+                          ].map((f) => (
+                            <Button
+                              key={f.id}
+                              type="button"
+                              size="sm"
+                              variant={bookingStatusFilter === f.id ? "default" : "outline"}
+                              className="h-7 px-2 text-xs font-semibold gap-1.5"
+                              onClick={() => setBookingStatusFilter(f.id)}
+                            >
+                              <span>{f.label}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
+                                  bookingStatusFilter === f.id
+                                    ? "bg-primary-foreground/20 text-primary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                {f.count}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* Pre-set Quick Date Filters */}
+                        <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border">
+                          <span className="text-[10px] font-bold text-muted-foreground px-2 flex items-center gap-1">
+                            <Calendar className="size-3" /> Date:
+                          </span>
+                          {[
+                            { id: "all", label: "All Time" },
+                            { id: "today", label: "Today" },
+                            { id: "yesterday", label: "Yesterday" },
+                            { id: "week", label: "This Week" },
+                            { id: "month", label: "This Month" },
+                          ].map((df) => (
+                            <button
+                              key={df.id}
+                              onClick={() => setBookingDateFilter(df.id)}
+                              className={`h-6 px-2 rounded-md text-[10px] font-bold transition-all ${
+                                bookingDateFilter === df.id
+                                  ? "bg-background text-foreground shadow-xs font-extrabold"
+                                  : "text-muted-foreground hover:text-foreground"
                               }`}
                             >
-                              {b.status.replace("_", " ")}
-                            </span>
-                          </div>
-                          <span className="font-bold text-sm text-primary font-mono">
-                            ₹{Math.round(b.estimated_fare)}
-                          </span>
-                        </div>
-
-                        {/* Route & Time */}
-                        <div className="space-y-1.5 text-xs bg-muted/30 p-2.5 rounded-lg border border-border/50">
-                          <div className="flex items-start gap-2">
-                            <span className="size-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                            <span className="text-muted-foreground leading-snug">{b.pickup_area}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="size-2 rounded-full bg-primary mt-1 shrink-0" />
-                            <span className="text-foreground font-medium leading-snug">{b.drop_area}</span>
-                          </div>
-                        </div>
-
-                        {/* Details Grid */}
-                        <div className="flex items-center justify-between text-xs pt-1">
-                          <span className="text-muted-foreground font-medium">{b.vehicle_name}</span>
-                          {b.ride_otp && (
-                            <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 text-xs">
-                              OTP: {b.ride_otp}
-                            </span>
-                          )}
-                          <span className="text-[11px] text-muted-foreground font-mono">
-                            {b.created_at ? new Date(b.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                          </span>
-                        </div>
-
-                        {/* Driver & Quick Actions */}
-                        <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
-                          <div className="flex-1">
-                            {b.status === "searching" || (b.status === "scheduled" && !b.driver_id) ? (
-                              <Select onValueChange={(v) => assignDriver(b.id, v)}>
-                                <SelectTrigger className="h-7 w-full text-xs">
-                                  <SelectValue placeholder={b.status === "scheduled" ? "Pre-assign Chauffeur" : "Assign Chauffeur"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {drivers.map((d) => (
-                                    <SelectItem key={d.id} value={d.id} className="text-xs">
-                                      {d.full_name} ({d.vehicle_number || "No Plate"})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <div className="text-xs">
-                                <span className="text-muted-foreground">Chauffeur: </span>
-                                <strong className="text-foreground">{dr?.full_name || "Assigned"}</strong>
-                                {dr?.vehicle_number && (
-                                  <span className="ml-1 font-mono text-[11px] text-muted-foreground">({dr.vehicle_number})</span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {["searching", "scheduled", "accepted", "arrived", "in_progress"].includes(b.status) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
-                              onClick={async () => {
-                                await supabase
-                                  .from("bookings")
-                                  .update({
-                                    status: "cancelled",
-                                    cancelled_at: new Date().toISOString(),
-                                  })
-                                  .eq("id", b.id);
-                                toast.success("Booking cancelled");
-                                fetchBookings(true);
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* DRIVER APPLICATIONS */}
-          <TabsContent value="applications">
-            <div className="space-y-4">
-              {/* Applications Control Bar: Omni-Search, Status Filter Pills & CSV Export */}
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
-                {/* Omni Search */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search applicant name, phone, email, DL, Aadhaar, vehicle..."
-                    value={appSearch}
-                    onChange={(e) => setAppSearch(e.target.value)}
-                    className="pl-9 pr-8 text-xs h-9"
-                  />
-                  {appSearch && (
-                    <button
-                      type="button"
-                      onClick={() => setAppSearch("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Status Filter Pills & Export */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center rounded-lg border border-border bg-muted/40 p-1 text-xs font-medium">
-                    {[
-                      { key: "all", label: "All", count: applications.length },
-                      { key: "new", label: "New", count: applications.filter((a) => a.status === "new").length },
-                      { key: "approved", label: "Approved", count: applications.filter((a) => a.status === "approved").length },
-                      { key: "rejected", label: "Rejected", count: applications.filter((a) => a.status === "rejected").length },
-                    ].map((pill) => (
-                      <button
-                        key={pill.key}
-                        type="button"
-                        onClick={() => setAppStatusFilter(pill.key)}
-                        className={`rounded-md px-2.5 py-1 transition-colors ${
-                          appStatusFilter === pill.key
-                            ? "bg-background font-bold text-foreground shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {pill.label} ({pill.count})
-                      </button>
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportApplicationsCsv}
-                    className="h-9 gap-1.5 text-xs font-semibold"
-                    title="Export filtered driver applications to CSV"
-                  >
-                    <Download className="size-3.5" />
-                    <span>Export CSV</span>
-                  </Button>
-                </div>
-              </div>
-
-              {filteredApplications.length === 0 && (
-                <EmptyState
-                  title={applications.length === 0 ? "No applications yet" : "No matching applications"}
-                  text={
-                    applications.length === 0
-                      ? "Driver applications from /drive will appear here."
-                      : "Try adjusting your search query or status filter."
-                  }
-                />
-              )}
-              {filteredApplications.map((app) => {
-                const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
-
-                return (
-                  <div key={app.id} className="rounded-xl border border-border bg-background p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      {/* Driver Photo & Information */}
-                      <div className="flex items-start gap-4 flex-1">
-                        {/* Driver Mandatory Photo Preview */}
-                        <div className="relative shrink-0">
-                          {app.photo_url ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const s = sanitizeDocumentUrl(app.photo_url);
-                                if (s) openLightbox(`Driver Photo — ${app.full_name}`, s, app);
-                              }}
-                              className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
-                              title="Click to inspect photo in lightbox"
-                            >
-                              <img
-                                src={app.photo_url}
-                                alt={app.full_name}
-                                className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <ZoomIn className="size-4 text-white" />
-                              </div>
+                              {df.label}
                             </button>
-                          ) : (
-                            <div className="size-16 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl">
-                              {app.full_name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <span
-                            className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold pointer-events-none"
-                            title="Submitted Driver Photo"
-                          >
-                            ✓
-                          </span>
+                          ))}
                         </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="font-bold text-base">{app.full_name}</h3>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[app.status] ?? "bg-muted text-muted-foreground"}`}
-                            >
-                              {app.status}
-                            </span>
-                            {/* Operating Model Badge */}
-                            {isPartner ? (
-                              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <Handshake className="size-3" /> Partner Owner-Operator (15% Comm.)
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                <Building2 className="size-3" /> Company Fleet Driver (Fixed Salary)
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-muted-foreground lg:grid-cols-4">
-                            <span>📧 {app.email}</span>
-                            <span>📞 {app.phone}</span>
-                            <span>📍 {app.city}</span>
-                            <span>🪪 {app.licence_number}</span>
-                            {app.aadhaar_number && <span>🆔 {app.aadhaar_number}</span>}
-                            <span>🚗 {app.experience_years} yrs experience</span>
-                            <span>{isPartner ? "⚡ Brings Own EV" : "🏢 Company EV"}</span>
-                            <span>📅 {new Date(app.created_at).toLocaleDateString()}</span>
-                          </div>
-
-                          {/* Vehicle Details for Partner */}
-                          {isPartner &&
-                            (app.vehicle_number || app.vehicle_model || app.chassis_number) && (
-                              <div className="mt-3 rounded-lg bg-muted/40 border border-border p-3 text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                                <span className="text-muted-foreground font-semibold flex items-center gap-1">
-                                  <Car className="size-3.5 text-primary" /> Partner EV:
-                                </span>
-                                <span>
-                                  Model:{" "}
-                                  <strong className="text-foreground">
-                                    {app.vehicle_model || "Mahindra BE.6"}
-                                  </strong>
-                                </span>
-                                {app.vehicle_year && (
-                                  <span>
-                                    Year:{" "}
-                                    <strong className="text-foreground">{app.vehicle_year}</strong>
-                                  </span>
-                                )}
-                                {app.vehicle_number && (
-                                  <span>
-                                    Reg Plate:{" "}
-                                    <strong className="font-mono text-primary uppercase">
-                                      {app.vehicle_number}
-                                    </strong>
-                                  </span>
-                                )}
-                                {app.chassis_number && (
-                                  <span>
-                                    Chassis (VIN):{" "}
-                                    <strong className="font-mono text-foreground uppercase">
-                                      {app.chassis_number}
-                                    </strong>
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                          {app.message && (
-                            <p className="mt-3 rounded-lg bg-muted p-3 text-xs leading-5">
-                              {app.message}
-                            </p>
-                          )}
-
-                          {/* Uploaded Documents with XSS Protection */}
-                          {(() => {
-                            const safePhoto = sanitizeDocumentUrl(app.photo_url);
-                            const safeDl = sanitizeDocumentUrl(app.dl_url);
-                            if (!safePhoto && !safeDl) return null;
-                            return (
-                              <div className="mt-3 flex gap-4">
-                                {safePhoto && (
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between text-xs font-semibold gap-2">
-                                      <span>Photo</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => openLightbox(`Driver Photo — ${app.full_name}`, safePhoto, app)}
-                                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-                                      >
-                                        <Maximize2 className="size-3" /> Zoom
-                                      </button>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => openLightbox(`Driver Photo — ${app.full_name}`, safePhoto, app)}
-                                      className="group relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
-                                      title="Open in KYC Lightbox"
-                                    >
-                                      <img
-                                        src={safePhoto}
-                                        alt="Photo"
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                      />
-                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <ZoomIn className="size-4 text-white" />
-                                      </div>
-                                    </button>
-                                  </div>
-                                )}
-                                {safeDl && (
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between text-xs font-semibold gap-2">
-                                      <span>Driving Licence</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => openLightbox(`Driving Licence — ${app.full_name} (${app.licence_number})`, safeDl, app)}
-                                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-                                      >
-                                        <Maximize2 className="size-3" /> Inspect
-                                      </button>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => openLightbox(`Driving Licence — ${app.full_name} (${app.licence_number})`, safeDl, app)}
-                                      className="group relative h-20 w-32 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
-                                      title="Open in KYC Lightbox"
-                                    >
-                                      <img
-                                        src={safeDl}
-                                        alt="DL"
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                      />
-                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <ZoomIn className="size-4 text-white" />
-                                      </div>
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2 flex-wrap">
-                        {app.phone && (
-                          <div className="flex items-center gap-1.5">
-                            <a
-                              href={`tel:${app.phone.replace(/\s+/g, "")}`}
-                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-xs"
-                              title={`Call ${app.full_name} (${app.phone})`}
-                            >
-                              <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Call</span>
-                            </a>
-                            <a
-                              href={`https://api.whatsapp.com/send?phone=${app.phone.replace(/\D/g, "")}&text=${encodeURIComponent(
-                                `Hello ${app.full_name}, this is Orange Taxi Fleet Operations regarding your driver application.`,
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold transition-colors shadow-xs"
-                              title={`Chat with ${app.full_name} on WhatsApp`}
-                            >
-                              <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>WhatsApp</span>
-                            </a>
-                          </div>
-                        )}
-
-                        {app.status === "approved" && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab("drivers")}
-                            className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
-                          >
-                            <span>✓ In Fleet (View in Drivers →)</span>
-                          </button>
-                        )}
-
-                        {app.status === "new" && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:bg-destructive/10"
-                              onClick={() => updateApplicationStatus(app.id, "rejected")}
-                            >
-                              <X className="size-4" /> Reject
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                updateApplicationStatus(app.id, "approved", app.email, app)
-                              }
-                            >
-                              <CheckCircle className="size-4" /> Approve
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </TabsContent>
+                    {/* Desktop Table View */}
+                    <div className="overflow-x-auto hidden lg:block">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            {[
+                              "Ref",
+                              "Route & Time",
+                              "Vehicle",
+                              "Fare",
+                              "Status",
+                              "Driver",
+                              "OTP",
+                              "Actions",
+                            ].map((h) => (
+                              <th
+                                key={h}
+                                className="px-4 py-3.5 text-left text-xs font-semibold text-muted-foreground"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {filteredBookings.map((b) => (
+                            <tr key={b.id} className="hover:bg-muted/30">
+                              <td className="px-4 py-3.5 align-middle font-mono text-xs font-bold">
+                                {b.reference}
+                              </td>
+                              <td className="px-4 py-3.5 align-middle text-xs max-w-[280px]">
+                                <div
+                                  className="font-medium text-foreground truncate"
+                                  title={`${b.pickup_area} → ${b.drop_area}`}
+                                >
+                                  {formatCompactArea(b.pickup_area)} →{" "}
+                                  {formatCompactArea(b.drop_area)}
+                                </div>
+                                {b.status === "scheduled" && (
+                                  <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-primary">
+                                    <Calendar className="size-3 text-primary shrink-0" />
+                                    <span>
+                                      {b.scheduled_at
+                                        ? new Date(b.scheduled_at).toLocaleDateString("en-IN", {
+                                            weekday: "short",
+                                            day: "numeric",
+                                            month: "short",
+                                            hour: "numeric",
+                                            minute: "2-digit",
+                                            hour12: true,
+                                          })
+                                        : "Advance Booking"}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 align-middle text-xs text-muted-foreground">
+                                {b.vehicle_name}
+                              </td>
+                              <td className="px-4 py-3.5 align-middle font-semibold text-primary">
+                                ₹{Math.round(b.estimated_fare)}
+                              </td>
+                              <td className="px-4 py-3.5 align-middle">
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"}`}
+                                >
+                                  {b.status.replace("_", " ")}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 align-middle">
+                                {b.status === "searching" ||
+                                (b.status === "scheduled" && !b.driver_id) ? (
+                                  <Select onValueChange={(v) => assignDriver(b.id, v)}>
+                                    <SelectTrigger className="h-8 w-48 text-xs">
+                                      <SelectValue
+                                        placeholder={
+                                          b.status === "scheduled"
+                                            ? "Pre-assign Chauffeur"
+                                            : "Assign driver"
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(() => {
+                                        let pickupLat = 0;
+                                        let pickupLng = 0;
+                                        if (b.pickup_address && b.pickup_address.includes(",")) {
+                                          const parts = b.pickup_address.split(",");
+                                          pickupLat = parseFloat(parts[0]);
+                                          pickupLng = parseFloat(parts[1]);
+                                        }
 
-          {/* ENQUIRIES */}
-          <TabsContent value="enquiries">
-            <div className="space-y-4">
-              {enquiries.length === 0 && (
-                <EmptyState
-                  title="No enquiries yet"
-                  text="Corporate enquiries from /talk-to-orange will appear here."
-                />
-              )}
-              {enquiries.map((eq) => (
-                <div key={eq.id} className="rounded-xl border border-border bg-background p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-bold">{eq.company_name}</h3>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[eq.status] ?? "bg-muted text-muted-foreground"}`}
-                        >
-                          {eq.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground lg:grid-cols-3">
-                        <span>👤 {eq.contact_name}</span>
-                        <span>📧 {eq.email}</span>
-                        <span>📞 {eq.phone}</span>
-                        <span>📍 {eq.city}</span>
-                        <span>👥 Team: {eq.team_size}</span>
-                        <span>📅 {new Date(eq.created_at).toLocaleDateString()}</span>
-                      </div>
-                      {eq.requirement && (
-                        <p className="mt-2 text-xs text-muted-foreground">Need: {eq.requirement}</p>
-                      )}
-                      {eq.message && (
-                        <p className="mt-2 rounded-lg bg-muted p-3 text-xs leading-5">
-                          {eq.message}
+                                        const sortedDrivers = [...drivers].sort((d1, d2) => {
+                                          if (!pickupLat || !pickupLng) return 0;
+                                          const dist1 =
+                                            d1.current_lat && d1.current_lng
+                                              ? getDistance(
+                                                  pickupLat,
+                                                  pickupLng,
+                                                  d1.current_lat,
+                                                  d1.current_lng,
+                                                )
+                                              : Infinity;
+                                          const dist2 =
+                                            d2.current_lat && d2.current_lng
+                                              ? getDistance(
+                                                  pickupLat,
+                                                  pickupLng,
+                                                  d2.current_lat,
+                                                  d2.current_lng,
+                                                )
+                                              : Infinity;
+                                          return dist1 - dist2;
+                                        });
+
+                                        return sortedDrivers.map((d) => {
+                                          let distLabel = "";
+                                          if (
+                                            pickupLat &&
+                                            pickupLng &&
+                                            d.current_lat &&
+                                            d.current_lng
+                                          ) {
+                                            const dist = getDistance(
+                                              pickupLat,
+                                              pickupLng,
+                                              d.current_lat,
+                                              d.current_lng,
+                                            );
+                                            distLabel = ` - ${dist.toFixed(1)}km away`;
+                                          }
+                                          return (
+                                            <SelectItem key={d.id} value={d.id}>
+                                              {d.full_name} ·{" "}
+                                              {d.vehicle_number && d.vehicle_number !== "Unassigned"
+                                                ? d.vehicle_number
+                                                : "No plate"}{" "}
+                                              {d.is_online ? `(Online${distLabel})` : "(Offline)"}
+                                            </SelectItem>
+                                          );
+                                        });
+                                      })()}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    {b.driver_id
+                                      ? (() => {
+                                          const d = drivers.find((dr) => dr.id === b.driver_id);
+                                          const ridePlate = getBookingVehiclePlate(b, d);
+                                          return d ? (
+                                            <span className="flex flex-col space-y-0.5 leading-snug">
+                                              <span className="font-semibold text-foreground">
+                                                {d.full_name}
+                                              </span>
+                                              {d.phone && (
+                                                <span className="text-[11px] font-mono text-muted-foreground">
+                                                  📞 {d.phone}
+                                                </span>
+                                              )}
+                                              <span className="font-mono text-[11px] font-bold text-primary">
+                                                {ridePlate}
+                                              </span>
+                                            </span>
+                                          ) : (
+                                            <span className="flex flex-col space-y-0.5 leading-snug">
+                                              <span className="font-semibold text-foreground">
+                                                Assigned
+                                              </span>
+                                              <span className="font-mono text-[11px] font-bold text-primary">
+                                                {ridePlate}
+                                              </span>
+                                            </span>
+                                          );
+                                        })()
+                                      : "—"}
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5 align-middle">
+                                <span className="font-mono text-sm font-bold text-primary">
+                                  {b.ride_otp || "—"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 align-middle">
+                                {[
+                                  "searching",
+                                  "scheduled",
+                                  "accepted",
+                                  "arrived",
+                                  "in_progress",
+                                ].includes(b.status) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                                    onClick={async () => {
+                                      await supabase
+                                        .from("bookings")
+                                        .update({
+                                          status: "cancelled",
+                                          cancelled_at: new Date().toISOString(),
+                                        })
+                                        .eq("id", b.id);
+                                      toast.success("Booking cancelled");
+                                      fetchBookings(true);
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredBookings.length === 0 && (
+                        <p className="p-8 text-center text-sm text-muted-foreground">
+                          No bookings found matching filters.
                         </p>
                       )}
                     </div>
-                    <div className="flex shrink-0 gap-2">
-                      {eq.status === "new" && (
-                        <Button size="sm" onClick={() => updateEnquiryStatus(eq.id, "contacted")}>
-                          Mark Contacted
-                        </Button>
-                      )}
-                      {eq.status === "contacted" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => updateEnquiryStatus(eq.id, "closed")}
-                        >
-                          Close
-                        </Button>
+
+                    {/* Mobile / Tablet Responsive Ride Cards */}
+                    <div className="lg:hidden divide-y divide-border">
+                      {filteredBookings.length === 0 ? (
+                        <p className="p-8 text-center text-sm text-muted-foreground">
+                          No bookings found matching filters.
+                        </p>
+                      ) : (
+                        filteredBookings.map((b) => {
+                          const dr = drivers.find((d) => d.id === b.driver_id);
+                          return (
+                            <div
+                              key={b.id}
+                              className="p-4 space-y-3 bg-card/40 hover:bg-muted/20 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-bold text-foreground">
+                                    {b.reference}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                      STATUS_BADGE[b.status] ?? "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {b.status.replace("_", " ")}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-sm text-primary font-mono">
+                                  ₹{Math.round(b.estimated_fare)}
+                                </span>
+                              </div>
+
+                              {/* Route & Time */}
+                              <div className="space-y-1.5 text-xs bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                                <div className="flex items-start gap-2">
+                                  <span className="size-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                                  <span className="text-muted-foreground leading-snug">
+                                    {b.pickup_area}
+                                  </span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <span className="size-2 rounded-full bg-primary mt-1 shrink-0" />
+                                  <span className="text-foreground font-medium leading-snug">
+                                    {b.drop_area}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Details Grid */}
+                              <div className="flex items-center justify-between text-xs pt-1">
+                                <span className="text-muted-foreground font-medium">
+                                  {b.vehicle_name}
+                                </span>
+                                {b.ride_otp && (
+                                  <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 text-xs">
+                                    OTP: {b.ride_otp}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-muted-foreground font-mono">
+                                  {b.created_at
+                                    ? new Date(b.created_at).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : ""}
+                                </span>
+                              </div>
+
+                              {/* Driver & Quick Actions */}
+                              <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  {b.status === "searching" ||
+                                  (b.status === "scheduled" && !b.driver_id) ? (
+                                    <Select onValueChange={(v) => assignDriver(b.id, v)}>
+                                      <SelectTrigger className="h-7 w-full text-xs">
+                                        <SelectValue
+                                          placeholder={
+                                            b.status === "scheduled"
+                                              ? "Pre-assign Chauffeur"
+                                              : "Assign Chauffeur"
+                                          }
+                                        />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {drivers.map((d) => (
+                                          <SelectItem key={d.id} value={d.id} className="text-xs">
+                                            {d.full_name} ({d.vehicle_number || "No Plate"})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <div className="text-xs">
+                                      <span className="text-muted-foreground">Chauffeur: </span>
+                                      <strong className="text-foreground">
+                                        {dr?.full_name || "Assigned"}
+                                      </strong>
+                                      {dr?.vehicle_number && (
+                                        <span className="ml-1 font-mono text-[11px] text-muted-foreground">
+                                          ({dr.vehicle_number})
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {[
+                                  "searching",
+                                  "scheduled",
+                                  "accepted",
+                                  "arrived",
+                                  "in_progress",
+                                ].includes(b.status) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                                    onClick={async () => {
+                                      await supabase
+                                        .from("bookings")
+                                        .update({
+                                          status: "cancelled",
+                                          cancelled_at: new Date().toISOString(),
+                                        })
+                                        .eq("id", b.id);
+                                      toast.success("Booking cancelled");
+                                      fetchBookings(true);
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
+                </TabsContent>
 
-          {/* LIVE DRIVERS MAP */}
-          <TabsContent value="live-map">
-            <TabErrorBoundary tabName="Live Drivers Map" onRetry={loadAll}>
-              <LiveDriversMap
-                drivers={drivers}
-                bookings={bookings}
-                apiKey={GOOGLE_MAPS_KEY}
-                onRefresh={loadAll}
-              />
-            </TabErrorBoundary>
-          </TabsContent>
+                {/* DRIVER APPLICATIONS */}
+                <TabsContent value="applications">
+                  <div className="space-y-4">
+                    {/* Applications Control Bar: Omni-Search, Status Filter Pills & CSV Export */}
+                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+                      {/* Omni Search */}
+                      <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search applicant name, phone, email, DL, Aadhaar, vehicle..."
+                          value={appSearch}
+                          onChange={(e) => setAppSearch(e.target.value)}
+                          className="pl-9 pr-8 text-xs h-9"
+                        />
+                        {appSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setAppSearch("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
 
-          {/* DRIVERS */}
-          <TabsContent value="drivers">
-            <DriverAnalyticsPanel
-              drivers={drivers}
-              bookings={bookings}
-              onRefresh={loadAll}
-              onNavigateTab={(tab) => {
-                setActiveTab(tab);
-                navigate({ to: "/admin", search: { tab }, replace: true });
-              }}
-            />
-          </TabsContent>
+                      {/* Status Filter Pills & Export */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center rounded-lg border border-border bg-muted/40 p-1 text-xs font-medium">
+                          {[
+                            { key: "all", label: "All", count: applications.length },
+                            {
+                              key: "new",
+                              label: "New",
+                              count: applications.filter((a) => a.status === "new").length,
+                            },
+                            {
+                              key: "approved",
+                              label: "Approved",
+                              count: applications.filter((a) => a.status === "approved").length,
+                            },
+                            {
+                              key: "rejected",
+                              label: "Rejected",
+                              count: applications.filter((a) => a.status === "rejected").length,
+                            },
+                          ].map((pill) => (
+                            <button
+                              key={pill.key}
+                              type="button"
+                              onClick={() => setAppStatusFilter(pill.key)}
+                              className={`rounded-md px-2.5 py-1 transition-colors ${
+                                appStatusFilter === pill.key
+                                  ? "bg-background font-bold text-foreground shadow-xs"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {pill.label} ({pill.count})
+                            </button>
+                          ))}
+                        </div>
 
-          {/* FLEET & BAYS */}
-          <TabsContent value="fleet">
-            <FleetManager drivers={drivers} onRefresh={loadAll} />
-          </TabsContent>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={exportApplicationsCsv}
+                          className="h-9 gap-1.5 text-xs font-semibold"
+                          title="Export filtered driver applications to CSV"
+                        >
+                          <Download className="size-3.5" />
+                          <span>Export CSV</span>
+                        </Button>
+                      </div>
+                    </div>
 
-          {/* CASH SETTLEMENTS */}
-          <TabsContent value="cash">
-            <CashSettlementManager drivers={drivers} bookings={bookings} onRefresh={loadAll} />
-          </TabsContent>
+                    {filteredApplications.length === 0 && (
+                      <EmptyState
+                        title={
+                          applications.length === 0
+                            ? "No applications yet"
+                            : "No matching applications"
+                        }
+                        text={
+                          applications.length === 0
+                            ? "Driver applications from /drive will appear here."
+                            : "Try adjusting your search query or status filter."
+                        }
+                      />
+                    )}
+                    {filteredApplications.map((app) => {
+                      const isPartner = Boolean(app.owns_vehicle || app.driver_type === "partner");
 
-          {/* COMMISSION LEDGER */}
-          <TabsContent value="commissions">
-            <TabErrorBoundary tabName="Commission Ledger" onRetry={loadAll}>
-              <CommissionLedgerManager
-                drivers={drivers}
-                bookings={bookings}
-                onRefresh={loadAll}
-                onNavigateTab={(tab) => {
-                  setActiveTab(tab);
-                  navigate({ to: "/admin", search: { tab }, replace: true });
-                }}
-              />
-            </TabErrorBoundary>
-          </TabsContent>
+                      return (
+                        <div
+                          key={app.id}
+                          className="rounded-xl border border-border bg-background p-6"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            {/* Driver Photo & Information */}
+                            <div className="flex items-start gap-4 flex-1">
+                              {/* Driver Mandatory Photo Preview */}
+                              <div className="relative shrink-0">
+                                {app.photo_url ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const s = sanitizeDocumentUrl(app.photo_url);
+                                      if (s)
+                                        openLightbox(`Driver Photo — ${app.full_name}`, s, app);
+                                    }}
+                                    className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                    title="Click to inspect photo in lightbox"
+                                  >
+                                    <img
+                                      src={app.photo_url}
+                                      alt={app.full_name}
+                                      className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <ZoomIn className="size-4 text-white" />
+                                    </div>
+                                  </button>
+                                ) : (
+                                  <div className="size-16 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xl">
+                                    {app.full_name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span
+                                  className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold pointer-events-none"
+                                  title="Submitted Driver Photo"
+                                >
+                                  ✓
+                                </span>
+                              </div>
 
-          {/* GST & INVOICING */}
-          <TabsContent value="gst">
-            <TabErrorBoundary tabName="GST & Invoicing" onRetry={loadAll}>
-              <GSTAccountingManager bookings={bookings} onRefresh={loadAll} />
-            </TabErrorBoundary>
-          </TabsContent>
-        </Tabs>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <h3 className="font-bold text-base">{app.full_name}</h3>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[app.status] ?? "bg-muted text-muted-foreground"}`}
+                                  >
+                                    {app.status}
+                                  </span>
+                                  {/* Operating Model Badge */}
+                                  {isPartner ? (
+                                    <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                      <Handshake className="size-3" /> Partner Owner-Operator (15%
+                                      Comm.)
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                      <Building2 className="size-3" /> Company Fleet Driver (Fixed
+                                      Salary)
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-muted-foreground lg:grid-cols-4">
+                                  <span>📧 {app.email}</span>
+                                  <span>📞 {app.phone}</span>
+                                  <span>📍 {app.city}</span>
+                                  <span>🪪 {app.licence_number}</span>
+                                  {app.aadhaar_number && <span>🆔 {app.aadhaar_number}</span>}
+                                  <span>🚗 {app.experience_years} yrs experience</span>
+                                  <span>{isPartner ? "⚡ Brings Own EV" : "🏢 Company EV"}</span>
+                                  <span>📅 {new Date(app.created_at).toLocaleDateString()}</span>
+                                </div>
+
+                                {/* Vehicle Details for Partner */}
+                                {isPartner &&
+                                  (app.vehicle_number ||
+                                    app.vehicle_model ||
+                                    app.chassis_number) && (
+                                    <div className="mt-3 rounded-lg bg-muted/40 border border-border p-3 text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                                      <span className="text-muted-foreground font-semibold flex items-center gap-1">
+                                        <Car className="size-3.5 text-primary" /> Partner EV:
+                                      </span>
+                                      <span>
+                                        Model:{" "}
+                                        <strong className="text-foreground">
+                                          {app.vehicle_model || "Mahindra BE.6"}
+                                        </strong>
+                                      </span>
+                                      {app.vehicle_year && (
+                                        <span>
+                                          Year:{" "}
+                                          <strong className="text-foreground">
+                                            {app.vehicle_year}
+                                          </strong>
+                                        </span>
+                                      )}
+                                      {app.vehicle_number && (
+                                        <span>
+                                          Reg Plate:{" "}
+                                          <strong className="font-mono text-primary uppercase">
+                                            {app.vehicle_number}
+                                          </strong>
+                                        </span>
+                                      )}
+                                      {app.chassis_number && (
+                                        <span>
+                                          Chassis (VIN):{" "}
+                                          <strong className="font-mono text-foreground uppercase">
+                                            {app.chassis_number}
+                                          </strong>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                {app.message && (
+                                  <p className="mt-3 rounded-lg bg-muted p-3 text-xs leading-5">
+                                    {app.message}
+                                  </p>
+                                )}
+
+                                {/* Uploaded Documents with XSS Protection */}
+                                {(() => {
+                                  const safePhoto = sanitizeDocumentUrl(app.photo_url);
+                                  const safeDl = sanitizeDocumentUrl(app.dl_url);
+                                  if (!safePhoto && !safeDl) return null;
+                                  return (
+                                    <div className="mt-3 flex gap-4">
+                                      {safePhoto && (
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center justify-between text-xs font-semibold gap-2">
+                                            <span>Photo</span>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                openLightbox(
+                                                  `Driver Photo — ${app.full_name}`,
+                                                  safePhoto,
+                                                  app,
+                                                )
+                                              }
+                                              className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                            >
+                                              <Maximize2 className="size-3" /> Zoom
+                                            </button>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openLightbox(
+                                                `Driver Photo — ${app.full_name}`,
+                                                safePhoto,
+                                                app,
+                                              )
+                                            }
+                                            className="group relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
+                                            title="Open in KYC Lightbox"
+                                          >
+                                            <img
+                                              src={safePhoto}
+                                              alt="Photo"
+                                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                              <ZoomIn className="size-4 text-white" />
+                                            </div>
+                                          </button>
+                                        </div>
+                                      )}
+                                      {safeDl && (
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center justify-between text-xs font-semibold gap-2">
+                                            <span>Driving Licence</span>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                openLightbox(
+                                                  `Driving Licence — ${app.full_name} (${app.licence_number})`,
+                                                  safeDl,
+                                                  app,
+                                                )
+                                              }
+                                              className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                            >
+                                              <Maximize2 className="size-3" /> Inspect
+                                            </button>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openLightbox(
+                                                `Driving Licence — ${app.full_name} (${app.licence_number})`,
+                                                safeDl,
+                                                app,
+                                              )
+                                            }
+                                            className="group relative h-20 w-32 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
+                                            title="Open in KYC Lightbox"
+                                          >
+                                            <img
+                                              src={safeDl}
+                                              alt="DL"
+                                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                              <ZoomIn className="size-4 text-white" />
+                                            </div>
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2 flex-wrap">
+                              {app.phone && (
+                                <div className="flex items-center gap-1.5">
+                                  <a
+                                    href={`tel:${app.phone.replace(/\s+/g, "")}`}
+                                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-xs"
+                                    title={`Call ${app.full_name} (${app.phone})`}
+                                  >
+                                    <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Call</span>
+                                  </a>
+                                  <a
+                                    href={`https://api.whatsapp.com/send?phone=${app.phone.replace(/\D/g, "")}&text=${encodeURIComponent(
+                                      `Hello ${app.full_name}, this is Orange Taxi Fleet Operations regarding your driver application.`,
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold transition-colors shadow-xs"
+                                    title={`Chat with ${app.full_name} on WhatsApp`}
+                                  >
+                                    <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                </div>
+                              )}
+
+                              {app.status === "approved" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveTab("drivers")}
+                                  className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
+                                >
+                                  <span>✓ In Fleet (View in Drivers →)</span>
+                                </button>
+                              )}
+
+                              {app.status === "new" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive hover:bg-destructive/10"
+                                    onClick={() => updateApplicationStatus(app.id, "rejected")}
+                                  >
+                                    <X className="size-4" /> Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      updateApplicationStatus(app.id, "approved", app.email, app)
+                                    }
+                                  >
+                                    <CheckCircle className="size-4" /> Approve
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* ENQUIRIES */}
+                <TabsContent value="enquiries">
+                  <div className="space-y-4">
+                    {enquiries.length === 0 && (
+                      <EmptyState
+                        title="No corporate enquiries yet"
+                        text="Corporate B2B enquiries from /business and /talk-to-orange will appear here."
+                      />
+                    )}
+                    {enquiries.map((eq) => (
+                      <div
+                        key={eq.id}
+                        className="rounded-xl border border-border bg-background p-6"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <h3 className="font-bold">{eq.company_name}</h3>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[eq.status] ?? "bg-muted text-muted-foreground"}`}
+                              >
+                                {eq.status}
+                              </span>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground lg:grid-cols-3">
+                              <span>👤 {eq.contact_name}</span>
+                              <span>📧 {eq.email}</span>
+                              <span>📞 {eq.phone}</span>
+                              <span>📍 {eq.city}</span>
+                              <span>👥 Team: {eq.team_size}</span>
+                              <span>📅 {new Date(eq.created_at).toLocaleDateString()}</span>
+                            </div>
+                            {eq.requirement && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Need: {eq.requirement}
+                              </p>
+                            )}
+                            {eq.message && (
+                              <p className="mt-2 rounded-lg bg-muted p-3 text-xs leading-5">
+                                {eq.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            {eq.status === "new" && (
+                              <Button
+                                size="sm"
+                                onClick={() => updateEnquiryStatus(eq.id, "contacted")}
+                              >
+                                Mark Contacted
+                              </Button>
+                            )}
+                            {eq.status === "contacted" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => updateEnquiryStatus(eq.id, "closed")}
+                              >
+                                Close
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* LIVE DRIVERS MAP */}
+                <TabsContent value="live-map">
+                  <TabErrorBoundary tabName="Live Drivers Map" onRetry={loadAll}>
+                    <LiveDriversMap
+                      drivers={drivers}
+                      bookings={bookings}
+                      apiKey={GOOGLE_MAPS_KEY}
+                      onRefresh={loadAll}
+                    />
+                  </TabErrorBoundary>
+                </TabsContent>
+
+                {/* DRIVERS */}
+                <TabsContent value="drivers">
+                  <DriverAnalyticsPanel
+                    drivers={drivers}
+                    bookings={bookings}
+                    onRefresh={loadAll}
+                    onNavigateTab={(tab) => {
+                      setActiveTab(tab);
+                      navigate({ to: "/admin", search: { tab }, replace: true });
+                    }}
+                  />
+                </TabsContent>
+
+                {/* FLEET & BAYS */}
+                <TabsContent value="fleet">
+                  <FleetManager drivers={drivers} onRefresh={loadAll} />
+                </TabsContent>
+
+                {/* CASH SETTLEMENTS */}
+                <TabsContent value="cash">
+                  <CashSettlementManager
+                    drivers={drivers}
+                    bookings={bookings}
+                    onRefresh={loadAll}
+                  />
+                </TabsContent>
+
+                {/* COMMISSION LEDGER */}
+                <TabsContent value="commissions">
+                  <TabErrorBoundary tabName="Commission Ledger" onRetry={loadAll}>
+                    <CommissionLedgerManager
+                      drivers={drivers}
+                      bookings={bookings}
+                      onRefresh={loadAll}
+                      onNavigateTab={(tab) => {
+                        setActiveTab(tab);
+                        navigate({ to: "/admin", search: { tab }, replace: true });
+                      }}
+                    />
+                  </TabErrorBoundary>
+                </TabsContent>
+
+                {/* GST & INVOICING */}
+                <TabsContent value="gst">
+                  <TabErrorBoundary tabName="GST & Invoicing" onRetry={loadAll}>
+                    <GSTAccountingManager bookings={bookings} onRefresh={loadAll} />
+                  </TabErrorBoundary>
+                </TabsContent>
+              </Tabs>
             )}
           </div>
         )}
@@ -2459,7 +2592,9 @@ function AdminPage() {
                           Applied: {new Date(lightboxDoc.app.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <h4 className="mt-2 text-lg font-bold text-white">{lightboxDoc.app.full_name}</h4>
+                      <h4 className="mt-2 text-lg font-bold text-white">
+                        {lightboxDoc.app.full_name}
+                      </h4>
                       <p className="text-xs text-primary font-medium">
                         {lightboxDoc.app.owns_vehicle || lightboxDoc.app.driver_type === "partner"
                           ? "Partner Owner-Operator"
@@ -2475,7 +2610,10 @@ function AdminPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Email:</span>
-                        <span className="text-zinc-200 truncate max-w-[170px]" title={lightboxDoc.app.email}>
+                        <span
+                          className="text-zinc-200 truncate max-w-[170px]"
+                          title={lightboxDoc.app.email}
+                        >
                           {lightboxDoc.app.email}
                         </span>
                       </div>
@@ -2485,17 +2623,23 @@ function AdminPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Driving Licence:</span>
-                        <span className="font-mono font-bold text-primary">{lightboxDoc.app.licence_number}</span>
+                        <span className="font-mono font-bold text-primary">
+                          {lightboxDoc.app.licence_number}
+                        </span>
                       </div>
                       {lightboxDoc.app.aadhaar_number && (
                         <div className="flex justify-between">
                           <span className="text-zinc-400">Aadhaar (UIDAI):</span>
-                          <span className="font-mono text-zinc-200">{lightboxDoc.app.aadhaar_number}</span>
+                          <span className="font-mono text-zinc-200">
+                            {lightboxDoc.app.aadhaar_number}
+                          </span>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Experience:</span>
-                        <span className="text-zinc-200">{lightboxDoc.app.experience_years} years</span>
+                        <span className="text-zinc-200">
+                          {lightboxDoc.app.experience_years} years
+                        </span>
                       </div>
                       {lightboxDoc.app.vehicle_number && (
                         <div className="flex justify-between">
@@ -2564,7 +2708,10 @@ function AdminPage() {
                     ) : (
                       <div className="rounded-lg bg-zinc-800/40 p-2.5 text-center text-xs text-zinc-400">
                         Application has been marked as{" "}
-                        <strong className="text-zinc-200 uppercase">{lightboxDoc.app.status}</strong>.
+                        <strong className="text-zinc-200 uppercase">
+                          {lightboxDoc.app.status}
+                        </strong>
+                        .
                       </div>
                     )}
                   </div>
