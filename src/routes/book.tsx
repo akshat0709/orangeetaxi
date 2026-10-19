@@ -389,7 +389,7 @@ function PassengerPage() {
   const [liveDriverInfo, setLiveDriverInfo] = useState<any>(null);
   const [liveRideStatus, setLiveRideStatus] = useState<string>("searching");
 
-  // Read URL query params (e.g. from HomepageFareEstimator)
+  // Read URL query params (e.g. ?pickup=...&drop=...)
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {

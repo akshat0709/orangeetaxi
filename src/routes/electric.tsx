@@ -12,7 +12,6 @@ import {
   Trees,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EcoImpactCounter } from "@/components/eco-impact-counter";
 import heroImage from "@/assets/orange-taxi-hero.jpg";
 import eveningImage from "@/assets/orange-taxi-evening.jpg";
 
@@ -121,12 +120,6 @@ function ElectricPage() {
         </div>
       </section>
 
-      {/* Live Eco Impact Counter Integration */}
-      <section className="py-16 border-b border-border">
-        <div className="section-shell">
-          <EcoImpactCounter />
-        </div>
-      </section>
 
       {/* Vehicle Engineering Specs */}
       <section className="py-20 lg:py-24">
