@@ -59,14 +59,20 @@ import { LiveRideMap } from "@/components/live-ride-map";
 import { APIProvider } from "@vis.gl/react-google-maps";
 
 function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(query).matches;
+    }
+    return true;
+  });
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const media = window.matchMedia(query);
-    if (media.matches !== matches) setMatches(media.matches);
+    setMatches(media.matches);
     const listener = () => setMatches(media.matches);
     media.addEventListener("change", listener);
     return () => media.removeEventListener("change", listener);
-  }, [matches, query]);
+  }, [query]);
   return matches;
 }
 
@@ -91,7 +97,8 @@ import {
 import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_KEY =
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8";
 
 export const Route = createFileRoute("/book")({
   head: () => ({
@@ -925,7 +932,7 @@ function PassengerPage() {
   }
 
   return (
-    <APIProvider apiKey={GOOGLE_MAPS_KEY}>
+    <APIProvider apiKey={GOOGLE_MAPS_KEY} libraries={["routes", "geometry", "places"]}>
       {step !== 4 && (
         <section className="relative overflow-hidden bg-night text-white">
           <img
@@ -1099,13 +1106,13 @@ function PassengerPage() {
                 />
               )}
             </div>
-            {step === 4 && pickup && drop ? (
+            {step === 4 ? (
               isDesktop ? (
                 <div className="hidden lg:block sticky top-24 min-w-0 max-w-full">
                   <LiveRideMap
                     id="desktop-live-map"
-                    pickup={pickup}
-                    dropoff={drop}
+                    pickup={pickup || { name: "Pickup Location", lat: 28.6139, lng: 77.209 }}
+                    dropoff={drop || { name: "Destination", lat: 28.5562, lng: 77.1 }}
                     driverLocation={liveDriverInfo}
                     rideStatus={liveRideStatus}
                     distKm={distKm}
@@ -2377,8 +2384,8 @@ function Step4Confirmed({
         <div className="mt-6 lg:hidden">
           <LiveRideMap
             id="mobile-live-map"
-            pickup={pickup}
-            dropoff={drop}
+            pickup={pickup || { name: "Pickup Location", lat: 28.6139, lng: 77.209 }}
+            dropoff={drop || { name: "Destination", lat: 28.5562, lng: 77.1 }}
             driverLocation={driverInfo}
             rideStatus={status}
             distKm={distKm}
