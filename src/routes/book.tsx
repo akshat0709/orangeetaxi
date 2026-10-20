@@ -738,38 +738,43 @@ function PassengerPage() {
         estimated_fare: Math.round(fareBreakdown.total),
         payment_method: paymentMethod,
         payment_status: transactionId ? "paid" : "pending",
-        payment_made: transactionId ? "yes" : "no",
         status: isAdvanceBooking ? "scheduled" : "searching",
         scheduled_at: scheduledIso,
         ride_otp: otp,
       };
 
+      let insertPayload: Record<string, any> = { ...bookingPayload };
       let { data, error } = await supabase
         .from("bookings")
-        .insert({
-          ...bookingPayload,
-          payment_intent_id: transactionId || null,
-        })
+        .insert(insertPayload)
         .select("id, reference")
         .single();
 
-      if (
+      // Dynamic resilience: if PostgREST schema cache does not have a specific column,
+      // dynamically strip that column and retry up to 3 times
+      let retryCount = 0;
+      while (
         error &&
         error.message &&
-        (error.message.includes("payment_intent_id") || error.message.includes("payment_made"))
+        error.message.includes("in the schema cache") &&
+        retryCount < 3
       ) {
-        console.warn("Retrying booking insert without extra fields:", error.message);
-        const safePayload: any = { ...bookingPayload };
-        if (error.message.includes("payment_made")) {
-          delete safePayload.payment_made;
+        retryCount++;
+        const match = error.message.match(/Could not find the '([^']+)' column/);
+        const badCol = match ? match[1] : null;
+        if (badCol && badCol in insertPayload) {
+          console.warn(`Stripping missing column '${badCol}' from booking payload and retrying:`, error.message);
+          delete insertPayload[badCol];
+          const retryResult = await supabase
+            .from("bookings")
+            .insert(insertPayload)
+            .select("id, reference")
+            .single();
+          data = retryResult.data;
+          error = retryResult.error;
+        } else {
+          break;
         }
-        const retryResult = await supabase
-          .from("bookings")
-          .insert(safePayload)
-          .select("id, reference")
-          .single();
-        data = retryResult.data;
-        error = retryResult.error;
       }
 
       if (error) {
@@ -2480,23 +2485,13 @@ function Step4Confirmed({
                     handler: async function (response: any) {
                       // Update booking payment method to UPI/Online
                       try {
-                        const { error: updErr } = await supabase
+                        await supabase
                           .from("bookings")
                           .update({
                             payment_method: "upi",
                             payment_status: "paid_online",
-                            payment_made: "yes",
                           })
                           .eq("id", currentBooking.id);
-                        if (updErr && updErr.message && updErr.message.includes("payment_made")) {
-                          await supabase
-                            .from("bookings")
-                            .update({
-                              payment_method: "upi",
-                              payment_status: "paid_online",
-                            })
-                            .eq("id", currentBooking.id);
-                        }
                       } catch (err) {
                         console.warn("Booking payment status update failed:", err);
                       }
@@ -2506,7 +2501,6 @@ function Step4Confirmed({
                         ...prev,
                         payment_method: "upi",
                         payment_status: "paid_online",
-                        payment_made: "yes",
                       }));
                       toast.success("Payment successful! The driver has been notified.");
                     },
