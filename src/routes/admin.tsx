@@ -926,62 +926,47 @@ function AdminPage() {
       id: "bookings",
       title: "Bookings & Dispatch",
       category: "dispatch",
-      categoryLabel: "Live Dispatch & Fleet Telemetry",
-      tagline: "Live Rides, Scheduled & Dispatch",
-      description:
-        "Real-time trip routing, passenger ride requests, scheduled airport transfers, chauffeur pairings & OTP verification.",
+      description: "Real-time trip routing, ride requests, advance reservations & chauffeur OTPs.",
       icon: Car,
       badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
       badgeText:
         stats.activeBookings > 0
           ? `${stats.activeBookings} In Transit`
-          : `${stats.totalBookings} Total Bookings`,
+          : `${stats.totalBookings} Bookings`,
       iconColor: "text-amber-600 dark:text-amber-400",
       iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
-      tags: ["Live Dispatches", "Airport Transfers", "OTP Handshake", "Driver Pairing"],
     },
     {
       id: "live-map",
       title: "Live Drivers Map",
       category: "dispatch",
-      categoryLabel: "Live Dispatch & Fleet Telemetry",
-      tagline: "Real-time GPS Radar Tracking",
-      description:
-        "Sub-second radar telemetry tracking all online EV chauffeurs, active trip paths, bearings, and airport buffer zones.",
+      description: "Live GPS radar telemetry tracking active EV chauffeurs across Delhi NCR.",
       icon: Radio,
       badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-      badgeText: `${stats.onlineDrivers} Online Radar`,
+      badgeText: `${stats.onlineDrivers} Online`,
       iconColor: "text-emerald-600 dark:text-emerald-400",
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
-      tags: ["GPS Telemetry", "Airport Corridors", "Live Bearing", "Radial Geofence"],
     },
     {
       id: "fleet",
       title: "Fleet & Bays",
       category: "dispatch",
-      categoryLabel: "Live Dispatch & Fleet Telemetry",
-      tagline: "Airport Staging & Bay Allocation",
-      description:
-        "Manage dedicated airport terminal parking bays at IGI T3 (Pillar 4) and T1, charging states, and Mahindra BE.6 EVs.",
+      description: "Terminal bay allocations at IGI T3 (Pillar 4), T1 and DC fast-charging bays.",
       icon: ParkingSquare,
       badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-      badgeText: "T3 & T1 EV Staging",
+      badgeText: "T3 & T1 Staging",
       iconColor: "text-purple-600 dark:text-purple-400",
       iconBg: "bg-purple-500/10 dark:bg-purple-500/20",
-      tags: ["T3 Pillar 4", "T1 Gate 2", "Mahindra BE.6", "Fast DC Charging"],
     },
     {
       id: "applications",
       title: "Driver Applications",
       category: "network",
-      categoryLabel: "Chauffeur Network & Partner Workforce",
-      tagline: "KYC, Documents & Onboarding",
-      description:
-        "Review inbound driver partner submissions, inspect commercial DLs & Aadhaar cards, and approve partner EV vehicles.",
+      description: "Commercial DL, Aadhaar KYC verification & partner car onboarding approvals.",
       icon: ShieldCheck,
       badgeColor:
         stats.pendingApplications > 0
-          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold"
           : "bg-muted text-muted-foreground border-border",
       badgeText:
         stats.pendingApplications > 0
@@ -989,86 +974,65 @@ function AdminPage() {
           : "All Verified",
       iconColor: "text-blue-600 dark:text-blue-400",
       iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
-      tags: ["Commercial DL", "Aadhaar KYC", "DPDP Act 2023", "Instant Approval"],
     },
     {
       id: "drivers",
       title: "Chauffeur Directory",
       category: "network",
-      categoryLabel: "Chauffeur Network & Partner Workforce",
-      tagline: "Driver Profiles, Cars & Ratings",
-      description:
-        "Central registry of accredited Orange chauffeurs, vehicle plate bindings, performance ratings, and duty shift histories.",
+      description: "Master chauffeur roster, vehicle plate pairings, compliance & ratings.",
       icon: Users,
       badgeColor: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
-      badgeText: `${drivers.length || summaryCounts.totalDrivers} Accredited`,
+      badgeText: `${drivers.length || summaryCounts.totalDrivers} Drivers`,
       iconColor: "text-teal-600 dark:text-teal-400",
       iconBg: "bg-teal-500/10 dark:bg-teal-500/20",
-      tags: ["Active Roster", "Vehicle Plates", "Trip Ratings", "Shift Logs"],
     },
     {
       id: "cash",
       title: "Cash Settlements",
       category: "network",
-      categoryLabel: "Chauffeur Network & Partner Workforce",
-      tagline: "Daily Cash Reconciliation Desk",
-      description:
-        "Reconcile on-trip cash collected by drivers, record daily bank remittances, and resolve end-of-shift discrepancies.",
+      description: "Daily driver cash collection audit desk and remittance reconciliation.",
       icon: Banknote,
       badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-      badgeText: "Collection Audit Desk",
+      badgeText: "Remittance Audit",
       iconColor: "text-emerald-600 dark:text-emerald-400",
       iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
-      tags: ["Daily Remittance", "Cash Verification", "Driver Ledger", "Zero Variance"],
     },
     {
       id: "commissions",
       title: "Commission Ledger",
       category: "finance",
-      categoryLabel: "Financials, Accounting & Enterprise",
-      tagline: "Platform Splits & Partner Payouts",
-      description:
-        "Automated 80/20 gross fare splits between Orange platform and driver-partners, balance statements, and payout batches.",
+      description: "Automated 80/20 platform-to-driver revenue split calculation and balances.",
       icon: Percent,
       badgeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
-      badgeText: "80/20 Partner Splits",
+      badgeText: "80/20 Splits",
       iconColor: "text-indigo-600 dark:text-indigo-400",
       iconBg: "bg-indigo-500/10 dark:bg-indigo-500/20",
-      tags: ["80/20 Split Engine", "Driver Net Payout", "Platform Margin", "Batch Settlement"],
     },
     {
       id: "gst",
       title: "GST & Corporate Invoicing",
       category: "finance",
-      categoryLabel: "Financials, Accounting & Enterprise",
-      tagline: "HSN 9964 Invoices & Tax Reports",
-      description:
-        "Statutory GST tax invoices under HSN 9964 (5% rate), monthly corporate billing summaries, and government compliance exports.",
+      description: "Statutory HSN 9964 tax invoices (5% GST), monthly reports & B2B GSTIN bills.",
       icon: FileSpreadsheet,
       badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      badgeText: "HSN 9964 Compliant",
+      badgeText: "HSN 9964",
       iconColor: "text-amber-600 dark:text-amber-400",
       iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
-      tags: ["HSN 9964 (5%)", "B2B GSTIN Invoices", "Monthly Returns", "CSV Ledger"],
     },
     {
       id: "enquiries",
       title: "Corporate Enquiries",
       category: "finance",
-      categoryLabel: "Financials, Accounting & Enterprise",
-      tagline: "B2B Accounts & Enterprise Leads",
-      description:
-        "Enterprise commuter contracts, premium airport hospitality transfers, hotel partner leads, and employee shuttle RFPs.",
+      description: "B2B transit contracts, hotel partnerships, and enterprise commuter accounts.",
       icon: Building2,
       badgeColor:
         stats.newEnquiries > 0
-          ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
+          ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold"
           : "bg-muted text-muted-foreground border-border",
       badgeText:
-        stats.newEnquiries > 0 ? `${stats.newEnquiries} Action Required` : "Enterprise Pipeline",
+        stats.newEnquiries > 0 ? `${stats.newEnquiries} Action Needed` : "Enterprise Pipeline",
       iconColor: "text-rose-600 dark:text-rose-400",
       iconBg: "bg-rose-500/10 dark:bg-rose-500/20",
-      tags: ["Enterprise Accounts", "Hotel Alliances", "B2B Quotations", "Contract SLAs"],
     },
   ];
 
@@ -1076,21 +1040,18 @@ function AdminPage() {
     {
       id: "dispatch",
       title: "Live Operations & Telemetry",
-      subtitle: "Trip routing, driver radar telemetry, and terminal bay staging",
       icon: Activity,
       moduleIds: ["bookings", "live-map", "fleet"],
     },
     {
       id: "network",
       title: "Chauffeur Network & Workforce",
-      subtitle: "Driver onboarding, KYC accreditation, and cash collection desk",
       icon: Users,
       moduleIds: ["applications", "drivers", "cash"],
     },
     {
       id: "finance",
       title: "Financials & Enterprise Accounts",
-      subtitle: "80/20 revenue splits, HSN 9964 tax invoices, and B2B corporate partnerships",
       icon: BadgeIndianRupee,
       moduleIds: ["commissions", "gst", "enquiries"],
     },
@@ -1101,64 +1062,32 @@ function AdminPage() {
       <div
         key={mod.id}
         onClick={() => handleSelectTab(mod.id)}
-        className="group relative flex flex-col justify-between rounded-xl border border-border/80 bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all duration-200 cursor-pointer"
+        className="group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card p-4 hover:border-primary/50 hover:bg-muted/15 transition-all duration-150 cursor-pointer min-h-[96px]"
       >
-        <div>
-          {/* Card Top: Icon, Status Tag, and Open Arrow */}
-          <div className="flex items-center justify-between gap-2 mb-3.5">
-            <div
-              className={`p-2.5 rounded-lg ${mod.iconBg} ${mod.iconColor} group-hover:scale-105 transition-transform shrink-0`}
-            >
-              <mod.icon className="size-4.5" />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${mod.badgeColor}`}
-              >
-                {mod.badgeText}
-              </span>
-              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-            </div>
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className={`p-2 rounded-lg ${mod.iconBg} ${mod.iconColor} group-hover:scale-105 transition-transform shrink-0`}
+          >
+            <mod.icon className="size-4" />
           </div>
 
-          {/* Title & Tagline */}
-          <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
-            {mod.title}
-          </h3>
-          <p className="text-[11px] font-medium text-muted-foreground mt-0.5">
-            {mod.tagline}
-          </p>
-
-          {/* Description */}
-          <p className="text-xs text-foreground/75 mt-2.5 leading-relaxed line-clamp-2">
-            {mod.description}
-          </p>
-
-          {/* Capability Tags */}
-          {mod.tags && mod.tags.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {mod.tags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/50"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${mod.badgeColor}`}
+            >
+              {mod.badgeText}
+            </span>
+            <ArrowUpRight className="size-3.5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+          </div>
         </div>
 
-        {/* Card Footer */}
-        <div className="mt-5 pt-3 border-t border-border/70 flex items-center justify-between text-xs">
-          <span className="font-semibold text-primary group-hover:underline flex items-center gap-1">
-            Access Command Suite
-            <ArrowUpRight className="size-3" />
-          </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            Direct Routing
-          </span>
+        <div className="mt-2.5">
+          <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+            {mod.title}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+            {mod.description}
+          </p>
         </div>
       </div>
     );
@@ -1538,31 +1467,24 @@ function AdminPage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {OPERATIONAL_SUITES.map((suite) => {
                   const suiteModules = MODULES.filter((m) => suite.moduleIds.includes(m.id));
                   return (
-                    <div key={suite.id} className="space-y-3.5">
-                      <div className="flex items-center justify-between pb-2 border-b border-border/70">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 rounded-md bg-primary/10 text-primary">
-                            <suite.icon className="size-4" />
-                          </div>
-                          <div>
-                            <h2 className="text-sm font-bold text-foreground tracking-tight">
-                              {suite.title}
-                            </h2>
-                            <p className="text-[11px] text-muted-foreground">
-                              {suite.subtitle}
-                            </p>
-                          </div>
+                    <div key={suite.id} className="space-y-2.5">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <suite.icon className="size-3.5 text-muted-foreground" />
+                          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            {suite.title}
+                          </h2>
                         </div>
-                        <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">
+                        <span className="text-[10px] font-mono text-muted-foreground font-medium">
                           {suiteModules.length} Modules
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {suiteModules.map((mod) => renderModuleCard(mod))}
                       </div>
                     </div>
@@ -1571,93 +1493,53 @@ function AdminPage() {
               </div>
             )}
 
-            {/* Airport Staging & Infrastructure Status */}
-            <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    <Plane className="size-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">
-                      Delhi NCR Airport Staging & Fast Charging Nodes
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Dedicated pickup bays at IGI Airport terminals & EV depot staging
-                    </p>
-                  </div>
-                </div>
+            {/* Airport Staging Status (Minimal Footer Strip) */}
+            <div className="rounded-xl border border-border/60 bg-card/60 p-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/50 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    All Staging Bays Active
+                  <Plane className="size-3.5 text-primary" />
+                  <span className="font-semibold text-foreground">
+                    Delhi NCR Airport Staging Status
                   </span>
+                  <span className="text-muted-foreground hidden sm:inline">• IGI T3, T1 & Aerocity Depot</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  All Terminal Bays Active
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between font-bold text-foreground">
-                      <span>IGI Terminal 3</span>
-                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Pillar 4</span>
-                    </div>
-                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
-                      MLCP Multi-Level Parking Level 2 · Orange EV Chauffeur Bay
-                    </p>
+              <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                  <div className="flex items-center justify-between font-medium">
+                    <span>IGI T3 (MLCP L2)</span>
+                    <span className="text-[10px] font-mono text-primary font-bold">Pillar 4</span>
                   </div>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
-                    <span className="size-1 rounded-full bg-emerald-500" />
-                    Terminal Staging Operational
-                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● Staging Active</p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between font-bold text-foreground">
-                      <span>IGI Terminal 1</span>
-                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Gate 2</span>
-                    </div>
-                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
-                      Arrival Curbside Bay 2 · Chauffeur Meet & Greet Lane
-                    </p>
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                  <div className="flex items-center justify-between font-medium">
+                    <span>IGI T1 (Arrivals)</span>
+                    <span className="text-[10px] font-mono text-primary font-bold">Gate 2</span>
                   </div>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
-                    <span className="size-1 rounded-full bg-emerald-500" />
-                    Priority Lane Ready
-                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● Priority Lane</p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between font-bold text-foreground">
-                      <span>Aerocity Hub</span>
-                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">60kW DC</span>
-                    </div>
-                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
-                      Hospitality District Fast DC Depot · 100% Green Energy
-                    </p>
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                  <div className="flex items-center justify-between font-medium">
+                    <span>Aerocity Fast DC</span>
+                    <span className="text-[10px] font-mono text-primary font-bold">60kW</span>
                   </div>
-                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
-                    <span className="size-1 rounded-full bg-emerald-500" />
-                    6/6 Rapid Dispensers Online
-                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● 6/6 Online</p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between font-bold text-foreground">
-                      <span>Central Control</span>
-                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">24/7 Desk</span>
-                    </div>
-                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
-                      Direct Dispatch Hotline: +91 80 4736 0000
-                    </p>
+                <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                  <div className="flex items-center justify-between font-medium">
+                    <span>Central Dispatch</span>
+                    <span className="text-[10px] font-mono text-primary font-bold">24/7 Desk</span>
                   </div>
-                  <p className="text-[10px] text-primary font-semibold mt-3 flex items-center gap-1">
-                    <span className="size-1 rounded-full bg-primary" />
-                    Escalations & Concierge Active
-                  </p>
+                  <p className="text-[11px] text-primary font-medium mt-1">● +91 80 4736 0000</p>
                 </div>
               </div>
             </div>
