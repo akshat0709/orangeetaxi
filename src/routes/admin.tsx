@@ -98,6 +98,15 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c;
 }
 
+function formatVehicleDisplay(name?: string): string {
+  if (!name) return "Orange Signature";
+  if (name.toLowerCase().includes("rental")) {
+    const match = name.match(/\((\d+h\s*Rental)\)/i);
+    return match ? `Orange Signature (${match[1]})` : "Orange Signature (Rental)";
+  }
+  return "Orange Signature";
+}
+
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
     tab: typeof search.tab === "string" ? search.tab : "hub",
@@ -507,6 +516,13 @@ function AdminPage() {
         .limit(300);
       setBookings((b as Booking[]) ?? []);
 
+      // Auto-normalize any legacy vehicle categories in the DB
+      supabase
+        .from("bookings")
+        .update({ vehicle_name: "Orange Signature" })
+        .ilike("vehicle_name", "%Mahindra%")
+        .then(() => {});
+
       if (drivers.length === 0) {
         const { data: d } = await supabase
           .from("drivers")
@@ -587,6 +603,13 @@ function AdminPage() {
         supabase.from("drivers").select("*").order("created_at", { ascending: false }).limit(300),
       ]);
       setBookings((b as Booking[]) ?? []);
+
+      // Auto-normalize any legacy vehicle categories in the DB
+      supabase
+        .from("bookings")
+        .update({ vehicle_name: "Orange Signature" })
+        .ilike("vehicle_name", "%Mahindra%")
+        .then(() => {});
       setDrivers(processDriversList((d as Driver[]) ?? []));
       setLoadedTabs((prev) => ({ ...prev, bookings: true, drivers: true }));
     } catch (err) {
@@ -1168,7 +1191,7 @@ function AdminPage() {
         b.status,
         b.pickup_area,
         b.drop_area,
-        b.vehicle_name,
+        formatVehicleDisplay(b.vehicle_name),
         Math.round(b.estimated_fare || 0),
         Math.round(b.final_fare ?? b.estimated_fare ?? 0),
         b.payment_method || "cash",
@@ -1404,17 +1427,17 @@ function AdminPage() {
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">EV Fleet Spec</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Vehicle Category</span>
                   <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
                     <ParkingSquare className="size-4" />
                   </div>
                 </div>
                 <div className="mt-3">
                   <div className="text-lg font-bold tracking-tight text-foreground truncate">
-                    Mahindra BE.6
+                    Orange Signature
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>IGI T3 & T1 Bays</span>
+                    <span>100% Electric EV</span>
                     <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline">Staging →</span>
                   </div>
                 </div>
@@ -1882,8 +1905,8 @@ function AdminPage() {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-4 py-3.5 align-middle text-xs text-muted-foreground">
-                                {b.vehicle_name}
+                              <td className="px-4 py-3.5 align-middle text-xs font-medium text-foreground">
+                                {formatVehicleDisplay(b.vehicle_name)}
                               </td>
                               <td className="px-4 py-3.5 align-middle font-semibold text-primary">
                                 ₹{Math.round(b.estimated_fare)}
@@ -2100,8 +2123,8 @@ function AdminPage() {
 
                               {/* Details Grid */}
                               <div className="flex items-center justify-between text-xs pt-1">
-                                <span className="text-muted-foreground font-medium">
-                                  {b.vehicle_name}
+                                <span className="text-foreground font-semibold">
+                                  {formatVehicleDisplay(b.vehicle_name)}
                                 </span>
                                 {b.ride_otp && (
                                   <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 text-xs">

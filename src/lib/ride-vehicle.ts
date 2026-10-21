@@ -65,7 +65,7 @@ export function extractPlateFromVehicleName(vehicleName?: string): string | null
  * "Orange Signature" + "DL 01 EV 1001" -> "Orange Signature · DL 01 EV 1001"
  */
 export function formatVehicleNameWithPlate(baseName?: string, plate?: string): string {
-  const base = (baseName || "Orange Signature").split("·")[0].split("[")[0].split("(")[0].trim();
+  const base = "Orange Signature";
   if (!plate || plate === "Unassigned" || plate === "No plate") return base;
   return `${base} · ${plate.trim().toUpperCase()}`;
 }
