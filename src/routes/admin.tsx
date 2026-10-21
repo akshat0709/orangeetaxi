@@ -44,6 +44,10 @@ import {
   BadgeIndianRupee,
   MapPin,
   Radio,
+  ChevronRight,
+  AlertCircle,
+  Activity,
+  Plane,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -921,124 +925,244 @@ function AdminPage() {
     {
       id: "bookings",
       title: "Bookings & Dispatch",
+      category: "dispatch",
+      categoryLabel: "Live Dispatch & Fleet Telemetry",
       tagline: "Live Rides, Scheduled & Dispatch",
       description:
-        "Manage real-time customer ride requests, scheduled advance bookings, chauffeur assignments & OTPs.",
+        "Real-time trip routing, passenger ride requests, scheduled airport transfers, chauffeur pairings & OTP verification.",
       icon: Car,
       badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
       badgeText:
         stats.activeBookings > 0
-          ? `${stats.activeBookings} Live Active`
-          : `${stats.totalBookings} Total`,
-      iconColor: "text-amber-500",
-      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+          ? `${stats.activeBookings} In Transit`
+          : `${stats.totalBookings} Total Bookings`,
+      iconColor: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
+      tags: ["Live Dispatches", "Airport Transfers", "OTP Handshake", "Driver Pairing"],
     },
     {
       id: "live-map",
       title: "Live Drivers Map",
+      category: "dispatch",
+      categoryLabel: "Live Dispatch & Fleet Telemetry",
       tagline: "Real-time GPS Radar Tracking",
       description:
-        "Live radar view of all online chauffeurs, active trips, vehicle locations, and airport staging zones.",
+        "Sub-second radar telemetry tracking all online EV chauffeurs, active trip paths, bearings, and airport buffer zones.",
       icon: Radio,
-      badgeColor: "bg-primary/10 text-primary border-primary/20",
-      badgeText: `${stats.onlineDrivers} Chauffeurs Online`,
-      iconColor: "text-primary",
-      bgAccent: "hover:border-primary/50 hover:shadow-primary/5",
-    },
-    {
-      id: "applications",
-      title: "Driver Applications",
-      tagline: "KYC, Documents & Onboarding",
-      description:
-        "Review new driver signups, commercial driving licences, Aadhaar cards, and approve partner EV drivers.",
-      icon: ShieldCheck,
-      badgeColor:
-        stats.pendingApplications > 0
-          ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-          : "bg-muted text-muted-foreground border-border",
-      badgeText:
-        stats.pendingApplications > 0
-          ? `${stats.pendingApplications} Pending Review`
-          : "All Reviewed",
-      iconColor: "text-amber-600",
-      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+      badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      badgeText: `${stats.onlineDrivers} Online Radar`,
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+      iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+      tags: ["GPS Telemetry", "Airport Corridors", "Live Bearing", "Radial Geofence"],
     },
     {
       id: "fleet",
       title: "Fleet & Bays",
+      category: "dispatch",
+      categoryLabel: "Live Dispatch & Fleet Telemetry",
       tagline: "Airport Staging & Bay Allocation",
       description:
-        "Track Mahindra BE.6 & Tata Nexon EVs across airport terminal bays, charging status, and vehicle assignments.",
+        "Manage dedicated airport terminal parking bays at IGI T3 (Pillar 4) and T1, charging states, and Mahindra BE.6 EVs.",
       icon: ParkingSquare,
       badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-      badgeText: "Airport Charging Bays",
-      iconColor: "text-purple-600",
-      bgAccent: "hover:border-purple-500/50 hover:shadow-purple-500/5",
+      badgeText: "T3 & T1 EV Staging",
+      iconColor: "text-purple-600 dark:text-purple-400",
+      iconBg: "bg-purple-500/10 dark:bg-purple-500/20",
+      tags: ["T3 Pillar 4", "T1 Gate 2", "Mahindra BE.6", "Fast DC Charging"],
     },
     {
-      id: "cash",
-      title: "Cash Settlements",
-      tagline: "Daily Cash Reconciliation Desk",
+      id: "applications",
+      title: "Driver Applications",
+      category: "network",
+      categoryLabel: "Chauffeur Network & Partner Workforce",
+      tagline: "KYC, Documents & Onboarding",
       description:
-        "Verify daily cash collections made by drivers on cash trips, reconcile discrepancies, and record remittances.",
-      icon: Banknote,
-      badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-      badgeText: "Cash Collection Audit",
-      iconColor: "text-emerald-600",
-      bgAccent: "hover:border-emerald-500/50 hover:shadow-emerald-500/5",
-    },
-    {
-      id: "commissions",
-      title: "Commission Ledger",
-      tagline: "Platform Splits & Partner Payouts",
-      description:
-        "Automated 80/20 revenue splits between Orange platform and partner owner-drivers, payout ledgers & balances.",
-      icon: Percent,
-      badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-      badgeText: "80/20 Partner Splits",
-      iconColor: "text-blue-600",
-      bgAccent: "hover:border-blue-500/50 hover:shadow-blue-500/5",
-    },
-    {
-      id: "gst",
-      title: "GST & Corporate Invoicing",
-      tagline: "HSN 9964 Invoices & Tax Reports",
-      description:
-        "Generate compliant GST tax invoices for B2B corporate rides, monthly tax summaries, and customer statements.",
-      icon: FileSpreadsheet,
-      badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-      badgeText: "GST Tax Invoices",
-      iconColor: "text-amber-600",
-      bgAccent: "hover:border-amber-500/50 hover:shadow-amber-500/5",
+        "Review inbound driver partner submissions, inspect commercial DLs & Aadhaar cards, and approve partner EV vehicles.",
+      icon: ShieldCheck,
+      badgeColor:
+        stats.pendingApplications > 0
+          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+          : "bg-muted text-muted-foreground border-border",
+      badgeText:
+        stats.pendingApplications > 0
+          ? `${stats.pendingApplications} Pending KYC`
+          : "All Verified",
+      iconColor: "text-blue-600 dark:text-blue-400",
+      iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
+      tags: ["Commercial DL", "Aadhaar KYC", "DPDP Act 2023", "Instant Approval"],
     },
     {
       id: "drivers",
       title: "Chauffeur Directory",
+      category: "network",
+      categoryLabel: "Chauffeur Network & Partner Workforce",
       tagline: "Driver Profiles, Cars & Ratings",
       description:
-        "Comprehensive roster of all registered chauffeurs, assigned vehicles, ratings, compliance details and contact info.",
+        "Central registry of accredited Orange chauffeurs, vehicle plate bindings, performance ratings, and duty shift histories.",
       icon: Users,
       badgeColor: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
-      badgeText: `${drivers.length || summaryCounts.totalDrivers} Chauffeurs`,
-      iconColor: "text-teal-600",
-      bgAccent: "hover:border-teal-500/50 hover:shadow-teal-500/5",
+      badgeText: `${drivers.length || summaryCounts.totalDrivers} Accredited`,
+      iconColor: "text-teal-600 dark:text-teal-400",
+      iconBg: "bg-teal-500/10 dark:bg-teal-500/20",
+      tags: ["Active Roster", "Vehicle Plates", "Trip Ratings", "Shift Logs"],
+    },
+    {
+      id: "cash",
+      title: "Cash Settlements",
+      category: "network",
+      categoryLabel: "Chauffeur Network & Partner Workforce",
+      tagline: "Daily Cash Reconciliation Desk",
+      description:
+        "Reconcile on-trip cash collected by drivers, record daily bank remittances, and resolve end-of-shift discrepancies.",
+      icon: Banknote,
+      badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      badgeText: "Collection Audit Desk",
+      iconColor: "text-emerald-600 dark:text-emerald-400",
+      iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+      tags: ["Daily Remittance", "Cash Verification", "Driver Ledger", "Zero Variance"],
+    },
+    {
+      id: "commissions",
+      title: "Commission Ledger",
+      category: "finance",
+      categoryLabel: "Financials, Accounting & Enterprise",
+      tagline: "Platform Splits & Partner Payouts",
+      description:
+        "Automated 80/20 gross fare splits between Orange platform and driver-partners, balance statements, and payout batches.",
+      icon: Percent,
+      badgeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
+      badgeText: "80/20 Partner Splits",
+      iconColor: "text-indigo-600 dark:text-indigo-400",
+      iconBg: "bg-indigo-500/10 dark:bg-indigo-500/20",
+      tags: ["80/20 Split Engine", "Driver Net Payout", "Platform Margin", "Batch Settlement"],
+    },
+    {
+      id: "gst",
+      title: "GST & Corporate Invoicing",
+      category: "finance",
+      categoryLabel: "Financials, Accounting & Enterprise",
+      tagline: "HSN 9964 Invoices & Tax Reports",
+      description:
+        "Statutory GST tax invoices under HSN 9964 (5% rate), monthly corporate billing summaries, and government compliance exports.",
+      icon: FileSpreadsheet,
+      badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badgeText: "HSN 9964 Compliant",
+      iconColor: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
+      tags: ["HSN 9964 (5%)", "B2B GSTIN Invoices", "Monthly Returns", "CSV Ledger"],
     },
     {
       id: "enquiries",
       title: "Corporate Enquiries",
+      category: "finance",
+      categoryLabel: "Financials, Accounting & Enterprise",
       tagline: "B2B Accounts & Enterprise Leads",
       description:
-        "Incoming corporate transit partnership enquiries, employee shuttle requests, and enterprise contract leads.",
+        "Enterprise commuter contracts, premium airport hospitality transfers, hotel partner leads, and employee shuttle RFPs.",
       icon: Building2,
       badgeColor:
         stats.newEnquiries > 0
-          ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20"
+          ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
           : "bg-muted text-muted-foreground border-border",
-      badgeText: stats.newEnquiries > 0 ? `${stats.newEnquiries} New Inquiries` : "Corporate Leads",
-      iconColor: "text-indigo-600",
-      bgAccent: "hover:border-indigo-500/50 hover:shadow-indigo-500/5",
+      badgeText:
+        stats.newEnquiries > 0 ? `${stats.newEnquiries} Action Required` : "Enterprise Pipeline",
+      iconColor: "text-rose-600 dark:text-rose-400",
+      iconBg: "bg-rose-500/10 dark:bg-rose-500/20",
+      tags: ["Enterprise Accounts", "Hotel Alliances", "B2B Quotations", "Contract SLAs"],
     },
   ];
+
+  const OPERATIONAL_SUITES = [
+    {
+      id: "dispatch",
+      title: "Live Operations & Telemetry",
+      subtitle: "Trip routing, driver radar telemetry, and terminal bay staging",
+      icon: Activity,
+      moduleIds: ["bookings", "live-map", "fleet"],
+    },
+    {
+      id: "network",
+      title: "Chauffeur Network & Workforce",
+      subtitle: "Driver onboarding, KYC accreditation, and cash collection desk",
+      icon: Users,
+      moduleIds: ["applications", "drivers", "cash"],
+    },
+    {
+      id: "finance",
+      title: "Financials & Enterprise Accounts",
+      subtitle: "80/20 revenue splits, HSN 9964 tax invoices, and B2B corporate partnerships",
+      icon: BadgeIndianRupee,
+      moduleIds: ["commissions", "gst", "enquiries"],
+    },
+  ];
+
+  function renderModuleCard(mod: (typeof MODULES)[number]) {
+    return (
+      <div
+        key={mod.id}
+        onClick={() => handleSelectTab(mod.id)}
+        className="group relative flex flex-col justify-between rounded-xl border border-border/80 bg-card p-5 hover:border-primary/50 hover:shadow-md transition-all duration-200 cursor-pointer"
+      >
+        <div>
+          {/* Card Top: Icon, Status Tag, and Open Arrow */}
+          <div className="flex items-center justify-between gap-2 mb-3.5">
+            <div
+              className={`p-2.5 rounded-lg ${mod.iconBg} ${mod.iconColor} group-hover:scale-105 transition-transform shrink-0`}
+            >
+              <mod.icon className="size-4.5" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${mod.badgeColor}`}
+              >
+                {mod.badgeText}
+              </span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+            </div>
+          </div>
+
+          {/* Title & Tagline */}
+          <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+            {mod.title}
+          </h3>
+          <p className="text-[11px] font-medium text-muted-foreground mt-0.5">
+            {mod.tagline}
+          </p>
+
+          {/* Description */}
+          <p className="text-xs text-foreground/75 mt-2.5 leading-relaxed line-clamp-2">
+            {mod.description}
+          </p>
+
+          {/* Capability Tags */}
+          {mod.tags && mod.tags.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {mod.tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/50"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Card Footer */}
+        <div className="mt-5 pt-3 border-t border-border/70 flex items-center justify-between text-xs">
+          <span className="font-semibold text-primary group-hover:underline flex items-center gap-1">
+            Access Command Suite
+            <ArrowUpRight className="size-3" />
+          </span>
+          <span className="text-[10px] text-muted-foreground font-mono">
+            Direct Routing
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const currentModule = MODULES.find((m) => m.id === activeTab);
   const filteredModules = MODULES.filter((m) => {
@@ -1165,32 +1289,46 @@ function AdminPage() {
     <section className="min-h-screen bg-warm py-10">
       <div className="section-shell">
         {activeTab === "hub" ? (
-          <div>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                  Admin Command Center
-                </p>
-                <h1 className="display-serif mt-1 text-3xl sm:text-4xl">Orange Operations</h1>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Instant launchpad. Select any department to load records on-demand.
+          <div className="space-y-8">
+            {/* Top Bar: Operational Status & Global Controls */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-card/60 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-border/70 shadow-xs">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground">
+                    Orange Dispatch Node · Delhi NCR
+                  </span>
+                  <span className="text-muted-foreground/40">•</span>
+                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    Live Telemetry Online
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                  Fleet Command & Operations
+                </h1>
+                <p className="text-xs text-muted-foreground max-w-2xl">
+                  Enterprise console for real-time EV dispatching, chauffeur KYC compliance, airport bay staging, and financial ledgers.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="relative w-full sm:w-64">
+              <div className="flex items-center gap-3 self-start lg:self-center w-full lg:w-auto">
+                <div className="relative flex-1 lg:w-72">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search modules..."
+                    placeholder="Search suites, modules, or tags..."
                     value={hubSearch}
                     onChange={(e) => setHubSearch(e.target.value)}
-                    className="w-full pl-9 pr-7 py-1.5 text-xs rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full pl-9 pr-7 py-2 text-xs rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/25 placeholder:text-muted-foreground/60 transition-all"
                   />
                   {hubSearch && (
                     <button
                       onClick={() => setHubSearch("")}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                      title="Clear search"
                     >
                       ✕
                     </button>
@@ -1200,104 +1338,327 @@ function AdminPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 px-2.5 text-xs font-semibold gap-1.5 shrink-0"
+                  className="h-9 px-3 text-xs font-semibold gap-1.5 shrink-0 bg-background hover:bg-muted"
                   onClick={fetchSummaryCounts}
-                  title="Refresh counters"
+                  title="Sync live telemetry"
                 >
                   <RefreshCw className="size-3.5" />
-                  <span className="hidden sm:inline">Refresh</span>
+                  <span>Sync Telemetry</span>
                 </Button>
               </div>
             </div>
 
-            {/* KPIs */}
-            <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              <KpiCard
-                label="Total Bookings"
-                value={stats.totalBookings}
-                sub={`${stats.activeBookings} active`}
-                icon={Car}
-              />
-              <KpiCard
-                label="Revenue"
-                value={`₹${Math.round(stats.totalRevenue)}`}
-                sub={`${stats.completedBookings} completed`}
-                icon={BadgeCheck}
-              />
-              <KpiCard
-                label="Drivers Online"
-                value={stats.onlineDrivers}
-                sub={`of ${stats.totalDrivers || drivers.length} total`}
-                icon={Users}
-              />
-              <KpiCard
-                label="Orange Fleet"
-                value="Mahindra BE.6"
-                sub="Bay & battery tracking"
-                icon={ParkingSquare}
-              />
-              <KpiCard
-                label="Pending Items"
-                value={stats.pendingApplications + stats.newEnquiries}
-                sub={`${stats.pendingApplications} apps · ${stats.newEnquiries} enquiries`}
-                icon={Clock}
-              />
-            </div>
-
-            {/* Hub Module Grid */}
-            <div className="mt-9">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
-                  <LayoutGrid className="size-4 text-primary" />
-                  Operations Modules
-                </h2>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {filteredModules.length} module{filteredModules.length === 1 ? "" : "s"}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
-                {filteredModules.map((mod) => (
-                  <div
-                    key={mod.id}
-                    onClick={() => handleSelectTab(mod.id)}
-                    className={`group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer ${mod.bgAccent}`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-3.5">
-                        <div
-                          className={`p-2.5 rounded-xl bg-muted/60 group-hover:scale-105 transition-transform ${mod.iconColor}`}
-                        >
-                          <mod.icon className="size-5" />
-                        </div>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${mod.badgeColor}`}
-                        >
-                          {mod.badgeText}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
-                        <span>{mod.title}</span>
-                        <ArrowUpRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-                      </h3>
-                      <p className="text-[11px] font-semibold text-primary/80 mt-0.5">
-                        {mod.tagline}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                        {mod.description}
-                      </p>
+            {/* Exception / Action Items Banner */}
+            {(stats.pendingApplications > 0 || stats.newEnquiries > 0) && (
+              <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                    <AlertCircle className="size-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                        Operational Items Requiring Action
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200">
+                        {stats.pendingApplications + stats.newEnquiries} Pending
+                      </span>
                     </div>
-
-                    <div className="mt-5 pt-3 border-t border-border/80 flex items-center justify-between">
-                      <span className="text-xs font-bold text-primary group-hover:underline">
-                        Open Module →
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        Instant Load
-                      </span>
+                    <div className="text-xs text-foreground/85 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                      {stats.pendingApplications > 0 && (
+                        <span>
+                          <strong>{stats.pendingApplications}</strong> driver application{stats.pendingApplications > 1 ? "s" : ""} awaiting KYC / DL verification
+                        </span>
+                      )}
+                      {stats.newEnquiries > 0 && (
+                        <span>
+                          <strong>{stats.newEnquiries}</strong> corporate enquiry lead{stats.newEnquiries > 1 ? "s" : ""} awaiting proposal
+                        </span>
+                      )}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {stats.pendingApplications > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleSelectTab("applications")}
+                      className="h-8 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs gap-1.5"
+                    >
+                      <ShieldCheck className="size-3.5" />
+                      Review KYC ({stats.pendingApplications})
+                    </Button>
+                  )}
+                  {stats.newEnquiries > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSelectTab("enquiries")}
+                      className="h-8 text-xs font-bold border-amber-500/30 hover:bg-amber-500/10 gap-1.5"
+                    >
+                      <Building2 className="size-3.5" />
+                      View Inquiries ({stats.newEnquiries})
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Executive Telemetry Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+              <div
+                onClick={() => handleSelectTab("bookings")}
+                className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Active Dispatches</span>
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Car className="size-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-extrabold tracking-tight text-foreground font-mono">
+                    {stats.activeBookings}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{stats.totalBookings} lifetime booked</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:underline">View →</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleSelectTab("live-map")}
+                className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Fleet On-Duty</span>
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Radio className="size-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-extrabold tracking-tight text-foreground font-mono">
+                    {stats.onlineDrivers}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>of {stats.totalDrivers || drivers.length} total chauffeurs</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline">Radar →</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleSelectTab("commissions")}
+                className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Gross GMV Volume</span>
+                  <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <BadgeCheck className="size-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-extrabold tracking-tight text-foreground font-mono truncate">
+                    ₹{Math.round(stats.totalRevenue).toLocaleString("en-IN")}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{stats.completedBookings} completed trips</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:underline">Ledger →</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleSelectTab("fleet")}
+                className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">EV Fleet Spec</span>
+                  <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    <ParkingSquare className="size-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-lg font-bold tracking-tight text-foreground truncate">
+                    Mahindra BE.6
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>IGI T3 & T1 Bays</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline">Staging →</span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleSelectTab(stats.pendingApplications > 0 ? "applications" : "enquiries")}
+                className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between col-span-2 lg:col-span-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Action Backlog</span>
+                  <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                    <Clock className="size-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-extrabold tracking-tight text-foreground font-mono">
+                    {stats.pendingApplications + stats.newEnquiries}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{stats.pendingApplications} KYC · {stats.newEnquiries} Leads</span>
+                    <span className="text-rose-600 dark:text-rose-400 font-semibold group-hover:underline">Audit →</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filtered Search Results or Categorized Operational Suites */}
+            {hubSearch.trim() ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <h2 className="text-sm font-bold text-foreground">
+                    Search Results ({filteredModules.length})
+                  </h2>
+                  <button
+                    onClick={() => setHubSearch("")}
+                    className="text-xs text-primary hover:underline font-semibold"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
+                {filteredModules.length === 0 ? (
+                  <div className="p-8 text-center bg-card rounded-2xl border border-dashed border-border text-muted-foreground text-xs">
+                    No operations module matched "{hubSearch}". Try searching for "dispatch", "kyc", "gst", or "map".
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredModules.map((mod) => renderModuleCard(mod))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {OPERATIONAL_SUITES.map((suite) => {
+                  const suiteModules = MODULES.filter((m) => suite.moduleIds.includes(m.id));
+                  return (
+                    <div key={suite.id} className="space-y-3.5">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/70">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+                            <suite.icon className="size-4" />
+                          </div>
+                          <div>
+                            <h2 className="text-sm font-bold text-foreground tracking-tight">
+                              {suite.title}
+                            </h2>
+                            <p className="text-[11px] text-muted-foreground">
+                              {suite.subtitle}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">
+                          {suiteModules.length} Modules
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {suiteModules.map((mod) => renderModuleCard(mod))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Airport Staging & Infrastructure Status */}
+            <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <Plane className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">
+                      Delhi NCR Airport Staging & Fast Charging Nodes
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Dedicated pickup bays at IGI Airport terminals & EV depot staging
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    All Staging Bays Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between font-bold text-foreground">
+                      <span>IGI Terminal 3</span>
+                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Pillar 4</span>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
+                      MLCP Multi-Level Parking Level 2 · Orange EV Chauffeur Bay
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
+                    <span className="size-1 rounded-full bg-emerald-500" />
+                    Terminal Staging Operational
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between font-bold text-foreground">
+                      <span>IGI Terminal 1</span>
+                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">Gate 2</span>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
+                      Arrival Curbside Bay 2 · Chauffeur Meet & Greet Lane
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
+                    <span className="size-1 rounded-full bg-emerald-500" />
+                    Priority Lane Ready
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between font-bold text-foreground">
+                      <span>Aerocity Hub</span>
+                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">60kW DC</span>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
+                      Hospitality District Fast DC Depot · 100% Green Energy
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-3 flex items-center gap-1">
+                    <span className="size-1 rounded-full bg-emerald-500" />
+                    6/6 Rapid Dispensers Online
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between font-bold text-foreground">
+                      <span>Central Control</span>
+                      <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">24/7 Desk</span>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-[11px] leading-relaxed">
+                      Direct Dispatch Hotline: +91 80 4736 0000
+                    </p>
+                  </div>
+                  <p className="text-[10px] text-primary font-semibold mt-3 flex items-center gap-1">
+                    <span className="size-1 rounded-full bg-primary" />
+                    Escalations & Concierge Active
+                  </p>
+                </div>
               </div>
             </div>
           </div>
