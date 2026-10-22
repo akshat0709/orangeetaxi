@@ -88,11 +88,11 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
     const supabaseUrl =
       (env as any)?.VITE_SUPABASE_URL ||
       (typeof process !== "undefined" ? process.env?.["VITE_SUPABASE_URL"] : undefined) ||
-      "https://qcrpzrrzjddwqebaktyu.supabase.co";
+      "https://ndaollycrvlawemhwvky.supabase.co";
     const supabaseAnonKey =
       (env as any)?.VITE_SUPABASE_PUBLISHABLE_KEY ||
       (typeof process !== "undefined" ? process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"] : undefined) ||
-      "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx";
+      "sb_publishable_baABGadHhpQI6LtkZcyI0g_HJX39Y_d";
 
     try {
       const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
