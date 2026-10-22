@@ -372,9 +372,15 @@ CREATE POLICY "bookings_select_driver" ON public.bookings
     OR public.is_driver_of(driver_id, auth.uid())
   );
 
+DROP POLICY IF EXISTS "bookings_insert_customer" ON public.bookings;
 CREATE POLICY "bookings_insert_customer" ON public.bookings
   FOR INSERT TO authenticated
-  WITH CHECK (customer_id = auth.uid());
+  WITH CHECK (customer_id = auth.uid() OR customer_id IS NULL OR public.has_role(auth.uid(), 'admin'));
+
+DROP POLICY IF EXISTS "bookings_insert_anon" ON public.bookings;
+CREATE POLICY "bookings_insert_anon" ON public.bookings
+  FOR INSERT TO anon
+  WITH CHECK (customer_id IS NULL);
 
 CREATE POLICY "bookings_update_scoped" ON public.bookings
   FOR UPDATE TO authenticated
