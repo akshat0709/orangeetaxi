@@ -52,6 +52,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  detectCityFromCoords,
+  getCityDefaultCenter,
+  SUPPORTED_CITY_HUBS,
+} from "@/lib/city-detector";
 
 interface Driver {
   id: string;
@@ -94,14 +100,20 @@ interface LiveDriversMapProps {
   onRefresh?: () => void;
 }
 
-// Controller to smoothly pan to selected driver
-function MapPanController({ targetLocation }: { targetLocation: { lat: number; lng: number } | null }) {
+// Controller to smoothly pan to selected driver or target location
+function MapPanController({
+  targetLocation,
+  zoom = 15,
+}: {
+  targetLocation: { lat: number; lng: number } | null;
+  zoom?: number;
+}) {
   const map = useMap();
   useEffect(() => {
     if (!map || !targetLocation) return;
     map.panTo(targetLocation);
-    map.setZoom(15);
-  }, [map, targetLocation]);
+    map.setZoom(zoom);
+  }, [map, targetLocation, zoom]);
   return null;
 }
 
@@ -113,8 +125,11 @@ export function LiveDriversMap({
 }: LiveDriversMapProps) {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "on_trip" | "offline">("all");
+  const [selectedCityHub, setSelectedCityHub] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mapTarget, setMapTarget] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
+  const [geocodedArea, setGeocodedArea] = useState<string | null>(null);
 
   // Active bookings map for fast O(1) lookup
   const activeBookingsByDriver = useMemo(() => {
@@ -127,7 +142,7 @@ export function LiveDriversMap({
     return bookingMap;
   }, [bookings]);
 
-  // Compute status and location for each driver
+  // Compute status, auto-detected city, and coordinates for each driver
   const enrichedDrivers = useMemo(() => {
     return drivers.map((d, index) => {
       const activeRide = activeBookingsByDriver[d.id];
@@ -137,15 +152,27 @@ export function LiveDriversMap({
         derivedStatus = activeRide ? "on_trip" : "available";
       }
 
-      // If driver coordinates are missing in DB, provide realistic spread around city center
-      const baseLat = 12.9716; // Bengaluru
-      const baseLng = 77.5946;
-      // Deterministic spread
+      const hasRealGps =
+        d.current_lat != null &&
+        d.current_lng != null &&
+        !isNaN(Number(d.current_lat)) &&
+        !isNaN(Number(d.current_lng)) &&
+        (Number(d.current_lat) !== 0 || Number(d.current_lng) !== 0);
+
+      // Default city center if driver coordinates are not yet acquired
+      const defaultCenter = getCityDefaultCenter(d.city);
+      const baseLat = defaultCenter.lat;
+      const baseLng = defaultCenter.lng;
+
+      // Deterministic spread around center only if driver has no live GPS
       const offsetLat = ((index % 7) - 3) * 0.021 + ((index * 13) % 11) * 0.003;
       const offsetLng = (((index * 3) % 7) - 3) * 0.025 + ((index * 7) % 13) * 0.004;
 
-      const lat = d.current_lat && !isNaN(Number(d.current_lat)) ? Number(d.current_lat) : baseLat + offsetLat;
-      const lng = d.current_lng && !isNaN(Number(d.current_lng)) ? Number(d.current_lng) : baseLng + offsetLng;
+      const lat = hasRealGps ? Number(d.current_lat) : baseLat + offsetLat;
+      const lng = hasRealGps ? Number(d.current_lng) : baseLng + offsetLng;
+
+      // Auto-detect the city directly from coordinates
+      const detectedCity = detectCityFromCoords(lat, lng, d.city);
 
       // Simulated battery & speed for Mahindra BE.6
       const batteryPercent = 70 + ((index * 17) % 28); // 70% - 98%
@@ -155,18 +182,23 @@ export function LiveDriversMap({
         ...d,
         activeRide,
         derivedStatus,
+        hasRealGps,
         lat,
         lng,
+        detectedCity,
         batteryPercent,
         speedKmH,
       };
     });
   }, [drivers, activeBookingsByDriver]);
 
-  // Filtered drivers based on status pill and search text
+  // Filtered drivers based on status pill, city hub, and search text
   const filteredDrivers = useMemo(() => {
     return enrichedDrivers.filter((d) => {
       if (filterStatus !== "all" && d.derivedStatus !== filterStatus) {
+        return false;
+      }
+      if (selectedCityHub !== "all" && d.detectedCity !== selectedCityHub) {
         return false;
       }
       if (searchQuery.trim()) {
@@ -175,15 +207,82 @@ export function LiveDriversMap({
         const matchesPhone = (d.phone || "").toLowerCase().includes(q);
         const matchesPlate = (d.vehicle_number || "").toLowerCase().includes(q);
         const matchesModel = (d.vehicle_model || "").toLowerCase().includes(q);
-        return matchesName || matchesPhone || matchesPlate || matchesModel;
+        const matchesCity = (d.detectedCity || "").toLowerCase().includes(q);
+        return matchesName || matchesPhone || matchesPlate || matchesModel || matchesCity;
       }
       return true;
     });
-  }, [enrichedDrivers, filterStatus, searchQuery]);
+  }, [enrichedDrivers, filterStatus, selectedCityHub, searchQuery]);
 
   const selectedDriver = useMemo(() => {
     return enrichedDrivers.find((d) => d.id === selectedDriverId) || null;
   }, [enrichedDrivers, selectedDriverId]);
+
+  // Auto-detect & reverse geocode the selected driver's location
+  useEffect(() => {
+    if (!selectedDriver) {
+      setGeocodedArea(null);
+      return;
+    }
+
+    const { lat, lng, detectedCity } = selectedDriver;
+    setGeocodedArea(detectedCity);
+
+    // High-resolution reverse geocoding via Google Maps
+    if (typeof window !== "undefined" && window.google?.maps?.Geocoder) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const comps = results[0].address_components;
+          const locality = comps.find((c) => c.types.includes("locality"))?.long_name;
+          const sublocality = comps.find(
+            (c) => c.types.includes("sublocality") || c.types.includes("sublocality_level_1")
+          )?.long_name;
+          const adminArea = comps.find(
+            (c) => c.types.includes("administrative_area_level_2")
+          )?.long_name;
+
+          const cityName = locality || adminArea || detectedCity.replace(" Hub", "");
+          const formatted = sublocality ? `${sublocality}, ${cityName}` : `${cityName} Hub`;
+          setGeocodedArea(formatted);
+
+          // Update driver's city in Supabase if it differs from live detected city
+          if (selectedDriver.id && cityName && selectedDriver.city !== cityName) {
+            supabase
+              .from("drivers")
+              .update({ city: cityName })
+              .eq("id", selectedDriver.id)
+              .then(() => {});
+          }
+        }
+      });
+    } else if (selectedDriver.id && selectedDriver.hasRealGps) {
+      const cleanCity = detectedCity.replace(" Hub", "");
+      if (selectedDriver.city !== cleanCity) {
+        supabase
+          .from("drivers")
+          .update({ city: cleanCity })
+          .eq("id", selectedDriver.id)
+          .then(() => {});
+      }
+    }
+  }, [selectedDriver?.id, selectedDriver?.lat, selectedDriver?.lng]);
+
+  function handleSelectCityFilter(cityId: string) {
+    setSelectedCityHub(cityId);
+    setSelectedDriverId(null);
+    if (cityId !== "all") {
+      const hub = SUPPORTED_CITY_HUBS.find((h) => h.name === cityId || h.id === cityId);
+      if (hub) {
+        setMapTarget({ lat: hub.lat, lng: hub.lng, zoom: 12 });
+      } else {
+        const center = getCityDefaultCenter(cityId);
+        setMapTarget({ lat: center.lat, lng: center.lng, zoom: 12 });
+      }
+    } else {
+      setMapTarget(null);
+    }
+  }
 
   // Overall fleet status counts
   const counts = useMemo(() => {
@@ -286,6 +385,43 @@ export function LiveDriversMap({
             <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin text-primary" : ""}`} />
           </Button>
         </div>
+      </div>
+
+      {/* City Hub Quick Filter Bar */}
+      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card/60 backdrop-blur-sm text-xs">
+        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mr-1">
+          <MapPin className="size-3 text-primary" />
+          City Hub:
+        </span>
+        <button
+          onClick={() => handleSelectCityFilter("all")}
+          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+            selectedCityHub === "all"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          All Hubs
+        </button>
+        {SUPPORTED_CITY_HUBS.slice(0, 6).map((hub) => (
+          <button
+            key={hub.id}
+            onClick={() => handleSelectCityFilter(hub.name)}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+              selectedCityHub === hub.name
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            {hub.shortName}
+          </button>
+        ))}
+        {selectedCityHub !== "all" && (
+          <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Active Hub Filter: {selectedCityHub}
+          </span>
+        )}
       </div>
 
       {/* Main Map + Sidebar Grid */}
@@ -402,8 +538,11 @@ export function LiveDriversMap({
                           <BatteryCharging className="size-3 text-emerald-600" />
                           {d.batteryPercent}%
                         </span>
+                        <span className="flex items-center gap-1 text-foreground/80 font-medium truncate max-w-[130px]" title={d.detectedCity}>
+                          <MapPin className="size-2.5 text-primary shrink-0" />
+                          <span className="truncate">{d.detectedCity}</span>
+                        </span>
                         <span>★ {d.rating ? d.rating.toFixed(2) : "5.00"}</span>
-                        <span>{d.total_rides || 0} rides</span>
                       </div>
                     </div>
                   </button>
@@ -427,8 +566,9 @@ export function LiveDriversMap({
               >
                 <MapPanController
                   targetLocation={
-                    selectedDriver ? { lat: selectedDriver.lat, lng: selectedDriver.lng } : null
+                    mapTarget || (selectedDriver ? { lat: selectedDriver.lat, lng: selectedDriver.lng } : null)
                   }
+                  zoom={mapTarget?.zoom || (selectedDriver ? 15 : 12)}
                 />
 
                 {enrichedDrivers.map((d) => {
@@ -578,12 +718,18 @@ export function LiveDriversMap({
                   </div>
 
                   <div className="rounded-lg bg-muted/30 p-2">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                      City Hub
-                    </span>
-                    <div className="flex items-center gap-1 font-bold text-foreground mt-0.5 truncate">
-                      <MapPin className="size-3.5 text-primary" />
-                      <span className="truncate">{selectedDriver.city || "Bengaluru Hub"}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                        City Hub
+                      </span>
+                      <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
+                        <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
+                        Auto-detected
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 font-bold text-foreground mt-0.5 truncate" title={geocodedArea || selectedDriver.detectedCity}>
+                      <MapPin className="size-3.5 text-primary shrink-0" />
+                      <span className="truncate">{geocodedArea || selectedDriver.detectedCity}</span>
                     </div>
                   </div>
 
