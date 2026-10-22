@@ -98,7 +98,7 @@ import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
 const GOOGLE_MAPS_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM";
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export const Route = createFileRoute("/book")({
   head: () => ({

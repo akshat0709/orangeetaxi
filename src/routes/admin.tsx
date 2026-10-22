@@ -81,7 +81,7 @@ import {
 } from "@/lib/ride-vehicle";
 
 const GOOGLE_MAPS_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM";
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // Haversine distance formula (returns km)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {

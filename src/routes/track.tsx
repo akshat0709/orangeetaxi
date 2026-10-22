@@ -582,10 +582,7 @@ function TrackPage() {
             {/* Live Interactive Map */}
             <div className="rounded-2xl border border-border overflow-hidden shadow-lg bg-card">
               <APIProvider
-                apiKey={
-                  import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-                  "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM"
-                }
+                apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}
                 libraries={["routes", "geometry"]}
               >
                 <LiveRideMap
