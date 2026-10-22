@@ -191,6 +191,56 @@ test("Findings 9.1 & 9.2: KYC storage policy restricted and drive form uses stor
   assert(driveCode.includes('supabase.storage.from("driver_kyc").upload'), "drive.tsx does not upload to driver_kyc storage");
 });
 
+// 20. Verify VULN-RLS-01: Financial & Vehicle Table Lockdown
+test("VULN-RLS-01: partner_vehicles, driver_cash_settlements, and driver_commission_settlements RLS secured", () => {
+  const migration = fs.readFileSync(path.join(rootDir, "supabase/migrations/20261022_comprehensive_security_remediation.sql"), "utf-8");
+  assert(migration.includes("driver_comm_select_scoped"), "Missing scoped select policy for driver_commission_settlements");
+  assert(migration.includes("driver_cash_select_scoped"), "Missing scoped select policy for driver_cash_settlements");
+  assert(migration.includes("partner_vehicles_select_scoped"), "Missing scoped select policy for partner_vehicles");
+  assert(migration.includes("DROP POLICY IF EXISTS \"Allow public manage on partner_vehicles\""), "Permissive partner_vehicles policy not dropped");
+  assert(migration.includes("DROP POLICY IF EXISTS \"Allow all on driver_cash_settlements\""), "Permissive driver_cash_settlements policy not dropped");
+});
+
+// 21. Verify VULN-FIN-01: Wallet ledger and balance tampering prevention
+test("VULN-FIN-01: Direct wallet tampering forbidden and atomic RPCs configured", () => {
+  const migration = fs.readFileSync(path.join(rootDir, "supabase/migrations/20261022_comprehensive_security_remediation.sql"), "utf-8");
+  assert(migration.includes("check_profile_wallet_tampering"), "Missing check_profile_wallet_tampering function");
+  assert(migration.includes("trg_prevent_direct_wallet_balance_update"), "Missing trg_prevent_direct_wallet_balance_update trigger");
+  assert(migration.includes("top_up_wallet"), "Missing top_up_wallet RPC");
+  assert(migration.includes("deduct_ride_wallet_payment"), "Missing deduct_ride_wallet_payment RPC");
+  assert(migration.includes("wallet_transactions"), "Missing wallet_transactions table");
+});
+
+// 22. Verify VULN-RIDE-01: Atomic ride dispatch and concurrency lock
+test("VULN-RIDE-01: accept_booking RPC enforces active driver verification & atomic row lock", () => {
+  const migration = fs.readFileSync(path.join(rootDir, "supabase/migrations/20261022_comprehensive_security_remediation.sql"), "utf-8");
+  assert(migration.includes("CREATE OR REPLACE FUNCTION public.accept_booking"), "Missing accept_booking RPC");
+  assert(migration.includes("status = 'searching'"), "Missing searching status check in accept_booking");
+  assert(migration.includes("driver_id IS NULL"), "Missing unassigned check in accept_booking");
+});
+
+// 23. Verify VULN-DRV-01: Driver self-promotion and attribute tampering prevention
+test("VULN-DRV-01: Driver attributes locked against tampering and application auto-approval prevented", () => {
+  const migration = fs.readFileSync(path.join(rootDir, "supabase/migrations/20261022_comprehensive_security_remediation.sql"), "utf-8");
+  assert(migration.includes("check_driver_update_integrity"), "Missing check_driver_update_integrity trigger");
+  assert(migration.includes("check_driver_application_insert_integrity"), "Missing check_driver_application_insert_integrity trigger");
+  assert(migration.includes("DROP POLICY IF EXISTS \"admin manages drivers\""), "Permissive driver insert policy not dropped");
+});
+
+// 24. Verify VULN-PRIV-01: Driver fleet privacy scoping
+test("VULN-PRIV-01: Drivers table scoped to authenticated authorized users", () => {
+  const migration = fs.readFileSync(path.join(rootDir, "supabase/migrations/20261022_comprehensive_security_remediation.sql"), "utf-8");
+  assert(migration.includes("drivers_select_scoped"), "Missing drivers_select_scoped policy");
+  assert(migration.includes("DROP POLICY IF EXISTS \"drivers readable by signed in\""), "Permissive drivers select policy not dropped");
+});
+
+// 25. Verify VULN-AUTH-01: Rider app Supabase client handles new API keys
+test("VULN-AUTH-01: Rider app custom fetch wrapper strips invalid Bearer tokens for sb_publishable keys", () => {
+  const riderSupabase = fs.readFileSync(path.join(rootDir, "../orange-taxi-rider/src/lib/supabase.ts"), "utf-8");
+  assert(riderSupabase.includes("isNewSupabaseApiKey"), "Missing isNewSupabaseApiKey helper in rider app");
+  assert(riderSupabase.includes("delete headerObj['Authorization']"), "Missing Bearer token cleanup in rider app");
+});
+
 console.log(`\nResults: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exit(1);
 

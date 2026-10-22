@@ -98,7 +98,7 @@ import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
 const GOOGLE_MAPS_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8";
+  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM";
 
 export const Route = createFileRoute("/book")({
   head: () => ({
@@ -745,6 +745,7 @@ function PassengerPage() {
         estimated_fare: Math.round(fareBreakdown.total),
         payment_method: paymentMethod,
         payment_status: transactionId ? "paid" : "pending",
+        payment_intent_id: transactionId || null,
         status: isAdvanceBooking ? "scheduled" : "searching",
         scheduled_at: scheduledIso,
         ride_otp: otp,

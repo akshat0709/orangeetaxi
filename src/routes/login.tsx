@@ -463,7 +463,7 @@ function LoginPage() {
         data: {
           full_name: values.fullName,
           phone: cleanPhone,
-          role: values.role,
+          role: "customer",
           consent_privacy_policy_at: consentTimestamp,
           consent_version: "2.4",
         },
@@ -476,26 +476,16 @@ function LoginPage() {
     }
 
     if (data.user) {
-      // 1. Immediately save verified profile details with consent metadata
+      // 1. Immediately save verified profile details with consent metadata (strictly customer role)
       try {
         await supabase.from("profiles").upsert({
           id: data.user.id,
           full_name: values.fullName,
           phone: cleanPhone,
-          role: values.role,
+          role: "customer",
           updated_at: consentTimestamp,
         });
       } catch (e) {}
-
-      // 2. If registering as driver, insert role in user_roles
-      if (values.role === "driver") {
-        try {
-          await supabase.from("user_roles").upsert(
-            { user_id: data.user.id, role: "driver" },
-            { onConflict: "user_id,role" }
-          );
-        } catch (e) {}
-      }
     }
 
     if (data.user && !data.session) {

@@ -584,7 +584,7 @@ function TrackPage() {
               <APIProvider
                 apiKey={
                   import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-                  "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8"
+                  "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM"
                 }
                 libraries={["routes", "geometry"]}
               >

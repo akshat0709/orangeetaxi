@@ -123,7 +123,7 @@ export function LiveRideMap({
   const apiKey =
     propApiKey ||
     (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ||
-    "AIzaSyD-IOH9cMppWtKjw_zn-m7XOE3ut62HVX8";
+    "AIzaSyCz4SEloomUEX3wQaFn4avuNvQemjuBkMM";
   const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
 
   // Check if we are already inside a parent <APIProvider>

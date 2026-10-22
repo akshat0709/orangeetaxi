@@ -684,9 +684,7 @@ function DriverApplicationForm() {
       if (photoFile) {
         const photoExt = (photoFile.name.split(".").pop() || "jpg").toLowerCase();
         const photoPath = `applications/${Date.now()}_photo_${Math.random().toString(36).substring(2, 7)}.${photoExt}`;
-        const { data: upPhoto, error: photoErr } = await supabase.storage
-          .from("driver_kyc")
-          .upload(photoPath, photoFile);
+        const { data: upPhoto, error: photoErr } = await supabase.storage.from("driver_kyc").upload(photoPath, photoFile);
         if (!photoErr && upPhoto?.path) {
           finalPhotoUrl = `storage://driver_kyc/${upPhoto.path}`;
         }
@@ -694,9 +692,7 @@ function DriverApplicationForm() {
       if (dlFile) {
         const dlExt = (dlFile.name.split(".").pop() || "jpg").toLowerCase();
         const dlPath = `applications/${Date.now()}_dl_${Math.random().toString(36).substring(2, 7)}.${dlExt}`;
-        const { data: upDl, error: dlErr } = await supabase.storage
-          .from("driver_kyc")
-          .upload(dlPath, dlFile);
+        const { data: upDl, error: dlErr } = await supabase.storage.from("driver_kyc").upload(dlPath, dlFile);
         if (!dlErr && upDl?.path) {
           finalDlUrl = `storage://driver_kyc/${upDl.path}`;
         }
