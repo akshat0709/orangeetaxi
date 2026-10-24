@@ -65,6 +65,7 @@ function SupportPage() {
       const userId = userRes.data?.user?.id || null;
       const genDocket = `OG-TKT-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      // @ts-expect-error Supabase generated types do not yet include support_tickets
       const { error } = await supabase.from("support_tickets").insert({
         docket_number: genDocket,
         user_id: userId,
@@ -75,7 +76,7 @@ function SupportPage() {
         booking_reference: reference.trim() || null,
         message: message.trim(),
         status: "open",
-      });
+      } as any);
 
       if (error) {
         console.error("Support ticket registration error:", error);

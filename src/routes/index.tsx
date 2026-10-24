@@ -218,7 +218,6 @@ function HomePage() {
         </div>
       </section>
 
-
       {/* In-Cab Amenities Showcase */}
       <section className="bg-card/50 py-20 text-foreground border-b border-border md:py-28">
         <div className="section-shell">
@@ -251,7 +250,6 @@ function HomePage() {
           </div>
         </div>
       </section>
-
 
       {/* The Orange Experience Flow */}
       <section className="bg-warm/60 py-20 md:py-28 border-b border-border">

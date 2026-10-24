@@ -75,7 +75,9 @@ const OTP_ATTEMPTS_KEY = "@orange_web_otp_attempts";
 
 function LoginPage() {
   const { redirect, mode: initialMode, email: queryEmail } = useSearch({ from: "/login" });
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset" | "verify_otp">(initialMode ?? "signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset" | "verify_otp">(
+    initialMode ?? "signin",
+  );
   const [resetEmail, setResetEmail] = useState<string>(queryEmail || "");
   const [otpEmail, setOtpEmail] = useState<string>(queryEmail || "");
   const [otpDigits, setOtpDigits] = useState<string>("");
@@ -167,12 +169,16 @@ function LoginPage() {
     // 2. Fetch authenticated user email from recovery session
     const fetchRecoveryEmail = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user?.email) {
           setResetEmail(user.email);
           return;
         }
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user?.email) {
           setResetEmail(session.user.email);
           return;
@@ -210,7 +216,11 @@ function LoginPage() {
       } else if (event === "SIGNED_IN" && session?.user) {
         const hash = typeof window !== "undefined" ? window.location.hash || "" : "";
         const search = typeof window !== "undefined" ? window.location.search || "" : "";
-        if (hash.includes("type=signup") || search.includes("type=signup") || mode === "verify_otp") {
+        if (
+          hash.includes("type=signup") ||
+          search.includes("type=signup") ||
+          mode === "verify_otp"
+        ) {
           toast.success("Email verified successfully! Welcome to Orange Taxi.");
           let role = session.user.user_metadata?.role;
           if (!role) {
@@ -257,7 +267,9 @@ function LoginPage() {
       const storedLockout = localStorage.getItem(LOCKOUT_KEY);
       if (storedLockout && parseInt(storedLockout, 10) > Date.now()) {
         const remainingSeconds = Math.ceil((parseInt(storedLockout, 10) - Date.now()) / 1000);
-        toast.error(`Account locked due to 5 failed attempts. Please wait ${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'} before trying again.`);
+        toast.error(
+          `Account locked due to 5 failed attempts. Please wait ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"} before trying again.`,
+        );
         return;
       }
     } catch {}
@@ -282,18 +294,28 @@ function LoginPage() {
         setResendCooldown(30);
         setOtpDigits("");
         setMode("verify_otp");
-        supabase.auth.resend({
-          type: "signup",
-          email: values.email.trim(),
-        }).catch(() => {});
-        toast.info("Please verify your email address. A verification code has been sent to your email.");
+        supabase.auth
+          .resend({
+            type: "signup",
+            email: values.email.trim(),
+          })
+          .catch(() => {});
+        toast.info(
+          "Please verify your email address. A verification code has been sent to your email.",
+        );
         setSubmitting(false);
         return;
       }
 
-      if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
+      if (
+        error.status === 429 ||
+        error.message?.toLowerCase().includes("rate limit") ||
+        error.message?.toLowerCase().includes("too many requests")
+      ) {
         setLockoutRemaining(60);
-        toast.error("Too many login attempts from this network. Please wait 60 seconds before trying again.");
+        toast.error(
+          "Too many login attempts from this network. Please wait 60 seconds before trying again.",
+        );
         setSubmitting(false);
         return;
       }
@@ -310,7 +332,9 @@ function LoginPage() {
           toast.error("Account locked for 1 minute due to 5 unsuccessful login attempts.");
         } else {
           localStorage.setItem(ATTEMPTS_KEY, attempts.toString());
-          toast.error(`${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? '' : 's'} remaining before 1-minute cooldown)`);
+          toast.error(
+            `${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining before 1-minute cooldown)`,
+          );
         }
       } catch {
         toast.error(error.message);
@@ -493,7 +517,9 @@ function LoginPage() {
       setResendCooldown(30);
       setOtpDigits("");
       setMode("verify_otp");
-      toast.success("We have sent a 6-digit verification code to your email! You can also click the confirmation link in the email.");
+      toast.success(
+        "We have sent a 6-digit verification code to your email! You can also click the confirmation link in the email.",
+      );
       setSubmitting(false);
       return;
     }
@@ -505,7 +531,9 @@ function LoginPage() {
   async function handleVerifyOtp(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (otpLockoutRemaining > 0) {
-      toast.error(`Too many failed attempts. Please wait ${otpLockoutRemaining} second${otpLockoutRemaining === 1 ? "" : "s"}.`);
+      toast.error(
+        `Too many failed attempts. Please wait ${otpLockoutRemaining} second${otpLockoutRemaining === 1 ? "" : "s"}.`,
+      );
       return;
     }
     const cleanToken = otpDigits.trim();
@@ -547,7 +575,9 @@ function LoginPage() {
             toast.error("Verification locked for 1 minute due to 5 unsuccessful attempts.");
           } else {
             localStorage.setItem(OTP_ATTEMPTS_KEY, attempts.toString());
-            toast.error(`${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining)`);
+            toast.error(
+              `${error.message} (${5 - attempts} attempt${5 - attempts === 1 ? "" : "s"} remaining)`,
+            );
           }
         } catch {
           toast.error(error.message);
@@ -592,7 +622,11 @@ function LoginPage() {
         if (!retry.error) error = null;
       }
       if (error) {
-        if (error.status === 429 || error.message?.toLowerCase().includes("rate limit") || error.message?.toLowerCase().includes("too many requests")) {
+        if (
+          error.status === 429 ||
+          error.message?.toLowerCase().includes("rate limit") ||
+          error.message?.toLowerCase().includes("too many requests")
+        ) {
           setOtpLockoutRemaining(60);
           toast.error("Too many resend requests. Please wait 60 seconds before trying again.");
         } else {
@@ -680,7 +714,11 @@ function LoginPage() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {mode === "forgot" ? "Reset Password" : mode === "reset" ? "Set New Password" : "Sign In"}
+                  {mode === "forgot"
+                    ? "Reset Password"
+                    : mode === "reset"
+                      ? "Set New Password"
+                      : "Sign In"}
                 </button>
                 <button
                   type="button"
@@ -705,13 +743,17 @@ function LoginPage() {
                   <h3 className="mt-3 text-xl font-bold tracking-tight">Verify Your Email</h3>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                     We sent a 6-digit verification code to{" "}
-                    <span className="font-semibold text-foreground">{otpEmail || "your email"}</span>. Enter the code below or click the confirmation link in your email.
+                    <span className="font-semibold text-foreground">
+                      {otpEmail || "your email"}
+                    </span>
+                    . Enter the code below or click the confirmation link in your email.
                   </p>
                 </div>
 
                 {otpLockoutRemaining > 0 && (
                   <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive text-center">
-                    Verification locked for 1 minute due to 5 unsuccessful attempts. Please wait {otpLockoutRemaining}s.
+                    Verification locked for 1 minute due to 5 unsuccessful attempts. Please wait{" "}
+                    {otpLockoutRemaining}s.
                   </div>
                 )}
 
@@ -748,7 +790,10 @@ function LoginPage() {
                         }}
                         onPaste={(e) => {
                           e.preventDefault();
-                          const pasted = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, 6);
+                          const pasted = e.clipboardData
+                            .getData("text")
+                            .replace(/[^0-9]/g, "")
+                            .slice(0, 6);
                           if (pasted) {
                             setOtpDigits(pasted);
                             const nextIndex = Math.min(pasted.length, 5);
@@ -763,7 +808,8 @@ function LoginPage() {
                   </div>
 
                   <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 text-center text-[11px] text-muted-foreground">
-                    Tip: You can also click the <strong>Confirm your mail</strong> link directly in the email to activate your account.
+                    Tip: You can also click the <strong>Confirm your mail</strong> link directly in
+                    the email to activate your account.
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 px-1">
@@ -810,7 +856,9 @@ function LoginPage() {
               <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="mt-8 space-y-5">
                 {lockoutRemaining > 0 && (
                   <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
-                    Account temporarily locked due to 5 unsuccessful attempts. Please wait {lockoutRemaining} second{lockoutRemaining === 1 ? "" : "s"} before trying again.
+                    Account temporarily locked due to 5 unsuccessful attempts. Please wait{" "}
+                    {lockoutRemaining} second{lockoutRemaining === 1 ? "" : "s"} before trying
+                    again.
                   </div>
                 )}
                 <div>
@@ -865,7 +913,12 @@ function LoginPage() {
                     </p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" size="lg" disabled={submitting || lockoutRemaining > 0}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={submitting || lockoutRemaining > 0}
+                >
                   {submitting ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : lockoutRemaining > 0 ? (
@@ -878,21 +931,34 @@ function LoginPage() {
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   By signing in, you agree to Orange Taxi&apos;s{" "}
-                  <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    className="font-semibold text-primary underline hover:text-primary/80"
+                  >
                     Privacy Policy
                   </Link>{" "}
                   and{" "}
-                  <Link to="/terms" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    className="font-semibold text-primary underline hover:text-primary/80"
+                  >
                     Terms of Service
-                  </Link>.
+                  </Link>
+                  .
                 </p>
               </form>
             ) : mode === "forgot" ? (
-              <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="mt-8 space-y-5">
+              <form
+                onSubmit={forgotForm.handleSubmit(handleForgotPassword)}
+                className="mt-8 space-y-5"
+              >
                 <div>
                   <h3 className="text-lg font-bold">Reset Password</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Enter your registered email address and we'll send you instructions to reset your password.
+                    Enter your registered email address and we'll send you instructions to reset
+                    your password.
                   </p>
                 </div>
                 <div>
@@ -930,7 +996,10 @@ function LoginPage() {
                 </div>
               </form>
             ) : mode === "reset" ? (
-              <form onSubmit={resetForm.handleSubmit(handleResetPassword)} className="mt-8 space-y-5">
+              <form
+                onSubmit={resetForm.handleSubmit(handleResetPassword)}
+                className="mt-8 space-y-5"
+              >
                 <div>
                   <h3 className="text-lg font-bold">Set New Password</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -1067,7 +1136,9 @@ function LoginPage() {
 
                 {signUpForm.watch("role") === "driver" && (
                   <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground leading-relaxed">
-                    🚕 <strong>Chauffeur Registration:</strong> Create your account first, then you will be redirected to complete your driver application with your driving licence.
+                    🚕 <strong>Chauffeur Registration:</strong> Create your account first, then you
+                    will be redirected to complete your driver application with your driving
+                    licence.
                   </div>
                 )}
 
@@ -1157,7 +1228,11 @@ function LoginPage() {
                       onClick={() => setShowSignUpConfirmPass((p) => !p)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showSignUpConfirmPass ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      {showSignUpConfirmPass ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
                     </button>
                   </div>
                   {signUpForm.formState.errors.confirmPassword && (
@@ -1176,13 +1251,24 @@ function LoginPage() {
                       className="size-4 mt-0.5 rounded border-border accent-primary shrink-0 cursor-pointer"
                       {...signUpForm.register("agreePrivacy")}
                     />
-                    <Label htmlFor="su-agree" className="text-xs font-normal leading-relaxed cursor-pointer text-muted-foreground">
+                    <Label
+                      htmlFor="su-agree"
+                      className="text-xs font-normal leading-relaxed cursor-pointer text-muted-foreground"
+                    >
                       I have read and consent to the{" "}
-                      <Link to="/privacy" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                      <Link
+                        to="/privacy"
+                        target="_blank"
+                        className="font-semibold text-primary underline hover:text-primary/80"
+                      >
                         Privacy Policy & Data Notice
                       </Link>{" "}
                       and{" "}
-                      <Link to="/terms" target="_blank" className="font-semibold text-primary underline hover:text-primary/80">
+                      <Link
+                        to="/terms"
+                        target="_blank"
+                        className="font-semibold text-primary underline hover:text-primary/80"
+                      >
                         Terms of Service
                       </Link>
                       , including trip telemetry and safety processing under the DPDP Act, 2023.

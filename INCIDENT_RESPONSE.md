@@ -1,4 +1,5 @@
 # Orange Taxi — Incident Response Plan & Data Breach Procedure
+
 **Document Version:** 2.4 &bull; **Effective Date:** October 15, 2026  
 **Classification:** Confidential &bull; Operational Security Procedure  
 **Governing Laws:** Digital Personal Data Protection (DPDP) Act, 2023 &bull; CERT-In Cybersecurity Directions (2022) &bull; Motor Vehicle Aggregator Guidelines (2020)
@@ -15,24 +16,24 @@ It covers all data repositories, server runtimes, progressive web apps, chauffeu
 
 ## 2. Incident Response Team (IRT) & Escalation Hierarchy
 
-| Role | Primary Responsibility | Contact Channel |
-| :--- | :--- | :--- |
-| **Incident Commander (IC)** | Coordinates response, approves containment actions, and leads post-incident reviews. | `security-lead@orange-taxi.com` |
-| **Lead Security Engineer** | Forensic analysis, log triage, patch development, and database/network containment. | `secops@orange-taxi.com` |
-| **Data Protection Officer (DPO)** | Assesses legal exposure, coordinates statutory notifications to CERT-In and DPBI. | `privacy@orange-taxi.com` |
-| **Fleet Operations Lead** | Chauffeur and driver partner communications, fleet safety coordination. | `fleet-ops@orange-taxi.com` |
-| **Customer Support Lead** | Passenger communications and helpdesk escalation. | `support@orange-taxi.com` |
+| Role                              | Primary Responsibility                                                               | Contact Channel                 |
+| :-------------------------------- | :----------------------------------------------------------------------------------- | :------------------------------ |
+| **Incident Commander (IC)**       | Coordinates response, approves containment actions, and leads post-incident reviews. | `security-lead@orange-taxi.com` |
+| **Lead Security Engineer**        | Forensic analysis, log triage, patch development, and database/network containment.  | `secops@orange-taxi.com`        |
+| **Data Protection Officer (DPO)** | Assesses legal exposure, coordinates statutory notifications to CERT-In and DPBI.    | `privacy@orange-taxi.com`       |
+| **Fleet Operations Lead**         | Chauffeur and driver partner communications, fleet safety coordination.              | `fleet-ops@orange-taxi.com`     |
+| **Customer Support Lead**         | Passenger communications and helpdesk escalation.                                    | `support@orange-taxi.com`       |
 
 ---
 
 ## 3. Incident Severity Classification Matrix
 
-| Severity Level | Criteria & Impact | Response SLA | Regulatory Reporting |
-| :--- | :--- | :--- | :--- |
+| Severity Level    | Criteria & Impact                                                                                                                                                                              | Response SLA                 | Regulatory Reporting                            |
+| :---------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------- | :---------------------------------------------- |
 | **P1 — Critical** | Unauthorized access or exfiltration of sensitive personal data (KYC documents, DL/Aadhaar, live telemetry), compromised production database keys, or mass unauthorized fare/payment tampering. | **Immediate (&le; 15 mins)** | **Mandatory &le; 6 hours** to CERT-In and DPBI. |
-| **P2 — High** | Unauthorized alteration of single-user bookings, failed brute-force attacks against admin accounts, or privilege escalation attempts caught before data exfiltration. | **&le; 1 hour** | Assess if personal data exposure occurred. |
-| **P3 — Medium** | Anomalous login spikes, partial outage of external sub-processor, or non-PII software bug. | **&le; 4 hours** | Internal documentation only. |
-| **P4 — Low** | Isolated client-side error, minor cosmetic defect, or spam attempt blocked by firewalls. | **&le; 24 hours** | Routine sprint review. |
+| **P2 — High**     | Unauthorized alteration of single-user bookings, failed brute-force attacks against admin accounts, or privilege escalation attempts caught before data exfiltration.                          | **&le; 1 hour**              | Assess if personal data exposure occurred.      |
+| **P3 — Medium**   | Anomalous login spikes, partial outage of external sub-processor, or non-PII software bug.                                                                                                     | **&le; 4 hours**             | Internal documentation only.                    |
+| **P4 — Low**      | Isolated client-side error, minor cosmetic defect, or spam attempt blocked by firewalls.                                                                                                       | **&le; 24 hours**            | Routine sprint review.                          |
 
 ---
 
@@ -49,6 +50,7 @@ flowchart TD
 ```
 
 ### Stage 1: Detection & Triage
+
 - Events are captured in `public.security_audit_logs` without storing passwords, credit card numbers, or authorization tokens.
 - Automatic alerts trigger on:
   - Unauthorized booking modifications (`check_booking_update_integrity` trigger violations).
@@ -57,6 +59,7 @@ flowchart TD
 - The IC convenes the IRT and assigns an incident tracking code (e.g., `INC-2026-1015-01`).
 
 ### Stage 2: Immediate Containment
+
 1. **Compromised Sessions**: Revoke active user or admin sessions immediately via Supabase Auth Admin API:
    ```typescript
    await supabase.auth.admin.signOut(targetUserId);
@@ -68,6 +71,7 @@ flowchart TD
    ```
 
 ### Stage 3: Forensic Investigation & Query Recipes
+
 Identify the scope of exposure and affected user IDs using non-destructive audit queries:
 
 ```sql
@@ -92,10 +96,12 @@ WHERE bucket_id = 'driver_kyc'
 ```
 
 ### Stage 4: Eradication & Patching
+
 - Deploy code or RLS policy hotfixes to staging, execute regression test suites, and merge to `main`.
 - Invalidate all cached data in Cloudflare CDN.
 
 ### Stage 5: Recovery & Verification
+
 - Verify database integrity and test positive and negative access permissions.
 - Validate that all application routes (`/book`, `/admin`, `/driver-console`) function normally under least-privilege rules.
 
@@ -104,11 +110,13 @@ WHERE bucket_id = 'driver_kyc'
 ## 5. Statutory Reporting Mandates & Timelines
 
 ### Indian Computer Emergency Response Team (CERT-In)
+
 - **Mandate:** Cyber Security Directions under Section 70B of the Information Technology Act, 2000.
 - **Reporting Deadline:** **Within 6 hours** of notice or becoming aware of cybersecurity incidents (including data breaches, unauthorized database access, denial-of-service, or ransomware).
 - **Incident Reporting Portal:** `https://www.cert-in.org.in` &bull; **Email:** `incident@cert-in.org.in`
 
 ### Data Protection Board of India (DPBI)
+
 - **Mandate:** Section 8(6) of the Digital Personal Data Protection (DPDP) Act, 2023.
 - **Reporting Requirement:** In the event of a personal data breach, Orange Taxi as Data Fiduciary must give intimation of such breach to the Board and each affected Data Principal in the prescribed form and manner.
 

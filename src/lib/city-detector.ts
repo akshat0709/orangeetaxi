@@ -13,18 +13,81 @@ export interface CityHub {
 }
 
 export const SUPPORTED_CITY_HUBS: CityHub[] = [
-  { id: "bengaluru", name: "Bengaluru Hub", shortName: "Bengaluru", lat: 12.9716, lng: 77.5946, radiusKm: 120 },
-  { id: "delhi", name: "Delhi NCR Hub", shortName: "Delhi NCR", lat: 28.6139, lng: 77.2090, radiusKm: 140 },
-  { id: "mumbai", name: "Mumbai Hub", shortName: "Mumbai", lat: 19.0760, lng: 72.8777, radiusKm: 110 },
-  { id: "hyderabad", name: "Hyderabad Hub", shortName: "Hyderabad", lat: 17.3850, lng: 78.4867, radiusKm: 110 },
-  { id: "chennai", name: "Chennai Hub", shortName: "Chennai", lat: 13.0827, lng: 80.2707, radiusKm: 90 },
+  {
+    id: "bengaluru",
+    name: "Bengaluru Hub",
+    shortName: "Bengaluru",
+    lat: 12.9716,
+    lng: 77.5946,
+    radiusKm: 120,
+  },
+  {
+    id: "delhi",
+    name: "Delhi NCR Hub",
+    shortName: "Delhi NCR",
+    lat: 28.6139,
+    lng: 77.209,
+    radiusKm: 140,
+  },
+  {
+    id: "mumbai",
+    name: "Mumbai Hub",
+    shortName: "Mumbai",
+    lat: 19.076,
+    lng: 72.8777,
+    radiusKm: 110,
+  },
+  {
+    id: "hyderabad",
+    name: "Hyderabad Hub",
+    shortName: "Hyderabad",
+    lat: 17.385,
+    lng: 78.4867,
+    radiusKm: 110,
+  },
+  {
+    id: "chennai",
+    name: "Chennai Hub",
+    shortName: "Chennai",
+    lat: 13.0827,
+    lng: 80.2707,
+    radiusKm: 90,
+  },
   { id: "pune", name: "Pune Hub", shortName: "Pune", lat: 18.5204, lng: 73.8567, radiusKm: 90 },
-  { id: "kolkata", name: "Kolkata Hub", shortName: "Kolkata", lat: 22.5726, lng: 88.3639, radiusKm: 90 },
-  { id: "ahmedabad", name: "Ahmedabad Hub", shortName: "Ahmedabad", lat: 23.0225, lng: 72.5714, radiusKm: 90 },
-  { id: "jaipur", name: "Jaipur Hub", shortName: "Jaipur", lat: 26.9124, lng: 75.7873, radiusKm: 90 },
-  { id: "chandigarh", name: "Chandigarh Hub", shortName: "Chandigarh", lat: 30.7333, lng: 76.7794, radiusKm: 80 },
+  {
+    id: "kolkata",
+    name: "Kolkata Hub",
+    shortName: "Kolkata",
+    lat: 22.5726,
+    lng: 88.3639,
+    radiusKm: 90,
+  },
+  {
+    id: "ahmedabad",
+    name: "Ahmedabad Hub",
+    shortName: "Ahmedabad",
+    lat: 23.0225,
+    lng: 72.5714,
+    radiusKm: 90,
+  },
+  {
+    id: "jaipur",
+    name: "Jaipur Hub",
+    shortName: "Jaipur",
+    lat: 26.9124,
+    lng: 75.7873,
+    radiusKm: 90,
+  },
+  {
+    id: "chandigarh",
+    name: "Chandigarh Hub",
+    shortName: "Chandigarh",
+    lat: 30.7333,
+    lng: 76.7794,
+    radiusKm: 80,
+  },
   { id: "kochi", name: "Kochi Hub", shortName: "Kochi", lat: 9.9312, lng: 76.2673, radiusKm: 80 },
-  { id: "goa", name: "Goa Hub", shortName: "Goa", lat: 15.2993, lng: 74.1240, radiusKm: 80 },
+  { id: "goa", name: "Goa Hub", shortName: "Goa", lat: 15.2993, lng: 74.124, radiusKm: 80 },
 ];
 
 export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -44,7 +107,7 @@ export function detectCityFromCoords(
   lat?: number | null,
   lng?: number | null,
   fallbackCity?: string,
-  includeHubSuffix: boolean = true
+  includeHubSuffix: boolean = true,
 ): string {
   if (
     typeof lat !== "number" ||
@@ -60,7 +123,13 @@ export function detectCityFromCoords(
     return includeHubSuffix ? "Bengaluru Hub" : "Bengaluru";
   }
 
-  let nearest = SUPPORTED_CITY_HUBS[0];
+  let nearest = SUPPORTED_CITY_HUBS[0] || {
+    name: "Bengaluru Hub",
+    shortName: "Bengaluru",
+    lat: 12.9716,
+    lng: 77.5946,
+    radiusKm: 40,
+  };
   let minD = Infinity;
 
   for (const hub of SUPPORTED_CITY_HUBS) {
@@ -97,13 +166,13 @@ export function getCityDefaultCenter(cityName?: string): { lat: number; lng: num
     c.includes("faridabad") ||
     c.includes("ghaziabad")
   ) {
-    return { lat: 28.6139, lng: 77.2090 };
+    return { lat: 28.6139, lng: 77.209 };
   }
   if (c.includes("mumbai") || c.includes("bombay") || c.includes("navi") || c.includes("thane")) {
-    return { lat: 19.0760, lng: 72.8777 };
+    return { lat: 19.076, lng: 72.8777 };
   }
   if (c.includes("hyderabad") || c.includes("secunderabad") || c.includes("cyberabad")) {
-    return { lat: 17.3850, lng: 78.4867 };
+    return { lat: 17.385, lng: 78.4867 };
   }
   if (c.includes("chennai") || c.includes("madras")) {
     return { lat: 13.0827, lng: 80.2707 };
@@ -127,7 +196,7 @@ export function getCityDefaultCenter(cityName?: string): { lat: number; lng: num
     return { lat: 9.9312, lng: 76.2673 };
   }
   if (c.includes("goa")) {
-    return { lat: 15.2993, lng: 74.1240 };
+    return { lat: 15.2993, lng: 74.124 };
   }
   return { lat: 12.9716, lng: 77.5946 }; // Default Bengaluru
 }

@@ -183,8 +183,7 @@ export function CommissionLedgerManager({
       if (!pvErr && Array.isArray(pvData)) {
         setPartnerVehicles(
           pvData.filter(
-            (pv: any) =>
-              pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
+            (pv: any) => pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
           ),
         );
       } else {
@@ -273,7 +272,9 @@ export function CommissionLedgerManager({
     const driverRides = bookings.filter(
       (b) =>
         (b.driver_id === driverId ||
-          (driverName && b.driver_name && b.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim())) &&
+          (driverName &&
+            b.driver_name &&
+            b.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim())) &&
         b.status === "completed",
     );
 
@@ -289,7 +290,9 @@ export function CommissionLedgerManager({
     const driverSettlements = settlements.filter(
       (s) =>
         s.driver_id === driverId ||
-        (driverName && s.driver_name && s.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim()),
+        (driverName &&
+          s.driver_name &&
+          s.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim()),
     );
     const commissionPaid = driverSettlements.reduce(
       (sum, s) => sum + Math.round(Number(s.amount || 0)),
@@ -404,9 +407,7 @@ export function CommissionLedgerManager({
 
     // Update localStorage
     const stored = localStorage.getItem("orange_commission_settlements");
-    const current: CommissionSettlement[] = stored
-      ? JSON.parse(stored)
-      : [];
+    const current: CommissionSettlement[] = stored ? JSON.parse(stored) : [];
     current.unshift(newRecord);
     localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
     window.dispatchEvent(new Event("commission_settlements_updated"));
@@ -830,7 +831,9 @@ export function CommissionLedgerManager({
               <div className="max-w-md mx-auto space-y-1">
                 <h4 className="font-bold text-base text-foreground">No Partner Drivers Yet</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Currently, all active drivers are company fleet drivers. Partner owner-operators who bring their own EV keep 85% of customer ride fares and pay a 15% platform commission to Orange Taxi.
+                  Currently, all active drivers are company fleet drivers. Partner owner-operators
+                  who bring their own EV keep 85% of customer ride fares and pay a 15% platform
+                  commission to Orange Taxi.
                 </p>
               </div>
               <div className="pt-2 flex items-center justify-center gap-3">
@@ -898,150 +901,151 @@ export function CommissionLedgerManager({
                       </div>
                     </div>
 
-                  {/* Financial Metrics Row */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
-                    <div className="rounded-lg bg-muted/40 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">
-                        Completed Trips
-                      </p>
-                      <p className="mt-1 font-bold text-foreground">{stats.ridesCount} rides</p>
-                    </div>
-
-                    <div className="rounded-lg bg-muted/40 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">
-                        Gross Fare
-                      </p>
-                      <p className="mt-1 font-bold font-mono text-foreground">
-                        ₹{stats.grossFare.toLocaleString("en-IN")}
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5">
-                      <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">
-                        15% Comm. Due
-                      </p>
-                      <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">
-                        ₹{stats.commissionPayable.toLocaleString("en-IN")}
-                      </p>
-                    </div>
-
-                    <div
-                      className={`rounded-lg p-2.5 border ${
-                        stats.outstandingCommission > 0
-                          ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                          : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      <p className="text-[10px] uppercase font-semibold">Outstanding</p>
-                      <p className="mt-1 font-bold font-mono">
-                        {stats.outstandingCommission > 0
-                          ? `₹${stats.outstandingCommission.toLocaleString("en-IN")}`
-                          : "Cleared ✓"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      size="sm"
-                      disabled={stats.outstandingCommission <= 0}
-                      onClick={() => {
-                        setSelectedDriverId(d.id);
-                        setSettleAmount(
-                          stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
-                        );
-                        setIsRecording(true);
-                      }}
-                      className={`h-8 text-xs font-semibold gap-1 ${
-                        stats.outstandingCommission > 0
-                          ? "bg-primary"
-                          : "opacity-50 cursor-not-allowed"
-                      }`}
-                      title={
-                        stats.outstandingCommission > 0
-                          ? `Settle up to ₹${stats.outstandingCommission}`
-                          : "Driver has no outstanding commission (₹0 to be paid)"
-                      }
-                    >
-                      <Receipt className="size-3.5" /> Settle
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedDriverId(isExpanded ? null : d.id)}
-                      className="h-8 px-2.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1"
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="size-3.5" />
-                      ) : (
-                        <ChevronDown className="size-3.5" />
-                      )}
-                      History
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded Payment History */}
-                {isExpanded && (
-                  <div className="border-t border-border bg-muted/20 p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Receipt className="size-3.5 text-primary" /> Settlement History for{" "}
-                        {d.full_name}
-                      </h4>
-                      <span className="text-xs text-muted-foreground">
-                        Net partner take-home (85%):{" "}
-                        <strong className="text-emerald-600 font-mono">
-                          ₹{stats.partnerNetEarnings.toLocaleString("en-IN")}
-                        </strong>
-                      </span>
-                    </div>
-
-                    {stats.settlements.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-3">
-                        No commission settlements recorded yet for this partner.
-                      </p>
-                    ) : (
-                      <div className="divide-y divide-border/60 rounded-lg border border-border bg-background overflow-hidden text-xs">
-                        {stats.settlements.map((s) => (
-                          <div key={s.id} className="p-3 flex items-center justify-between gap-3">
-                            <div className="space-y-0.5">
-                              <p className="font-mono font-bold text-foreground">
-                                {s.reference_no || s.id}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground">
-                                {new Date(s.created_at).toLocaleDateString("en-IN", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}{" "}
-                                · Recorded by {s.collected_by}
-                              </p>
-                              {s.notes && (
-                                <p className="text-[11px] text-muted-foreground/80 italic">
-                                  {s.notes}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="font-mono font-bold text-emerald-600 text-sm">
-                                +₹{Math.round(s.amount).toLocaleString("en-IN")}
-                              </span>
-                              <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">
-                                {s.payment_mode?.replace("_", " ")}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                    {/* Financial Metrics Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
+                      <div className="rounded-lg bg-muted/40 p-2.5">
+                        <p className="text-[10px] uppercase font-semibold text-muted-foreground">
+                          Completed Trips
+                        </p>
+                        <p className="mt-1 font-bold text-foreground">{stats.ridesCount} rides</p>
                       </div>
-                    )}
+
+                      <div className="rounded-lg bg-muted/40 p-2.5">
+                        <p className="text-[10px] uppercase font-semibold text-muted-foreground">
+                          Gross Fare
+                        </p>
+                        <p className="mt-1 font-bold font-mono text-foreground">
+                          ₹{stats.grossFare.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5">
+                        <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">
+                          15% Comm. Due
+                        </p>
+                        <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">
+                          ₹{stats.commissionPayable.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div
+                        className={`rounded-lg p-2.5 border ${
+                          stats.outstandingCommission > 0
+                            ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                        }`}
+                      >
+                        <p className="text-[10px] uppercase font-semibold">Outstanding</p>
+                        <p className="mt-1 font-bold font-mono">
+                          {stats.outstandingCommission > 0
+                            ? `₹${stats.outstandingCommission.toLocaleString("en-IN")}`
+                            : "Cleared ✓"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        disabled={stats.outstandingCommission <= 0}
+                        onClick={() => {
+                          setSelectedDriverId(d.id);
+                          setSettleAmount(
+                            stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
+                          );
+                          setIsRecording(true);
+                        }}
+                        className={`h-8 text-xs font-semibold gap-1 ${
+                          stats.outstandingCommission > 0
+                            ? "bg-primary"
+                            : "opacity-50 cursor-not-allowed"
+                        }`}
+                        title={
+                          stats.outstandingCommission > 0
+                            ? `Settle up to ₹${stats.outstandingCommission}`
+                            : "Driver has no outstanding commission (₹0 to be paid)"
+                        }
+                      >
+                        <Receipt className="size-3.5" /> Settle
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDriverId(isExpanded ? null : d.id)}
+                        className="h-8 px-2.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted transition-colors flex items-center gap-1"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="size-3.5" />
+                        ) : (
+                          <ChevronDown className="size-3.5" />
+                        )}
+                        History
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          }))}
+
+                  {/* Expanded Payment History */}
+                  {isExpanded && (
+                    <div className="border-t border-border bg-muted/20 p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Receipt className="size-3.5 text-primary" /> Settlement History for{" "}
+                          {d.full_name}
+                        </h4>
+                        <span className="text-xs text-muted-foreground">
+                          Net partner take-home (85%):{" "}
+                          <strong className="text-emerald-600 font-mono">
+                            ₹{stats.partnerNetEarnings.toLocaleString("en-IN")}
+                          </strong>
+                        </span>
+                      </div>
+
+                      {stats.settlements.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-3">
+                          No commission settlements recorded yet for this partner.
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-border/60 rounded-lg border border-border bg-background overflow-hidden text-xs">
+                          {stats.settlements.map((s) => (
+                            <div key={s.id} className="p-3 flex items-center justify-between gap-3">
+                              <div className="space-y-0.5">
+                                <p className="font-mono font-bold text-foreground">
+                                  {s.reference_no || s.id}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {new Date(s.created_at).toLocaleDateString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}{" "}
+                                  · Recorded by {s.collected_by}
+                                </p>
+                                {s.notes && (
+                                  <p className="text-[11px] text-muted-foreground/80 italic">
+                                    {s.notes}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="font-mono font-bold text-emerald-600 text-sm">
+                                  +₹{Math.round(s.amount).toLocaleString("en-IN")}
+                                </span>
+                                <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">
+                                  {s.payment_mode?.replace("_", " ")}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

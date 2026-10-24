@@ -120,7 +120,6 @@ function ElectricPage() {
         </div>
       </section>
 
-
       {/* Vehicle Engineering Specs */}
       <section className="py-20 lg:py-24">
         <div className="section-shell">

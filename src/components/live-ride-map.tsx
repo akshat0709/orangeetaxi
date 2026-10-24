@@ -18,6 +18,7 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
 
   useEffect(() => {
     if (!routesLibrary || !map) return;
+    let cleanup: (() => void) | undefined;
     try {
       setDirectionsService(new routesLibrary.DirectionsService());
       const renderer = new routesLibrary.DirectionsRenderer({
@@ -26,10 +27,11 @@ function DirectionsController({ pickup, dropoff, driver, rideStatus, onRouteFoun
         polylineOptions: { strokeColor: "#f97316", strokeWeight: 4, strokeOpacity: 0.8 },
       });
       setDirectionsRenderer(renderer);
-      return () => renderer.setMap(null);
+      cleanup = () => renderer.setMap(null);
     } catch (e) {
       console.warn("Failed to initialize directions renderer:", e);
     }
+    return cleanup;
   }, [routesLibrary, map]);
 
   useEffect(() => {
@@ -120,10 +122,7 @@ export function LiveRideMap({
   apiKey: propApiKey,
   waypoints = [],
 }: any) {
-  const apiKey =
-    propApiKey ||
-    (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY ||
-    "";
+  const apiKey = propApiKey || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || "";
   const [routeInfo, setRouteInfo] = useState<{ distance?: string; duration?: string } | null>(null);
 
   // Check if we are already inside a parent <APIProvider>
@@ -137,7 +136,8 @@ export function LiveRideMap({
     if (!loc) return null;
     if (typeof loc === "string") {
       const match = loc.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
-      if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+      if (match && match[1] && match[2])
+        return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
       return null;
     }
     const lat = Number(loc.lat ?? loc.current_lat);
@@ -154,7 +154,10 @@ export function LiveRideMap({
   const center = parsedPickup || parsedDropoff || { lat: 28.6139, lng: 77.209 };
 
   const mapBody = (
-    <div className="relative w-full overflow-hidden rounded-xl border border-border shadow-md" style={{ height: "420px" }}>
+    <div
+      className="relative w-full overflow-hidden rounded-xl border border-border shadow-md"
+      style={{ height: "420px" }}
+    >
       {routeInfo && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1">
           {effectiveStatus === "accepted" && (
@@ -194,7 +197,7 @@ export function LiveRideMap({
             title="Pickup Location"
             icon={{
               url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>'
+                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>',
               )}`,
             }}
           />
@@ -205,7 +208,7 @@ export function LiveRideMap({
             title="Drop-off Destination"
             icon={{
               url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#EF4444" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>'
+                '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#EF4444" stroke="#FFFFFF" stroke-width="2.5"/><circle cx="16" cy="16" r="5" fill="#FFFFFF"/></svg>',
               )}`,
             }}
           />
@@ -224,7 +227,7 @@ export function LiveRideMap({
             title="Mahindra BE.6 Chauffeur"
             icon={{
               url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="17" fill="#F97316" stroke="#FFFFFF" stroke-width="3"/><path d="M11 23v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 21.4 11h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-9.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H12.5l1.3-2.5zM13.5 20a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/></svg>'
+                '<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38"><circle cx="19" cy="19" r="17" fill="#F97316" stroke="#FFFFFF" stroke-width="3"/><path d="M11 23v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V23c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 21.4 11h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-9.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H12.5l1.3-2.5zM13.5 20a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/></svg>',
               )}`,
             }}
           />

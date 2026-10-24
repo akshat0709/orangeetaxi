@@ -11,43 +11,51 @@
 ## 📸 Screenshots
 
 ### Homepage — Hero
+
 ![Homepage Hero](docs/screenshots/homepage-hero.png)
 
 ---
 
 ### Homepage — Book Your Orange
+
 ![Homepage CTA](docs/screenshots/homepage-cta.png)
 
 ---
 
 ### Booking — Pickup Location & Map
+
 ![Booking Map](docs/screenshots/booking-map.png)
 
 ---
 
 ### Booking — Confirm Your Ride
+
 ![Booking Confirm](docs/screenshots/booking-confirm.png)
 
 ---
 
 ### Active Ride — Live Driver Tracking
+
 ![Active Ride Tracking](docs/screenshots/booking-active-ride.png)
 
-*Real-time GPS map, driver details, Ride OTP, Guardian SOS, and live ETA*
+_Real-time GPS map, driver details, Ride OTP, Guardian SOS, and live ETA_
 
 ---
 
 ### Ride Completed
+
 ![Ride Completed](docs/screenshots/booking-completed.png)
 
 ---
 
 ### Corporate Enquiry
+
 ![Corporate Enquiry](docs/screenshots/corporate-enquiry.png)
 
 ---
 
 ### Admin — GST Tax Invoice
+
 ![Admin GST Invoice](docs/screenshots/admin-gst-invoice.png)
 
 ---
@@ -55,6 +63,7 @@
 ## ✨ Features
 
 ### 🧑‍💼 Passenger
+
 - **Instant booking** with GPS map-picker for pickup and drop
 - **Real-time ride tracking** with live driver GPS on map
 - **Ride OTP** authentication to start the ride
@@ -66,6 +75,7 @@
 - **Zero cancellation fee** under statutory exemption
 
 ### 🚗 Driver Console
+
 - Real-time incoming ride request alerts (audio chime + OS notification)
 - Accept, mark arrived, start ride, and complete with a single tap
 - Live GPS location broadcasting
@@ -75,6 +85,7 @@
 - Driver chat with passenger
 
 ### 🛡️ Admin Dashboard
+
 - Full bookings management with GST invoice generation & email dispatch
 - Driver application review and onboarding approval
 - Service area and vehicle category configuration
@@ -83,7 +94,8 @@
 - User role management
 
 ### 🔔 PWA Web Push Notifications
-- Background arrival alerts: *"Your Orange Chauffeur has arrived at your gate 📍"*
+
+- Background arrival alerts: _"Your Orange Chauffeur has arrived at your gate 📍"_
 - Works on Android (system tray) and iOS (home screen PWA)
 - Audio chime (Web Audio API) + haptic vibration on mobile
 - Service Worker handles offline caching and notification clicks
@@ -92,17 +104,17 @@
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology |
-| :--- | :--- |
-| **Frontend** | React 18, TanStack Router, TanStack Start (SSR) |
-| **Styling** | Tailwind CSS v4, shadcn/ui, Radix UI |
-| **Backend / DB** | Supabase (PostgreSQL + Realtime + Auth + Storage) |
-| **Deployment** | Cloudflare Workers + Pages |
-| **Maps** | Google Maps JavaScript API |
-| **PWA** | Service Worker, Web Push, Web Audio API |
-| **Transactional Email** | Resend (AWS SES) |
-| **Payments** | Cash + UPI (manual settlement) |
-| **Language** | TypeScript |
+| Layer                   | Technology                                        |
+| :---------------------- | :------------------------------------------------ |
+| **Frontend**            | React 18, TanStack Router, TanStack Start (SSR)   |
+| **Styling**             | Tailwind CSS v4, shadcn/ui, Radix UI              |
+| **Backend / DB**        | Supabase (PostgreSQL + Realtime + Auth + Storage) |
+| **Deployment**          | Cloudflare Workers + Pages                        |
+| **Maps**                | Google Maps JavaScript API                        |
+| **PWA**                 | Service Worker, Web Push, Web Audio API           |
+| **Transactional Email** | Resend (AWS SES)                                  |
+| **Payments**            | Cash + UPI (manual settlement)                    |
+| **Language**            | TypeScript                                        |
 
 ---
 
@@ -160,6 +172,7 @@ orangeetaxi/
 ## 🌍 Service Areas
 
 Currently operating in **Delhi NCR** covering:
+
 - Delhi (Central, South, North, East, West)
 - Gurugram (Cyber City, DLF, Golf Course Road)
 - Noida (Sectors 18, 62, 125, 135)
@@ -178,10 +191,10 @@ Currently operating in **Delhi NCR** covering:
 
 ## 📞 Contact
 
-| | |
-| :--- | :--- |
-| **Bookings** | bookings@orange-taxi.com |
-| **Corporate** | business@orange-taxi.com |
-| **Support** | support@orange-taxi.com |
-| **Helpline** | +91 11 4000 7000 |
+|                |                           |
+| :------------- | :------------------------ |
+| **Bookings**   | bookings@orange-taxi.com  |
+| **Corporate**  | business@orange-taxi.com  |
+| **Support**    | support@orange-taxi.com   |
+| **Helpline**   | +91 11 4000 7000          |
 | **Grievances** | grievance@orange-taxi.com |

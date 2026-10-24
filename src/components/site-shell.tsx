@@ -128,7 +128,9 @@ export function SiteHeader() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin">⚙️ Admin Dashboard</Link>
+                        <Link to="/admin" search={{ tab: "hub" }}>
+                          ⚙️ Admin Dashboard
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/admin" search={{ tab: "fleet" }}>
@@ -253,7 +255,11 @@ export function SiteHeader() {
                 )}
                 {role === "admin" && (
                   <SheetClose asChild>
-                    <Link to="/admin" className="border-b border-border py-4 text-xl font-semibold">
+                    <Link
+                      to="/admin"
+                      search={{ tab: "hub" }}
+                      className="border-b border-border py-4 text-xl font-semibold"
+                    >
                       Admin
                     </Link>
                   </SheetClose>
@@ -395,7 +401,19 @@ export function SiteFooter() {
         <span>
           © 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.
         </span>
-        <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
+          <span className="text-white/30">|</span>
+          <a
+            href="https://builtbyakshat.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/60 hover:text-primary transition-colors underline-offset-4 hover:underline font-medium inline-flex items-center gap-1"
+          >
+            <span>Built by Akshat</span>
+            <span className="text-[10px] text-white/40">↗</span>
+          </a>
+        </div>
       </div>
     </footer>
   );

@@ -68,7 +68,9 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized: Valid authentication token required to dispatch invoices." }),
+        JSON.stringify({
+          error: "Unauthorized: Valid authentication token required to dispatch invoices.",
+        }),
         {
           status: 401,
           headers: { "content-type": "application/json" },
@@ -91,7 +93,9 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
       "https://ndaollycrvlawemhwvky.supabase.co";
     const supabaseAnonKey =
       (env as any)?.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      (typeof process !== "undefined" ? process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"] : undefined) ||
+      (typeof process !== "undefined"
+        ? process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]
+        : undefined) ||
       "sb_publishable_baABGadHhpQI6LtkZcyI0g_HJX39Y_d";
 
     try {
@@ -114,7 +118,9 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
         const callerId = userData?.id || "authenticated_user";
         if (!checkInvoiceRateLimit(callerId, 5, 60000)) {
           return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Maximum 5 invoice dispatches per minute." }),
+            JSON.stringify({
+              error: "Rate limit exceeded. Maximum 5 invoice dispatches per minute.",
+            }),
             { status: 429, headers: { "content-type": "application/json" } },
           );
         }
@@ -136,24 +142,18 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
 
     // Prevent email header injection
     if (body.to.includes("\r") || body.to.includes("\n")) {
-      return new Response(
-        JSON.stringify({ error: "Invalid recipient header format." }),
-        {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Invalid recipient header format." }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(body.to)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid recipient email address" }),
-        {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Invalid recipient email address" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     // 2. Retrieve API Key strictly from deployment environment (no hardcoded secret fallbacks)
@@ -164,7 +164,9 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
     if (!apiKey) {
       console.error("[Security] RESEND_API_KEY is not configured in server environment.");
       return new Response(
-        JSON.stringify({ error: "Email delivery service unavailable. Contact system administration." }),
+        JSON.stringify({
+          error: "Email delivery service unavailable. Contact system administration.",
+        }),
         {
           status: 503,
           headers: { "content-type": "application/json" },
@@ -214,7 +216,11 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
   }
 }
 
-async function verifyHmacSha256(message: string, secret: string, signature: string): Promise<boolean> {
+async function verifyHmacSha256(
+  message: string,
+  secret: string,
+  signature: string,
+): Promise<boolean> {
   try {
     const enc = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -222,7 +228,7 @@ async function verifyHmacSha256(message: string, secret: string, signature: stri
       enc.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
     const signBuffer = await crypto.subtle.sign("HMAC", key, enc.encode(message));
     const signHex = Array.from(new Uint8Array(signBuffer))
@@ -258,13 +264,13 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       (env as any)?.RAZORPAY_KEY_ID ||
       (typeof process !== "undefined" ? process.env?.["RAZORPAY_KEY_ID"] : undefined) ||
       (typeof process !== "undefined" ? process.env?.["VITE_RAZORPAY_KEY_ID"] : undefined) ||
-      "rzp_test_TjnylwNIDTQjP2";
+      "";
 
     const keySecret =
       (env as any)?.RAZORPAY_KEY_SECRET ||
       (typeof process !== "undefined" ? process.env?.["RAZORPAY_KEY_SECRET"] : undefined);
 
-    if (keySecret && keyId && !keyId.startsWith("mock")) {
+    if (keySecret && keyId && !keyId.startsWith("mock") && keyId.length > 0) {
       try {
         const authCredentials = btoa(`${keyId}:${keySecret}`);
         const rzpRes = await fetch("https://api.razorpay.com/v1/orders", {
@@ -290,7 +296,7 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
               currency: rzpData.currency,
               keyId,
             }),
-            { status: 200, headers: { "content-type": "application/json" } }
+            { status: 200, headers: { "content-type": "application/json" } },
           );
         }
       } catch (e) {
@@ -308,12 +314,12 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
         keyId,
         mock: true,
       }),
-      { status: 200, headers: { "content-type": "application/json" } }
+      { status: 200, headers: { "content-type": "application/json" } },
     );
   } catch (err: any) {
     return new Response(
       JSON.stringify({ error: err.message || "Failed to initialize payment order" }),
-      { status: 500, headers: { "content-type": "application/json" } }
+      { status: 500, headers: { "content-type": "application/json" } },
     );
   }
 }
@@ -330,7 +336,7 @@ async function handleVerifyRazorpayPayment(request: Request, env: unknown): Prom
     if (!razorpay_payment_id) {
       return new Response(
         JSON.stringify({ verified: false, error: "Missing razorpay_payment_id" }),
-        { status: 400, headers: { "content-type": "application/json" } }
+        { status: 400, headers: { "content-type": "application/json" } },
       );
     }
 
@@ -338,46 +344,43 @@ async function handleVerifyRazorpayPayment(request: Request, env: unknown): Prom
       (env as any)?.RAZORPAY_KEY_SECRET ||
       (typeof process !== "undefined" ? process.env?.["RAZORPAY_KEY_SECRET"] : undefined);
 
-    const keyId =
-      (env as any)?.RAZORPAY_KEY_ID ||
-      (typeof process !== "undefined" ? process.env?.["RAZORPAY_KEY_ID"] : undefined) ||
-      (typeof process !== "undefined" ? process.env?.["VITE_RAZORPAY_KEY_ID"] : undefined) ||
-      "rzp_test_TjnylwNIDTQjP2";
-
-    const isTestKey = !keyId || keyId.startsWith("rzp_test_");
-
-    if (keySecret && razorpay_order_id && razorpay_signature) {
-      const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
-      const isValid = await verifyHmacSha256(payload, keySecret, razorpay_signature);
-      if (!isValid) {
-        return new Response(
-          JSON.stringify({ verified: false, error: "Cryptographic signature mismatch" }),
-          { status: 400, headers: { "content-type": "application/json" } }
-        );
-      }
+    if (!keySecret) {
       return new Response(
-        JSON.stringify({ verified: true, paymentId: razorpay_payment_id }),
-        { status: 200, headers: { "content-type": "application/json" } }
+        JSON.stringify({
+          verified: false,
+          error: "Payment verification unavailable: RAZORPAY_KEY_SECRET is not configured on the server",
+        }),
+        { status: 503, headers: { "content-type": "application/json" } },
       );
     }
 
-    // Live mode requires signature if secret is present
-    if (keySecret && !isTestKey) {
+    if (!razorpay_order_id || !razorpay_signature) {
       return new Response(
-        JSON.stringify({ verified: false, error: "Missing razorpay_order_id or razorpay_signature for live production verification" }),
-        { status: 400, headers: { "content-type": "application/json" } }
+        JSON.stringify({
+          verified: false,
+          error: "Missing razorpay_order_id or razorpay_signature for cryptographic verification",
+        }),
+        { status: 400, headers: { "content-type": "application/json" } },
       );
     }
 
-    // In test mode or when secret is not yet provisioned, allow valid payment ID
-    return new Response(
-      JSON.stringify({ verified: true, paymentId: razorpay_payment_id, test_mode: isTestKey }),
-      { status: 200, headers: { "content-type": "application/json" } }
-    );
+    const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const isValid = await verifyHmacSha256(payload, keySecret, razorpay_signature);
+    if (!isValid) {
+      return new Response(
+        JSON.stringify({ verified: false, error: "Cryptographic signature mismatch" }),
+        { status: 400, headers: { "content-type": "application/json" } },
+      );
+    }
+
+    return new Response(JSON.stringify({ verified: true, paymentId: razorpay_payment_id }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   } catch (err: any) {
     return new Response(
       JSON.stringify({ verified: false, error: err.message || "Payment verification failed" }),
-      { status: 500, headers: { "content-type": "application/json" } }
+      { status: 500, headers: { "content-type": "application/json" } },
     );
   }
 }
@@ -395,26 +398,28 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
 
     if (webhookSecret) {
       if (!signature) {
-        return new Response(
-          JSON.stringify({ error: "Missing x-razorpay-signature header" }),
-          { status: 400, headers: { "content-type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Missing x-razorpay-signature header" }), {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        });
       }
       const isValid = await verifyHmacSha256(rawBody, webhookSecret, signature);
       if (!isValid) {
-        return new Response(
-          JSON.stringify({ error: "Invalid webhook signature" }),
-          { status: 400, headers: { "content-type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Invalid webhook signature" }), {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        });
       }
     } else {
       const isProd =
         (env as any)?.NODE_ENV === "production" ||
-        (typeof process !== "undefined" && process.env?.NODE_ENV === "production");
+        (typeof process !== "undefined" && process.env?.["NODE_ENV"] === "production");
       if (isProd) {
         return new Response(
-          JSON.stringify({ error: "Webhook verification unavailable: RAZORPAY_WEBHOOK_SECRET not configured" }),
-          { status: 500, headers: { "content-type": "application/json" } }
+          JSON.stringify({
+            error: "Webhook verification unavailable: RAZORPAY_WEBHOOK_SECRET not configured",
+          }),
+          { status: 500, headers: { "content-type": "application/json" } },
         );
       }
     }
@@ -423,18 +428,18 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
     try {
       eventData = JSON.parse(rawBody);
     } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid JSON body" }),
-        { status: 400, headers: { "content-type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     const eventId = eventData?.id || eventData?.event_id;
     if (eventId && processedWebhookEvents.has(eventId)) {
-      return new Response(
-        JSON.stringify({ status: "already_processed", event_id: eventId }),
-        { status: 200, headers: { "content-type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ status: "already_processed", event_id: eventId }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     if (eventId) {
@@ -446,15 +451,15 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
     }
 
     const eventType = eventData?.event;
-    return new Response(
-      JSON.stringify({ success: true, event: eventType }),
-      { status: 200, headers: { "content-type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, event: eventType }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Webhook processing error" }),
-      { status: 500, headers: { "content-type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: err.message || "Webhook processing error" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
   }
 }
 
@@ -584,9 +589,7 @@ export default {
         host === "admin.localhost" ||
         url.searchParams.get("__subdomain") === "admin";
 
-      const isMainDomain =
-        host === "orange-taxi.com" ||
-        host === "www.orange-taxi.com";
+      const isMainDomain = host === "orange-taxi.com" || host === "www.orange-taxi.com";
 
       // 1. Canonical host and HTTPS enforcement for search crawlers
       if (

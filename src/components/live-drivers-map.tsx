@@ -1,34 +1,6 @@
 /// <reference types="google.maps" />
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  APIProvider,
-  Map as GoogleMap,
-  Marker,
-  useMap,
-} from "@vis.gl/react-google-maps";
-
-function createDriverMarkerIcon(status: "available" | "on_trip" | "offline", isSelected: boolean) {
-  const color = status === "available" ? "#10B981" : status === "on_trip" ? "#F97316" : "#64748B";
-  const size = isSelected ? 42 : 34;
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 36 36">
-    <circle cx="18" cy="18" r="16" fill="${color}" stroke="#FFFFFF" stroke-width="2.5"/>
-    <path d="M10 21v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 20.4 9h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-10.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H11.5l1.3-2.5zM12.5 18a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/>
-    ${isSelected ? '<circle cx="18" cy="18" r="17" fill="none" stroke="#F97316" stroke-width="2"/>' : ''}
-  </svg>`;
-
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize:
-      typeof window !== "undefined" && window.google?.maps?.Size
-        ? new window.google.maps.Size(size, size)
-        : undefined,
-    anchor:
-      typeof window !== "undefined" && window.google?.maps?.Point
-        ? new window.google.maps.Point(size / 2, size / 2)
-        : undefined,
-  };
-}
+import { APIProvider, Map as GoogleMap, Marker, useMap } from "@vis.gl/react-google-maps";
 import {
   Car,
   MapPin,
@@ -58,6 +30,31 @@ import {
   getCityDefaultCenter,
   SUPPORTED_CITY_HUBS,
 } from "@/lib/city-detector";
+
+function createDriverMarkerIcon(
+  status: "available" | "on_trip" | "offline",
+  isSelected: boolean,
+): google.maps.Icon {
+  const color = status === "available" ? "#10B981" : status === "on_trip" ? "#F97316" : "#64748B";
+  const size = isSelected ? 42 : 34;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="16" fill="${color}" stroke="#FFFFFF" stroke-width="2.5"/>
+    <path d="M10 21v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21h8v1.5a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5V21c.83 0 1.5-.67 1.5-1.5v-5c0-.9-.5-1.7-1.3-2.1l-1.8-3.5A2.2 2.2 0 0 0 20.4 9h-4.8a2.2 2.2 0 0 0-1.9 1.4l-1.8 3.5c-.8.4-1.3 1.2-1.3 2.1v5c0 .83.67 1.5 1.5 1.5h-.1zm2.8-10.5a.7.7 0 0 1 .6-.4h5.2a.7.7 0 0 1 .6.4l1.3 2.5H11.5l1.3-2.5zM12.5 18a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#FFFFFF"/>
+    ${isSelected ? '<circle cx="18" cy="18" r="17" fill="none" stroke="#F97316" stroke-width="2"/>' : ""}
+  </svg>`;
+
+  const icon: google.maps.Icon = {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+  };
+  if (typeof window !== "undefined" && window.google?.maps?.Size) {
+    icon.scaledSize = new window.google.maps.Size(size, size);
+  }
+  if (typeof window !== "undefined" && window.google?.maps?.Point) {
+    icon.anchor = new window.google.maps.Point(size / 2, size / 2);
+  }
+  return icon;
+}
 
 interface Driver {
   id: string;
@@ -117,18 +114,17 @@ function MapPanController({
   return null;
 }
 
-export function LiveDriversMap({
-  drivers,
-  bookings,
-  apiKey,
-  onRefresh,
-}: LiveDriversMapProps) {
+export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDriversMapProps) {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<"all" | "available" | "on_trip" | "offline">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "available" | "on_trip" | "offline">(
+    "all",
+  );
   const [selectedCityHub, setSelectedCityHub] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [mapTarget, setMapTarget] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
+  const [mapTarget, setMapTarget] = useState<{ lat: number; lng: number; zoom?: number } | null>(
+    null,
+  );
   const [geocodedArea, setGeocodedArea] = useState<string | null>(null);
 
   // Active bookings map for fast O(1) lookup
@@ -236,10 +232,10 @@ export function LiveDriversMap({
           const comps = results[0].address_components;
           const locality = comps.find((c) => c.types.includes("locality"))?.long_name;
           const sublocality = comps.find(
-            (c) => c.types.includes("sublocality") || c.types.includes("sublocality_level_1")
+            (c) => c.types.includes("sublocality") || c.types.includes("sublocality_level_1"),
           )?.long_name;
-          const adminArea = comps.find(
-            (c) => c.types.includes("administrative_area_level_2")
+          const adminArea = comps.find((c) =>
+            c.types.includes("administrative_area_level_2"),
           )?.long_name;
 
           const cityName = locality || adminArea || detectedCity.replace(" Hub", "");
@@ -313,7 +309,7 @@ export function LiveDriversMap({
 
   const defaultCenter = useMemo(() => {
     if (selectedDriver) return { lat: selectedDriver.lat, lng: selectedDriver.lng };
-    if (enrichedDrivers.length > 0) return { lat: enrichedDrivers[0].lat, lng: enrichedDrivers[0].lng };
+    if (enrichedDrivers[0]) return { lat: enrichedDrivers[0].lat, lng: enrichedDrivers[0].lng };
     return { lat: 12.9716, lng: 77.5946 };
   }, [selectedDriver, enrichedDrivers]);
 
@@ -468,15 +464,15 @@ export function LiveDriversMap({
                   d.derivedStatus === "available"
                     ? "bg-emerald-500"
                     : d.derivedStatus === "on_trip"
-                    ? "bg-orange-500"
-                    : "bg-slate-400";
+                      ? "bg-orange-500"
+                      : "bg-slate-400";
 
                 const badgeText =
                   d.derivedStatus === "available"
                     ? "Available / Idle"
                     : d.derivedStatus === "on_trip"
-                    ? "On Active Ride"
-                    : "Offline";
+                      ? "On Active Ride"
+                      : "Offline";
 
                 return (
                   <button
@@ -489,7 +485,11 @@ export function LiveDriversMap({
                     {/* Driver Avatar */}
                     <div className="relative size-10 shrink-0 rounded-full bg-muted flex items-center justify-center font-bold text-xs border border-border overflow-hidden">
                       {d.photo_url ? (
-                        <img src={d.photo_url} alt={d.full_name} className="size-full object-cover" />
+                        <img
+                          src={d.photo_url}
+                          alt={d.full_name}
+                          className="size-full object-cover"
+                        />
                       ) : (
                         <span>{d.full_name ? d.full_name.charAt(0).toUpperCase() : "D"}</span>
                       )}
@@ -501,14 +501,16 @@ export function LiveDriversMap({
                     {/* Driver Meta */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <h4 className="text-xs font-bold text-foreground truncate">{d.full_name}</h4>
+                        <h4 className="text-xs font-bold text-foreground truncate">
+                          {d.full_name}
+                        </h4>
                         <span
                           className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
                             d.derivedStatus === "available"
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                               : d.derivedStatus === "on_trip"
-                              ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                              : "bg-slate-500/10 text-slate-500"
+                                ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                                : "bg-slate-500/10 text-slate-500"
                           }`}
                         >
                           {badgeText}
@@ -516,7 +518,9 @@ export function LiveDriversMap({
                       </div>
 
                       <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground font-mono">
-                        <span className="font-semibold text-foreground">{d.vehicle_number || "BE.6 EV"}</span>
+                        <span className="font-semibold text-foreground">
+                          {d.vehicle_number || "BE.6 EV"}
+                        </span>
                         <span>·</span>
                         <span>{d.vehicle_model || "Mahindra BE.6"}</span>
                       </div>
@@ -538,7 +542,10 @@ export function LiveDriversMap({
                           <BatteryCharging className="size-3 text-emerald-600" />
                           {d.batteryPercent}%
                         </span>
-                        <span className="flex items-center gap-1 text-foreground/80 font-medium truncate max-w-[130px]" title={d.detectedCity}>
+                        <span
+                          className="flex items-center gap-1 text-foreground/80 font-medium truncate max-w-[130px]"
+                          title={d.detectedCity}
+                        >
                           <MapPin className="size-2.5 text-primary shrink-0" />
                           <span className="truncate">{d.detectedCity}</span>
                         </span>
@@ -566,7 +573,8 @@ export function LiveDriversMap({
               >
                 <MapPanController
                   targetLocation={
-                    mapTarget || (selectedDriver ? { lat: selectedDriver.lat, lng: selectedDriver.lng } : null)
+                    mapTarget ||
+                    (selectedDriver ? { lat: selectedDriver.lat, lng: selectedDriver.lng } : null)
                   }
                   zoom={mapTarget?.zoom || (selectedDriver ? 15 : 12)}
                 />
@@ -641,15 +649,15 @@ export function LiveDriversMap({
                             selectedDriver.derivedStatus === "available"
                               ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-bold"
                               : selectedDriver.derivedStatus === "on_trip"
-                              ? "bg-orange-500/10 text-orange-600 border-orange-500/30 font-bold"
-                              : "bg-slate-500/10 text-slate-500 border-slate-500/30 font-bold"
+                                ? "bg-orange-500/10 text-orange-600 border-orange-500/30 font-bold"
+                                : "bg-slate-500/10 text-slate-500 border-slate-500/30 font-bold"
                           }
                         >
                           {selectedDriver.derivedStatus === "available"
                             ? "🟢 Available (Idle)"
                             : selectedDriver.derivedStatus === "on_trip"
-                            ? "🟠 On Active Trip"
-                            : "⚪ Offline"}
+                              ? "🟠 On Active Trip"
+                              : "⚪ Offline"}
                         </Badge>
                       </div>
 
@@ -660,7 +668,9 @@ export function LiveDriversMap({
                         <span>·</span>
                         <span>{selectedDriver.vehicle_model || "Mahindra BE 6 EV"}</span>
                         <span>·</span>
-                        <span>★ {selectedDriver.rating ? selectedDriver.rating.toFixed(2) : "5.00"}</span>
+                        <span>
+                          ★ {selectedDriver.rating ? selectedDriver.rating.toFixed(2) : "5.00"}
+                        </span>
                         <span>·</span>
                         <span>{selectedDriver.total_rides || 0} completed rides</span>
                       </div>
@@ -713,7 +723,11 @@ export function LiveDriversMap({
                     </span>
                     <div className="flex items-center gap-1 font-bold text-foreground mt-0.5">
                       <Zap className="size-3.5 text-amber-500" />
-                      <span>{selectedDriver.speedKmH > 0 ? `${selectedDriver.speedKmH} km/h` : "Stationary (0 km/h)"}</span>
+                      <span>
+                        {selectedDriver.speedKmH > 0
+                          ? `${selectedDriver.speedKmH} km/h`
+                          : "Stationary (0 km/h)"}
+                      </span>
                     </div>
                   </div>
 
@@ -727,9 +741,14 @@ export function LiveDriversMap({
                         Auto-detected
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 font-bold text-foreground mt-0.5 truncate" title={geocodedArea || selectedDriver.detectedCity}>
+                    <div
+                      className="flex items-center gap-1 font-bold text-foreground mt-0.5 truncate"
+                      title={geocodedArea || selectedDriver.detectedCity}
+                    >
                       <MapPin className="size-3.5 text-primary shrink-0" />
-                      <span className="truncate">{geocodedArea || selectedDriver.detectedCity}</span>
+                      <span className="truncate">
+                        {geocodedArea || selectedDriver.detectedCity}
+                      </span>
                     </div>
                   </div>
 
@@ -753,7 +772,8 @@ export function LiveDriversMap({
                         In-Transit Ride #{selectedDriver.activeRide.reference}
                       </span>
                       <span className="text-xs font-bold text-foreground font-mono">
-                        OTP: {selectedDriver.activeRide.ride_otp || "—"} · ₹{selectedDriver.activeRide.estimated_fare}
+                        OTP: {selectedDriver.activeRide.ride_otp || "—"} · ₹
+                        {selectedDriver.activeRide.estimated_fare}
                       </span>
                     </div>
 
@@ -761,13 +781,15 @@ export function LiveDriversMap({
                       <div className="flex items-center gap-2">
                         <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
                         <span className="text-muted-foreground truncate">
-                          <strong className="text-foreground">Pickup:</strong> {selectedDriver.activeRide.pickup_area}
+                          <strong className="text-foreground">Pickup:</strong>{" "}
+                          {selectedDriver.activeRide.pickup_area}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="size-2 rounded-full bg-red-500 shrink-0" />
                         <span className="text-muted-foreground truncate">
-                          <strong className="text-foreground">Dropoff:</strong> {selectedDriver.activeRide.drop_area}
+                          <strong className="text-foreground">Dropoff:</strong>{" "}
+                          {selectedDriver.activeRide.drop_area}
                         </span>
                       </div>
                     </div>

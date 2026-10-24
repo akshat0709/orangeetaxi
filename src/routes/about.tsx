@@ -141,6 +141,20 @@ function AboutPage() {
             </Button>
           </div>
         </div>
+
+        {/* Platform Credits */}
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          Platform Architecture & Engineering ·{" "}
+          <a
+            href="https://builtbyakshat.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-medium inline-flex items-center gap-1"
+          >
+            <span>Built by Akshat</span>
+            <span className="text-[10px]">↗</span>
+          </a>
+        </div>
       </div>
     </div>
   );

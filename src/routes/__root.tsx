@@ -11,6 +11,12 @@ import { useState, useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import "../i18n";
 import { CoolCarSplashScreen } from "../components/cool-car-splash-screen";
+import appCss from "../styles.css?url";
+import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SiteFooter, SiteHeader } from "../components/site-shell";
+import { supabase } from "@/integrations/supabase/client";
+import { PWAInstallPrompt } from "../components/pwa-install-prompt";
+import { CookieBanner } from "../components/cookie-banner";
 
 function Analytics() {
   useEffect(() => {
@@ -29,11 +35,6 @@ function Analytics() {
   }, []);
   return null;
 }
-
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { SiteFooter, SiteHeader } from "../components/site-shell";
-import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -99,9 +100,6 @@ function ErrorComponent({ error, reset }: { error: any; reset: () => void }) {
     </div>
   );
 }
-
-import { PWAInstallPrompt } from "../components/pwa-install-prompt";
-import { CookieBanner } from "../components/cookie-banner";
 
 const SCHEMA_JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
@@ -336,7 +334,9 @@ function RootComponent() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         if (!window.location.pathname.startsWith("/login")) {
-          const searchParams = window.location.search ? `&${window.location.search.replace(/^\?/, "")}` : "";
+          const searchParams = window.location.search
+            ? `&${window.location.search.replace(/^\?/, "")}`
+            : "";
           window.location.href = `/login?mode=reset${searchParams}${window.location.hash || ""}`;
         }
       }

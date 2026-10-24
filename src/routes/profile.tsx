@@ -351,7 +351,9 @@ function ProfilePage() {
         throw error;
       }
 
-      toast.success(data?.message || "Your account and personal data have been permanently erased.");
+      toast.success(
+        data?.message || "Your account and personal data have been permanently erased.",
+      );
       setDeleteModalOpen(false);
 
       if (typeof window !== "undefined") {
@@ -986,11 +988,15 @@ function ProfilePage() {
               <h3 className="font-bold text-base">Privacy & Account Erasure (DPDP Act, 2023)</h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Under India's Digital Personal Data Protection Act, 2023, you have the right to request the permanent erasure of your account, contact information, saved places, and personal identifiers. Statutory tax invoices are retained in anonymized form for 72 months to satisfy mandatory Central GST (CGST) audit compliance.
+              Under India's Digital Personal Data Protection Act, 2023, you have the right to
+              request the permanent erasure of your account, contact information, saved places, and
+              personal identifiers. Statutory tax invoices are retained in anonymized form for 72
+              months to satisfy mandatory Central GST (CGST) audit compliance.
             </p>
             <div className="pt-1 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-destructive/15">
               <div className="text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Irreversible action:</span> All active sessions will be terminated.
+                <span className="font-semibold text-foreground">Irreversible action:</span> All
+                active sessions will be terminated.
               </div>
               <Button
                 type="button"
@@ -1080,7 +1086,8 @@ function ProfilePage() {
                 <li>Revoke active login sessions across all devices.</li>
               </ul>
               <span className="block text-[11px] text-muted-foreground pt-1">
-                Note: Anonymized trip records with financial tax amounts are retained for 72 months solely to comply with Section 36 of the CGST Act, 2017.
+                Note: Anonymized trip records with financial tax amounts are retained for 72 months
+                solely to comply with Section 36 of the CGST Act, 2017.
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -1088,7 +1095,8 @@ function ProfilePage() {
           <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="del-confirm" className="text-xs font-semibold">
-                To confirm, type <span className="font-mono text-destructive font-bold">DELETE</span> below:
+                To confirm, type{" "}
+                <span className="font-mono text-destructive font-bold">DELETE</span> below:
               </Label>
               <Input
                 id="del-confirm"

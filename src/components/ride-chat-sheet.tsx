@@ -248,7 +248,9 @@ export function RideChatSheet({
 
     async function setupAuthorizedChat() {
       // 1. Verify authenticated session
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (isCancelled || !session?.user) {
         return;
       }

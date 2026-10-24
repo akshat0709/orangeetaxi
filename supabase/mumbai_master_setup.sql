@@ -595,11 +595,15 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Incorrect OTP. Please confirm with passenger.');
   END IF;
 
+  PERFORM set_config('app.otp_verified', 'on', true);
+
   UPDATE public.bookings
   SET status = 'in_progress',
       started_at = now(),
       updated_at = now()
   WHERE id = _booking_id;
+
+  PERFORM set_config('app.otp_verified', 'off', true);
 
   RETURN jsonb_build_object('success', true, 'message', 'OTP verified. Trip started successfully.');
 END;

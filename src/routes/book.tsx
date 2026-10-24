@@ -57,6 +57,25 @@ import { MapPicker, PAN_INDIA_PRESETS } from "@/components/map-picker";
 import { GuardianSafetyModal } from "@/components/guardian-safety-modal";
 import { LiveRideMap } from "@/components/live-ride-map";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { RatingModal } from "@/components/rating-modal";
+import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
+import { RideChatSheet } from "@/components/ride-chat-sheet";
+import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
+import passengerImage from "@/assets/orange-taxi-passenger.jpg";
+import interiorImage from "@/assets/orange-taxi-interior.jpg";
+import {
+  getBookingVehiclePlate,
+  resolveDriverDetails,
+  fetchAndHydrateDriverDetails,
+} from "@/lib/ride-vehicle";
+import {
+  encodePickupAddressWithPrefs,
+  parseRidePreferences,
+  parseCleanCoords,
+  getCabinClimateBadge,
+} from "@/lib/ride-preferences";
+import { NotificationBanner } from "@/components/notification-banner";
+import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => {
@@ -76,29 +95,7 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-import { RatingModal } from "@/components/rating-modal";
-import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
-import { RideChatSheet } from "@/components/ride-chat-sheet";
-import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
-import passengerImage from "@/assets/orange-taxi-passenger.jpg";
-import interiorImage from "@/assets/orange-taxi-interior.jpg";
-
-import {
-  getBookingVehiclePlate,
-  resolveDriverDetails,
-  fetchAndHydrateDriverDetails,
-} from "@/lib/ride-vehicle";
-import {
-  encodePickupAddressWithPrefs,
-  parseRidePreferences,
-  parseCleanCoords,
-  getCabinClimateBadge,
-} from "@/lib/ride-preferences";
-import { NotificationBanner } from "@/components/notification-banner";
-import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifications";
-
-const GOOGLE_MAPS_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 export const Route = createFileRoute("/book")({
   head: () => ({
@@ -771,7 +768,10 @@ function PassengerPage() {
         const match = error.message.match(/Could not find the '([^']+)' column/);
         const badCol = match ? match[1] : null;
         if (badCol && badCol in insertPayload) {
-          console.warn(`Stripping missing column '${badCol}' from booking payload and retrying:`, error.message);
+          console.warn(
+            `Stripping missing column '${badCol}' from booking payload and retrying:`,
+            error.message,
+          );
           delete insertPayload[badCol];
           const retryResult = await supabase
             .from("bookings")
@@ -892,12 +892,17 @@ function PassengerPage() {
             const verifyData = await verifyRes.json();
             toast.dismiss("payment-verify");
             if (!verifyRes.ok || !verifyData.verified) {
-              toast.error("Payment verification failed. Please contact customer care.");
+              toast.error(
+                verifyData.error || "Payment verification failed. Please contact customer care.",
+              );
               setSubmitting(false);
               return;
             }
           } catch (e) {
             toast.dismiss("payment-verify");
+            toast.error("Payment verification network error. Please try again.");
+            setSubmitting(false);
+            return;
           }
           toast.success("Payment verified! Confirming your ride...");
           await executeBookingInsert(response.razorpay_payment_id);
@@ -2483,34 +2488,73 @@ function Step4Confirmed({
                   const isLoaded = await loadRazorpay();
                   if (!isLoaded) return;
 
+                  let orderKey = "";
+                  let orderId: string | undefined = undefined;
+                  try {
+                    const orderRes = await fetch("/api/create-razorpay-order", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        amount: fare,
+                        vehicleCode: currentBooking?.vehicle_code || "ORANGE_SIGNATURE",
+                      }),
+                    });
+                    if (orderRes.ok) {
+                      const resJson = await orderRes.json();
+                      if (resJson.keyId) orderKey = resJson.keyId;
+                      if (resJson.orderId && !resJson.mock) orderId = resJson.orderId;
+                    }
+                  } catch (e) {
+                    console.warn("Mid-ride order generation notice:", e);
+                  }
+
                   const options = {
-                    key: "rzp_test_TjnylwNIDTQjP2",
+                    key: orderKey,
                     amount: Math.round(fare * 100),
                     currency: "INR",
                     name: "Orange Taxi",
                     description: "Mid-Ride Online Payment",
+                    order_id: orderId,
                     image: "https://orange-taxi.com/pwa-512x512.png",
                     handler: async function (response: any) {
-                      // Update booking payment method to UPI/Online
                       try {
+                        const verifyRes = await fetch("/api/verify-razorpay-payment", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                          }),
+                        });
+                        const verifyData = await verifyRes.json();
+                        if (!verifyRes.ok || !verifyData.verified) {
+                          toast.error(
+                            verifyData.error || "Mid-ride payment verification failed.",
+                          );
+                          return;
+                        }
+
                         await supabase
                           .from("bookings")
                           .update({
                             payment_method: "upi",
-                            payment_status: "paid_online",
+                            payment_status: "paid",
+                            payment_made: "yes",
+                            payment_intent_id: response.razorpay_payment_id,
                           })
                           .eq("id", currentBooking.id);
-                      } catch (err) {
-                        console.warn("Booking payment status update failed:", err);
-                      }
 
-                      // Optimistically update local state
-                      setCurrentBooking((prev) => ({
-                        ...prev,
-                        payment_method: "upi",
-                        payment_status: "paid_online",
-                      }));
-                      toast.success("Payment successful! The driver has been notified.");
+                        setCurrentBooking((prev) => ({
+                          ...prev,
+                          payment_method: "upi",
+                          payment_status: "paid",
+                        }));
+                        toast.success("Payment verified! The chauffeur has been notified.");
+                      } catch (err) {
+                        console.error("Booking payment status update failed:", err);
+                        toast.error("Payment verification failed. Please try again.");
+                      }
                     },
                     theme: { color: "#f97316" },
                   };

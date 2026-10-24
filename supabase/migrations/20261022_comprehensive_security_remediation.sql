@@ -167,6 +167,16 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Authentication required.');
   END IF;
 
+  -- Restrict direct execution: only service_role, platform admin, or server-verified session can credit wallet
+  IF auth.role() <> 'service_role' AND NOT public.has_role(_uid, 'admin') THEN
+    IF current_setting('app.verified_payment', true) IS DISTINCT FROM 'on' THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Unauthorized: Wallet top-up requires server-verified payment settlement.'
+      );
+    END IF;
+  END IF;
+
   IF _clean_amt <= 0 THEN
     RETURN jsonb_build_object('success', false, 'error', 'Top-up amount must be greater than zero.');
   END IF;
@@ -267,7 +277,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Booking payment method is not wallet.');
   END IF;
 
-  IF b.payment_status = 'paid' THEN
+  IF b.status NOT IN ('in_progress', 'completed') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Ride must be in progress or completed to settle fare.');
+  END IF;
+
+  IF b.payment_status = 'paid' AND COALESCE(b.payment_made, 'no') = 'yes' THEN
     RETURN jsonb_build_object('success', true, 'message', 'Payment already settled.');
   END IF;
 
@@ -578,8 +592,13 @@ BEGIN
     IF NEW.status <> OLD.status THEN
       IF OLD.status = 'accepted' AND NEW.status NOT IN ('arrived', 'cancelled') THEN
         RAISE EXCEPTION 'Invalid status transition: Accepted ride can only transition to arrived or cancelled.';
+      ELSIF OLD.status = 'arrived' AND NEW.status = 'in_progress' THEN
+        -- Arrived ride can only transition to in_progress via OTP verification RPC (verify_ride_otp) or by admin
+        IF current_setting('app.otp_verified', true) IS DISTINCT FROM 'on' AND NOT is_admin THEN
+          RAISE EXCEPTION 'Invalid status transition: Arrived ride can only transition to in_progress via OTP verification (verify_ride_otp).';
+        END IF;
       ELSIF OLD.status = 'arrived' AND NEW.status NOT IN ('in_progress', 'cancelled') THEN
-        RAISE EXCEPTION 'Invalid status transition: Arrived ride can only transition to in_progress via OTP.';
+        RAISE EXCEPTION 'Invalid status transition: Arrived ride can only transition to in_progress (via OTP) or cancelled.';
       ELSIF OLD.status = 'in_progress' AND NEW.status NOT IN ('completed') THEN
         RAISE EXCEPTION 'Invalid status transition: In-progress ride can only transition to completed.';
       ELSIF OLD.status = 'completed' THEN
@@ -610,3 +629,173 @@ BEGIN
   RAISE EXCEPTION 'Security Violation: Unauthorized booking modification.';
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_bookings_integrity_guard ON public.bookings;
+CREATE TRIGGER trg_bookings_integrity_guard
+  BEFORE UPDATE ON public.bookings
+  FOR EACH ROW
+  EXECUTE FUNCTION public.check_booking_update_integrity();
+
+-- ============================================================================
+-- 7. HARDENED SERVER-SIDE OTP VERIFICATION (verify_ride_otp)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.verify_ride_otp(_booking_id uuid, _otp text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  b record;
+  clean_otp text := trim(COALESCE(_otp, ''));
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Authentication required.');
+  END IF;
+
+  SELECT id, driver_id, status, ride_otp, customer_id
+  INTO b
+  FROM public.bookings
+  WHERE id = _booking_id;
+
+  IF b.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Ride not found.');
+  END IF;
+
+  -- Verify caller is the authorized driver for this trip or admin
+  IF NOT public.is_driver_of(b.driver_id, auth.uid()) THEN
+    IF NOT public.has_role(auth.uid(), 'admin') THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Unauthorized: You are not the assigned chauffeur for this ride.');
+    END IF;
+  END IF;
+
+  -- Ensure ride is in arrived state
+  IF b.status <> 'arrived' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Ride must be in arrived state before verifying OTP.');
+  END IF;
+
+  -- Verify OTP
+  IF b.ride_otp IS NULL OR clean_otp = '' OR b.ride_otp <> clean_otp THEN
+    -- Audit failed verification
+    INSERT INTO public.security_audit_logs (event_type, severity, user_id, metadata)
+    VALUES (
+      'booking.otp_verification_failed',
+      'medium',
+      auth.uid(),
+      jsonb_build_object('booking_id', _booking_id, 'reason', 'OTP mismatch')
+    );
+    RETURN jsonb_build_object('success', false, 'error', 'Incorrect OTP. Please confirm with the passenger.');
+  END IF;
+
+  -- Set session guard flag to permit status change in check_booking_update_integrity
+  PERFORM set_config('app.otp_verified', 'on', true);
+
+  -- State transition: arrived -> in_progress and clear OTP to prevent replay or post-trip leakage
+  UPDATE public.bookings
+  SET status = 'in_progress',
+      started_at = now(),
+      updated_at = now(),
+      ride_otp = ''
+  WHERE id = _booking_id;
+
+  PERFORM set_config('app.otp_verified', 'off', true);
+
+  -- Audit successful start
+  INSERT INTO public.security_audit_logs (event_type, severity, user_id, metadata)
+  VALUES (
+    'booking.trip_started',
+    'low',
+    auth.uid(),
+    jsonb_build_object('booking_id', _booking_id)
+  );
+
+  RETURN jsonb_build_object('success', true, 'message', 'OTP verified. Trip started successfully.');
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.verify_ride_otp(uuid, text) TO authenticated;
+
+
+-- ============================================================================
+-- 8. HARDENED BOOKING INSERTION INTEGRITY (VULN-PAY-01 & DISPATCH FORGERY GUARD)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.check_booking_insert_integrity()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_base numeric := 99;
+  v_per_km numeric := 18;
+  v_min numeric := 149;
+  v_cat record;
+  calc_dist_fare numeric;
+  min_expected numeric;
+  is_admin boolean := public.has_role(auth.uid(), 'admin');
+BEGIN
+  -- Authenticated customer identity enforcement
+  IF auth.uid() IS NOT NULL AND auth.role() <> 'service_role' THEN
+    NEW.customer_id := auth.uid();
+  END IF;
+
+  -- Non-admin insertion restrictions: Prevent client-side status, driver, and payment spoofing
+  IF NOT is_admin AND auth.role() <> 'service_role' THEN
+    -- Status can only be 'searching' or 'scheduled' upon creation
+    IF NEW.scheduled_at IS NOT NULL THEN
+      NEW.status := 'scheduled';
+    ELSE
+      NEW.status := 'searching';
+    END IF;
+
+    -- Drivers and fares cannot be pre-assigned or completed by customer upon insert
+    NEW.driver_id := NULL;
+    NEW.final_fare := NULL;
+    NEW.started_at := NULL;
+    NEW.completed_at := NULL;
+    NEW.accepted_at := NULL;
+    NEW.arrived_at := NULL;
+
+    -- Initial payment status must always be pending on creation
+    NEW.payment_status := 'pending';
+    NEW.payment_made := 'no';
+  END IF;
+
+  -- Lookup authoritative category pricing if exists
+  SELECT base_fare, per_km, minimum_fare
+  INTO v_cat
+  FROM public.vehicle_categories
+  WHERE code = NEW.vehicle_code AND is_active = true
+  LIMIT 1;
+
+  IF v_cat IS NOT NULL THEN
+    v_base := v_cat.base_fare;
+    v_per_km := v_cat.per_km;
+    v_min := v_cat.minimum_fare;
+  END IF;
+
+  -- Authoritative calculations
+  calc_dist_fare := ROUND(COALESCE(NEW.distance_km, 0) * v_per_km);
+  min_expected := GREATEST(v_min, v_base + calc_dist_fare);
+
+  -- Never permit negative or sub-minimum fares
+  IF NEW.estimated_fare < v_min THEN
+    NEW.estimated_fare := min_expected;
+    NEW.base_fare := v_base;
+    NEW.distance_fare := calc_dist_fare;
+    NEW.tax_amount := ROUND(min_expected * 0.05);
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_booking_insert_integrity ON public.bookings;
+CREATE TRIGGER trg_booking_insert_integrity
+  BEFORE INSERT ON public.bookings
+  FOR EACH ROW
+  EXECUTE FUNCTION public.check_booking_insert_integrity();
+
+

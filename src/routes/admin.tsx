@@ -80,8 +80,7 @@ import {
   resolveDriverDetails,
 } from "@/lib/ride-vehicle";
 
-const GOOGLE_MAPS_KEY =
-  import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
 // Haversine distance formula (returns km)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -207,6 +206,77 @@ function sanitizeDocumentUrl(url?: string | null): string | null {
   return null;
 }
 
+async function resolveKycDocumentUrl(url?: string | null): Promise<string | null> {
+  if (!url || typeof url !== "string") return null;
+  const clean = sanitizeDocumentUrl(url);
+  if (!clean) return null;
+  if (clean.startsWith("storage://")) {
+    const withoutPrefix = clean.replace("storage://", "");
+    const slashIdx = withoutPrefix.indexOf("/");
+    if (slashIdx !== -1) {
+      const bucket = withoutPrefix.slice(0, slashIdx);
+      const filePath = withoutPrefix.slice(slashIdx + 1);
+      try {
+        const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600);
+        if (!error && data?.signedUrl) {
+          return data.signedUrl;
+        }
+      } catch (err) {
+        console.error("Failed to generate signed KYC URL:", err);
+      }
+    }
+    return null;
+  }
+  return clean;
+}
+
+function KycDocPreview({
+  src,
+  alt,
+  className,
+  fallbackText = "Document",
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+  fallbackText?: string;
+}) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(() => {
+    if (src && !src.startsWith("storage://")) return sanitizeDocumentUrl(src);
+    return null;
+  });
+
+  useEffect(() => {
+    let active = true;
+    if (!src) {
+      setResolvedSrc(null);
+      return;
+    }
+    if (src.startsWith("storage://")) {
+      resolveKycDocumentUrl(src).then((res) => {
+        if (active) setResolvedSrc(res);
+      });
+    } else {
+      setResolvedSrc(sanitizeDocumentUrl(src));
+    }
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  if (!resolvedSrc) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-muted text-muted-foreground text-xs font-medium ${className}`}
+      >
+        {fallbackText}
+      </div>
+    );
+  }
+
+  return <img src={resolvedSrc} alt={alt} className={className} />;
+}
+
 const STATUS_BADGE: Record<string, string> = {
   scheduled: "bg-primary/10 text-primary border border-primary/20",
   searching: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
@@ -269,11 +339,12 @@ function AdminPage() {
     rotation: 0,
   });
 
-  function openLightbox(title: string, url: string, app?: Application) {
+  async function openLightbox(title: string, url: string, app?: Application) {
+    const resolvedUrl = (await resolveKycDocumentUrl(url)) || url;
     setLightboxDoc({
       isOpen: true,
       title,
-      url,
+      url: resolvedUrl,
       app,
       zoom: 1,
       rotation: 0,
@@ -992,9 +1063,7 @@ function AdminPage() {
           ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold"
           : "bg-muted text-muted-foreground border-border",
       badgeText:
-        stats.pendingApplications > 0
-          ? `${stats.pendingApplications} Pending KYC`
-          : "All Verified",
+        stats.pendingApplications > 0 ? `${stats.pendingApplications} Pending KYC` : "All Verified",
       iconColor: "text-blue-600 dark:text-blue-400",
       iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
     },
@@ -1108,9 +1177,7 @@ function AdminPage() {
           <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
             {mod.title}
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-            {mod.description}
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{mod.description}</p>
         </div>
       </div>
     );
@@ -1262,7 +1329,8 @@ function AdminPage() {
                   Fleet Command & Operations
                 </h1>
                 <p className="text-xs text-muted-foreground max-w-2xl">
-                  Enterprise console for real-time EV dispatching, chauffeur KYC compliance, airport bay staging, and financial ledgers.
+                  Enterprise console for real-time EV dispatching, chauffeur KYC compliance, airport
+                  bay staging, and financial ledgers.
                 </p>
               </div>
 
@@ -1319,12 +1387,14 @@ function AdminPage() {
                     <div className="text-xs text-foreground/85 mt-1 flex flex-wrap gap-x-4 gap-y-1">
                       {stats.pendingApplications > 0 && (
                         <span>
-                          <strong>{stats.pendingApplications}</strong> driver application{stats.pendingApplications > 1 ? "s" : ""} awaiting KYC / DL verification
+                          <strong>{stats.pendingApplications}</strong> driver application
+                          {stats.pendingApplications > 1 ? "s" : ""} awaiting KYC / DL verification
                         </span>
                       )}
                       {stats.newEnquiries > 0 && (
                         <span>
-                          <strong>{stats.newEnquiries}</strong> corporate enquiry lead{stats.newEnquiries > 1 ? "s" : ""} awaiting proposal
+                          <strong>{stats.newEnquiries}</strong> corporate enquiry lead
+                          {stats.newEnquiries > 1 ? "s" : ""} awaiting proposal
                         </span>
                       )}
                     </div>
@@ -1364,7 +1434,9 @@ function AdminPage() {
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Active Dispatches</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Active Dispatches
+                  </span>
                   <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
                     <Car className="size-4" />
                   </div>
@@ -1375,7 +1447,9 @@ function AdminPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>{stats.totalBookings} lifetime booked</span>
-                    <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:underline">View →</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:underline">
+                      View →
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1385,7 +1459,9 @@ function AdminPage() {
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Fleet On-Duty</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Fleet On-Duty
+                  </span>
                   <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <Radio className="size-4" />
                   </div>
@@ -1396,7 +1472,9 @@ function AdminPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>of {stats.totalDrivers || drivers.length} total chauffeurs</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline">Radar →</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline">
+                      Radar →
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1406,7 +1484,9 @@ function AdminPage() {
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Gross GMV Volume</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Gross GMV Volume
+                  </span>
                   <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
                     <BadgeCheck className="size-4" />
                   </div>
@@ -1417,7 +1497,9 @@ function AdminPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>{stats.completedBookings} completed trips</span>
-                    <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:underline">Ledger →</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:underline">
+                      Ledger →
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1427,7 +1509,9 @@ function AdminPage() {
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Vehicle Category</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Vehicle Category
+                  </span>
                   <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
                     <ParkingSquare className="size-4" />
                   </div>
@@ -1438,17 +1522,23 @@ function AdminPage() {
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>100% Electric EV</span>
-                    <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline">Staging →</span>
+                    <span className="text-purple-600 dark:text-purple-400 font-semibold group-hover:underline">
+                      Staging →
+                    </span>
                   </div>
                 </div>
               </div>
 
               <div
-                onClick={() => handleSelectTab(stats.pendingApplications > 0 ? "applications" : "enquiries")}
+                onClick={() =>
+                  handleSelectTab(stats.pendingApplications > 0 ? "applications" : "enquiries")
+                }
                 className="group p-4 rounded-xl border border-border/80 bg-card hover:border-primary/40 transition-all cursor-pointer flex flex-col justify-between col-span-2 lg:col-span-1"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Action Backlog</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Action Backlog
+                  </span>
                   <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
                     <Clock className="size-4" />
                   </div>
@@ -1458,8 +1548,12 @@ function AdminPage() {
                     {stats.pendingApplications + stats.newEnquiries}
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>{stats.pendingApplications} KYC · {stats.newEnquiries} Leads</span>
-                    <span className="text-rose-600 dark:text-rose-400 font-semibold group-hover:underline">Audit →</span>
+                    <span>
+                      {stats.pendingApplications} KYC · {stats.newEnquiries} Leads
+                    </span>
+                    <span className="text-rose-600 dark:text-rose-400 font-semibold group-hover:underline">
+                      Audit →
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1481,7 +1575,8 @@ function AdminPage() {
                 </div>
                 {filteredModules.length === 0 ? (
                   <div className="p-8 text-center bg-card rounded-2xl border border-dashed border-border text-muted-foreground text-xs">
-                    No operations module matched "{hubSearch}". Try searching for "dispatch", "kyc", "gst", or "map".
+                    No operations module matched "{hubSearch}". Try searching for "dispatch", "kyc",
+                    "gst", or "map".
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1524,7 +1619,9 @@ function AdminPage() {
                   <span className="font-semibold text-foreground">
                     Delhi NCR Airport Staging Status
                   </span>
-                  <span className="text-muted-foreground hidden sm:inline">• IGI T3, T1 & Aerocity Depot</span>
+                  <span className="text-muted-foreground hidden sm:inline">
+                    • IGI T3, T1 & Aerocity Depot
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                   <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1538,7 +1635,9 @@ function AdminPage() {
                     <span>IGI T3 (MLCP L2)</span>
                     <span className="text-[10px] font-mono text-primary font-bold">Pillar 4</span>
                   </div>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● Staging Active</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                    ● Staging Active
+                  </p>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
@@ -1546,7 +1645,9 @@ function AdminPage() {
                     <span>IGI T1 (Arrivals)</span>
                     <span className="text-[10px] font-mono text-primary font-bold">Gate 2</span>
                   </div>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● Priority Lane</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                    ● Priority Lane
+                  </p>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
@@ -1554,7 +1655,9 @@ function AdminPage() {
                     <span>Aerocity Fast DC</span>
                     <span className="text-[10px] font-mono text-primary font-bold">60kW</span>
                   </div>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">● 6/6 Online</p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                    ● 6/6 Online
+                  </p>
                 </div>
 
                 <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
@@ -2327,10 +2430,11 @@ function AdminPage() {
                                     className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
                                     title="Click to inspect photo in lightbox"
                                   >
-                                    <img
+                                    <KycDocPreview
                                       src={app.photo_url}
                                       alt={app.full_name}
                                       className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                      fallbackText={app.full_name.charAt(0).toUpperCase()}
                                     />
                                     <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                       <ZoomIn className="size-4 text-white" />
@@ -2467,7 +2571,7 @@ function AdminPage() {
                                             className="group relative h-20 w-20 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
                                             title="Open in KYC Lightbox"
                                           >
-                                            <img
+                                            <KycDocPreview
                                               src={safePhoto}
                                               alt="Photo"
                                               className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -2508,7 +2612,7 @@ function AdminPage() {
                                             className="group relative h-20 w-32 overflow-hidden rounded-md border border-border bg-muted focus:outline-hidden focus:ring-2 focus:ring-primary text-left"
                                             title="Open in KYC Lightbox"
                                           >
-                                            <img
+                                            <KycDocPreview
                                               src={safeDl}
                                               alt="DL"
                                               className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
@@ -3382,10 +3486,11 @@ function DriverAnalyticsPanel({
           <div className="flex items-center gap-4">
             <div className="relative size-11 shrink-0">
               {d.photo_url ? (
-                <img
+                <KycDocPreview
                   src={d.photo_url}
                   alt={d.full_name}
                   className="size-11 rounded-full object-cover border-2 border-primary/40 shadow-xs"
+                  fallbackText={d.full_name.charAt(0).toUpperCase()}
                 />
               ) : (
                 <div className="grid size-11 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary border border-primary/20">

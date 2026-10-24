@@ -222,7 +222,9 @@ export function TaxInvoiceModal({
 
       let authHeader = "";
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.access_token) {
           authHeader = `Bearer ${session.access_token}`;
         }

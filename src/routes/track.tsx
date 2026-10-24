@@ -43,7 +43,7 @@ import { sendRideNotification, getStatusNotificationContent } from "@/lib/notifi
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
-    ref: typeof search.ref === "string" ? search.ref : "",
+    ref: typeof search["ref"] === "string" ? search["ref"] : "",
   }),
   head: () => ({
     meta: [
@@ -253,7 +253,7 @@ function TrackPage() {
               filter: `id=eq.${bData.id}`,
             },
             async (payload) => {
-              const updated = payload.new;
+              const updated: any = payload.new;
               setBooking((prev: any) => ({ ...prev, ...updated }));
               let latestDriver = driver;
               if (updated.driver_id && (!driver || driver.id !== updated.driver_id)) {
@@ -323,7 +323,12 @@ function TrackPage() {
     booking?.id || booking?.reference,
   );
 
-  const statusInfo = STATUS_LABELS[booking?.status || "searching"] || STATUS_LABELS.searching;
+  const defaultStatusInfo = STATUS_LABELS["searching"] || {
+    label: "Searching for Chauffeur",
+    color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300",
+    desc: "Matching you with the nearest Mahindra BE.6 electric SUV...",
+  };
+  const statusInfo = (booking?.status && STATUS_LABELS[booking.status]) || defaultStatusInfo;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -582,7 +587,7 @@ function TrackPage() {
             {/* Live Interactive Map */}
             <div className="rounded-2xl border border-border overflow-hidden shadow-lg bg-card">
               <APIProvider
-                apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}
+                apiKey={import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] || ""}
                 libraries={["routes", "geometry"]}
               >
                 <LiveRideMap

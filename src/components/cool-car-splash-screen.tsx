@@ -209,12 +209,7 @@ export function CoolCarSplashScreen({ onFinish }: CoolCarSplashScreenProps) {
                 strokeOpacity="0.9"
                 strokeLinecap="round"
               />
-              <path
-                d="M 95 39 L 132 39"
-                stroke="#FEF08A"
-                strokeWidth="1.2"
-                strokeOpacity="0.8"
-              />
+              <path d="M 95 39 L 132 39" stroke="#FEF08A" strokeWidth="1.2" strokeOpacity="0.8" />
 
               {/* 3. Front Headlight Cluster (Quad LED Beam) */}
               <path d="M 214 34 L 223 37 L 219 41 L 211 39 Z" fill="#FEF08A" />
