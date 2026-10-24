@@ -320,7 +320,7 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-night py-16 text-white">
+    <footer className="bg-night pt-16 pb-24 sm:pb-20 text-white">
       <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
         <div>
           <div className="flex items-center gap-2.5">
@@ -398,21 +398,23 @@ export function SiteFooter() {
       </div>
 
       <div className="section-shell mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          © 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.
-        </span>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
+          <span>
+            © 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.
+          </span>
           <span className="text-white/30">|</span>
           <a
             href="https://builtbyakshat.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white/60 hover:text-primary transition-colors underline-offset-4 hover:underline font-medium inline-flex items-center gap-1"
+            className="text-white/70 hover:text-primary transition-colors underline-offset-4 hover:underline font-medium inline-flex items-center gap-1"
           >
             <span>Built by Akshat</span>
-            <span className="text-[10px] text-white/40">↗</span>
+            <span className="text-[10px] text-primary">↗</span>
           </a>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:pr-48 md:pr-56">
+          <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
         </div>
       </div>
     </footer>
