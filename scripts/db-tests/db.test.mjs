@@ -1051,3 +1051,17 @@ test("cancellation: within 3 min and under 1.5 km is free; otherwise ₹50", asy
   );
   assert.ok(!tamper.ok || Number(tamper.rows[0]?.cancellation_fee ?? 50) === 50);
 });
+
+test("every booking gets a ride OTP, including one made by an admin (20261025160000)", async () => {
+  const r = await authed(
+    ADMIN,
+    `INSERT INTO public.bookings (customer_id, pickup_area, pickup_address, drop_area, drop_address, distance_km,
+      vehicle_code, vehicle_name, estimated_fare, payment_method)
+     VALUES ($1, 'A', '12.97,77.59', 'B', '12.93,77.62', 6, 'ORANGE_SIGNATURE', 'Orange Signature', 300, 'cash')
+     RETURNING id, ride_otp`,
+    [ADMIN],
+  );
+  assert.ok(r.ok, r.error);
+  const otp = r.rows[0].ride_otp || (await otpOf(r.rows[0].id));
+  assert.match(otp || "", /^\d{4}$/);
+});

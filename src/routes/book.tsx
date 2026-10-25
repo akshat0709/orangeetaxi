@@ -927,6 +927,7 @@ function PassengerPage() {
         keyId: "",
       };
 
+      let orderProblem = "";
       try {
         const orderRes = await fetch("/api/create-razorpay-order", {
           method: "POST",
@@ -937,23 +938,28 @@ function PassengerPage() {
             vehicleCode: selectedVehicle.code,
           }),
         });
+        const resJson = await orderRes.json().catch(() => ({}));
         if (orderRes.ok) {
-          const resJson = await orderRes.json();
           if (resJson.keyId) orderData.keyId = resJson.keyId;
           if (resJson.amount) orderData.amount = resJson.amount;
           if (resJson.orderId && !resJson.mock) {
             orderData.orderId = resJson.orderId;
           }
+        } else {
+          orderProblem = resJson.reason || resJson.error || `HTTP ${orderRes.status}`;
         }
       } catch (err) {
+        orderProblem = "Network error";
         console.warn("Server order generation fallback:", err);
       }
 
       // Never fall back to a hard-coded (test-mode) key or an order-less checkout: such a payment
       // can't be verified, so the passenger could pay without getting a ride.
       if (!orderData.orderId || !orderData.keyId) {
+        console.warn("[payment] order not created:", orderProblem);
         toast.error(
           "Online payment is unavailable right now. Please choose cash or try again shortly.",
+          orderProblem ? { description: orderProblem } : undefined,
         );
         setSubmitting(false);
         return;
@@ -2639,6 +2645,7 @@ function Step4Confirmed({
 
                   let orderKey = "";
                   let orderId: string | undefined = undefined;
+                  let orderProblem = "";
                   try {
                     const orderRes = await fetch("/api/create-razorpay-order", {
                       method: "POST",
@@ -2649,18 +2656,23 @@ function Step4Confirmed({
                         bookingId: currentBooking?.id,
                       }),
                     });
+                    const resJson = await orderRes.json().catch(() => ({}));
                     if (orderRes.ok) {
-                      const resJson = await orderRes.json();
                       if (resJson.keyId) orderKey = resJson.keyId;
                       if (resJson.orderId && !resJson.mock) orderId = resJson.orderId;
+                    } else {
+                      orderProblem = resJson.reason || resJson.error || `HTTP ${orderRes.status}`;
                     }
                   } catch (e) {
+                    orderProblem = "Network error";
                     console.warn("Mid-ride order generation notice:", e);
                   }
 
                   if (!orderId || !orderKey) {
+                    console.warn("[payment] order not created:", orderProblem);
                     toast.error(
                       "Online payment is unavailable right now. Please pay the chauffeur directly.",
+                      orderProblem ? { description: orderProblem } : undefined,
                     );
                     return;
                   }

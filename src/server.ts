@@ -435,6 +435,9 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       return jsonResponse(503, {
         success: false,
         error: "Pricing is unavailable. Please try again.",
+        reason: bookingNotes
+          ? "Could not read the booking (check SUPABASE_SERVICE_ROLE_KEY on the Worker)."
+          : "Could not get a fare quote from the database (fn_fare_quote).",
       });
     }
     const effectiveFare = bookingNotes
@@ -452,6 +455,9 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       (env as any)?.RAZORPAY_KEY_SECRET ||
       (typeof process !== "undefined" ? process.env?.["RAZORPAY_KEY_SECRET"] : undefined);
 
+    // Why no order could be made, returned to the browser so the cause is visible without logs.
+    // (Razorpay's error description never contains the key secret.)
+    let reason = "Razorpay keys are not configured on the server.";
     if (keySecret && keyId && !keyId.startsWith("mock") && keyId.length > 0) {
       try {
         const authCredentials = btoa(`${keyId}:${keySecret}`);
@@ -469,6 +475,13 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
           }),
         });
 
+        if (!rzpRes.ok) {
+          const rzpErr = (await rzpRes.json().catch(() => null)) as {
+            error?: { description?: string };
+          } | null;
+          reason = `Razorpay rejected the order (${rzpRes.status}): ${rzpErr?.error?.description || "unknown error"}`;
+          console.warn("[razorpay] order creation failed:", reason);
+        }
         if (rzpRes.ok) {
           const rzpData = (await rzpRes.json()) as any;
           return new Response(
@@ -483,6 +496,7 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
           );
         }
       } catch (e) {
+        reason = "Could not reach Razorpay.";
         console.warn("Razorpay API order creation error:", e);
       }
     }
@@ -493,6 +507,7 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       success: false,
       error:
         "Online payments are temporarily unavailable. Please choose cash or try again shortly.",
+      reason,
     });
   } catch (err: any) {
     return new Response(
