@@ -744,8 +744,20 @@ function PassengerPage() {
       setDistKm(0);
     }
   }, [pickup?.lat, pickup?.lng, drop?.lat, drop?.lng]);
-  const fareBreakdown =
-    selectedVehicle && distKm > 0 ? calcFare(selectedVehicle, distKm, pricingSettings) : null;
+  // Unpaid cancellation fees from earlier rides are added to this ride (shown as their own line).
+  const [unpaidDues, setUnpaidDues] = useState(0);
+  useEffect(() => {
+    if (!user) {
+      setUnpaidDues(0);
+      return;
+    }
+    supabase.rpc("get_my_dues" as never).then(({ data }) => setUnpaidDues(Number(data) || 0));
+  }, [user, step]);
+  const fareBreakdown = (() => {
+    if (!selectedVehicle || distKm <= 0) return null;
+    const f = calcFare(selectedVehicle, distKm, pricingSettings);
+    return { ...f, dues: unpaidDues, total: f.total + unpaidDues };
+  })();
 
   async function confirmBooking() {
     if (!user) {
@@ -1510,6 +1522,12 @@ function Step3Confirm({
                 <span className="font-mono">₹{fareBreakdown.platform}</span>
               </div>
             )}
+            {fareBreakdown.dues > 0 && (
+              <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                <span>Cancellation fee from a previous ride</span>
+                <span className="font-mono">₹{fareBreakdown.dues}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="font-bold text-foreground">Total Fare</span>
@@ -1856,7 +1874,7 @@ function Step4Confirmed({
       setCancelModalOpen(false);
       toast.success(
         fee > 0
-          ? `Ride cancelled. A ₹${fee} cancellation fee applies.`
+          ? `Ride cancelled. A ₹${fee} cancellation fee will be added to your next ride.`
           : "Ride cancelled. No cancellation fee.",
       );
       setCancelling(false);
@@ -2456,8 +2474,8 @@ function Step4Confirmed({
                 cancelPreview.reason
               ) : cancelPreview.fee > 0 ? (
                 <>
-                  A <strong>₹{cancelPreview.fee} cancellation fee</strong> applies.{" "}
-                  {cancelPreview.reason}
+                  A <strong>₹{cancelPreview.fee} cancellation fee</strong> will be added to your
+                  next ride. {cancelPreview.reason}
                 </>
               ) : (
                 <>
@@ -2505,7 +2523,7 @@ function Step4Confirmed({
               {cancelling ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : cancelPreview && cancelPreview.fee > 0 ? (
-                `Cancel and pay ₹${cancelPreview.fee}`
+                `Cancel (₹${cancelPreview.fee} on next ride)`
               ) : (
                 "Confirm Cancellation"
               )}

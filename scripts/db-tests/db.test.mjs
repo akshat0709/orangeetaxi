@@ -1027,11 +1027,11 @@ test("cancellation: within 3 min and under 1.5 km is free; otherwise ₹50", asy
     DRIVER_ROW,
   ]);
 
-  // More than 3 minutes since acceptance -> ₹50 even if the driver hasn't moved.
+  // 3–5 minutes since acceptance -> ₹50 even if the driver hasn't moved (not yet "stuck").
   const t = await book(RIDER);
   await acceptAs(DRV, t.id);
   await force(
-    `UPDATE public.bookings SET accepted_at = now() - interval '5 minutes' WHERE id = $1`,
+    `UPDATE public.bookings SET accepted_at = now() - interval '4 minutes' WHERE id = $1`,
     [t.id],
   );
   const ct = await authed(
@@ -1064,4 +1064,183 @@ test("every booking gets a ride OTP, including one made by an admin (20261025160
   assert.ok(r.ok, r.error);
   const otp = r.rows[0].ride_otp || (await otpOf(r.rows[0].id));
   assert.match(otp || "", /^\d{4}$/);
+});
+
+// ---- Stuck driver + fees added to the next ride (20261025170000) --------------------------------
+const myDues = async (uid) =>
+  Number((await authed(uid, `SELECT public.get_my_dues() AS d`)).rows[0].d);
+
+test("cancellation: free when the driver hasn't moved 5+ minutes after accepting", async () => {
+  await force(`UPDATE public.drivers SET current_lat = 12.97, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+  const b = await book(RIDER);
+  await acceptAs(DRV, b.id);
+  await force(
+    `UPDATE public.bookings SET accepted_at = now() - interval '6 minutes' WHERE id = $1`,
+    [b.id],
+  );
+  const p = await authed(RIDER, `SELECT public.get_cancellation_fee($1) AS p`, [b.id]);
+  assert.equal(Number(p.rows[0].p.fee), 0);
+  assert.match(p.rows[0].p.reason, /hasn't moved/);
+  const c = await authed(
+    RIDER,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee`,
+    [b.id],
+  );
+  assert.equal(Number(c.rows[0].cancellation_fee), 0);
+});
+
+test("cancellation fee is added to the next ride and settled when that ride is paid", async () => {
+  const U = "55555555-0000-4000-8000-000000000001";
+  await su(
+    db,
+    `INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES ($1, 'dues@x.in', '{"full_name":"D","phone":"+910000000001"}')`,
+    [U],
+  );
+  await force(`UPDATE public.drivers SET current_lat = 12.97, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+
+  // Late cancel after the driver drove ~2 km: ₹50 becomes an unpaid fee.
+  const a = await book(U);
+  await acceptAs(DRV, a.id);
+  await force(`UPDATE public.drivers SET current_lat = 12.99, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+  const ca = await authed(
+    U,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee`,
+    [a.id],
+  );
+  assert.equal(Number(ca.rows[0].cancellation_fee), 50);
+  await force(`UPDATE public.drivers SET current_lat = 12.97, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+  assert.equal(await myDues(U), 50);
+
+  // Next ride carries it: fare = normal fare + ₹50, and it's no longer "open" for a third ride.
+  const next = await book(U, { fare: 1 });
+  const [row] = await su(
+    db,
+    `SELECT estimated_fare, dues_amount FROM public.bookings WHERE id = $1`,
+    [next.id],
+  );
+  const [q] = await su(
+    db,
+    `SELECT q.total FROM public.bookings b, public.fn_fare_quote(b.vehicle_code, b.distance_km) q WHERE b.id = $1`,
+    [next.id],
+  );
+  assert.equal(Number(row.dues_amount), 50);
+  assert.equal(Number(row.estimated_fare), Number(q.total) + 50);
+  assert.equal(await myDues(U), 0);
+
+  // If that ride is cancelled before a driver accepts, the fee waits for the following ride.
+  const cn = await authed(U, `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1`, [
+    next.id,
+  ]);
+  assert.ok(cn.ok, cn.error);
+  assert.equal(await myDues(U), 50);
+
+  // Carried again, then paid -> settled.
+  const third = await book(U, { fare: 1 });
+  await force(
+    `UPDATE public.bookings SET status = 'completed', payment_status = 'paid' WHERE id = $1`,
+    [third.id],
+  );
+  const [due] = await su(
+    db,
+    `SELECT status, carried_by FROM public.cancellation_dues WHERE booking_id = $1`,
+    [a.id],
+  );
+  assert.equal(due.status, "settled");
+  assert.equal(due.carried_by, third.id);
+  assert.equal(await myDues(U), 0);
+});
+
+test("unpaid fees: riders can't edit them or their ride's dues; admins can only waive", async () => {
+  const U = "55555555-0000-4000-8000-000000000002";
+  await su(
+    db,
+    `INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES ($1, 'dues2@x.in', '{"full_name":"E","phone":"+910000000002"}')`,
+    [U],
+  );
+  const b = await book(U);
+  await force(
+    `INSERT INTO public.cancellation_dues (customer_id, booking_id, amount) VALUES ($1, $2, 50)`,
+    [U, b.id],
+  );
+  const [d] = await su(db, `SELECT id FROM public.cancellation_dues WHERE booking_id = $1`, [b.id]);
+
+  const r1 = await authed(
+    U,
+    `UPDATE public.cancellation_dues SET status = 'waived' WHERE id = $1 RETURNING id`,
+    [d.id],
+  );
+  assert.ok(!r1.ok || r1.rows.length === 0, "rider cannot waive their own fee");
+  const r2 = await authed(
+    U,
+    `UPDATE public.bookings SET dues_amount = 0 WHERE id = $1 RETURNING dues_amount`,
+    [b.id],
+  );
+  assert.ok(!r2.ok || Number(r2.rows[0]?.dues_amount ?? 0) === 0);
+  const seen = await authed(U, `SELECT amount FROM public.cancellation_dues WHERE id = $1`, [d.id]);
+  assert.equal(seen.rows.length, 1, "rider can see their own fee");
+
+  const bad = await authed(ADMIN, `UPDATE public.cancellation_dues SET amount = 1 WHERE id = $1`, [
+    d.id,
+  ]);
+  assert.ok(!bad.ok);
+  const ok = await authed(
+    ADMIN,
+    `UPDATE public.cancellation_dues SET status = 'waived' WHERE id = $1 RETURNING status, waived_by`,
+    [d.id],
+  );
+  assert.ok(ok.ok, ok.error);
+  assert.deepEqual([ok.rows[0].status, ok.rows[0].waived_by], ["waived", ADMIN]);
+  assert.equal(await myDues(U), 0);
+});
+
+// ---- Commission drivers (20261025180000) ------------------------------------------------------
+test("commission drivers: driver_type is admin-only, settlements record a direction", async () => {
+  const self = await authed(
+    DRV,
+    `UPDATE public.drivers SET driver_type = 'partner' WHERE id = $1`,
+    [DRIVER_ROW],
+  );
+  assert.ok(!self.ok, "a driver cannot switch their own type");
+  const adm = await authed(
+    ADMIN,
+    `UPDATE public.drivers SET driver_type = 'partner' WHERE id = $1 RETURNING driver_type`,
+    [DRIVER_ROW],
+  );
+  assert.ok(adm.ok, adm.error);
+  assert.equal(adm.rows[0].driver_type, "partner");
+  const bad = await authed(
+    ADMIN,
+    `UPDATE public.drivers SET driver_type = 'freelance' WHERE id = $1`,
+    [DRIVER_ROW],
+  );
+  assert.ok(!bad.ok);
+
+  const pay = await authed(
+    ADMIN,
+    `INSERT INTO public.driver_commission_settlements (driver_id, driver_name, amount, direction, payment_mode)
+     VALUES ($1, 'Ravi', 120, 'company_to_driver', 'upi') RETURNING direction`,
+    [DRIVER_ROW],
+  );
+  assert.ok(pay.ok, pay.error);
+  const old = await authed(
+    ADMIN,
+    `INSERT INTO public.driver_commission_settlements (driver_id, driver_name, amount, payment_mode)
+     VALUES ($1, 'Ravi', 50, 'cash') RETURNING direction`,
+    [DRIVER_ROW],
+  );
+  assert.equal(old.rows[0].direction, "driver_to_company");
+  const [{ partner_commission_percent: pct }] = await su(
+    db,
+    `SELECT partner_commission_percent FROM public.pricing_settings WHERE id = 1`,
+  );
+  assert.equal(Number(pct), 15);
+  await force(`UPDATE public.drivers SET driver_type = 'company' WHERE id = $1`, [DRIVER_ROW]);
 });

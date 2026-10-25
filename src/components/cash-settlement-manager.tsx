@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { isCommissionDriver } from "@/lib/driver-type";
 import { toast } from "sonner";
 
 export interface CashSettlement {
@@ -123,7 +124,11 @@ export function CashSettlementManager({
   function getDriverCashStats(driverId: string) {
     // Total cash from completed rides
     const cashRides = bookings.filter(
-      (b) => b.driver_id === driverId && b.status === "completed" && b.payment_method === "cash",
+      // Money the driver holds: cash, or paid to the driver's own UPI (not company QR / online).
+      (b) =>
+        b.driver_id === driverId &&
+        b.status === "completed" &&
+        (b.payment_method === "cash" || b.payment_method === "driver_upi"),
     );
     const totalCashDealt = cashRides.reduce(
       (sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)),
@@ -150,14 +155,14 @@ export function CashSettlementManager({
   }
 
   // Filter only Company-Salaried Drivers (partner owner-operators manage their own cash/fares and operate on a commission model in the Commission Ledger)
-  const companyDrivers = drivers.filter((d) => d.driver_type !== "partner" && !d.owns_vehicle);
+  const companyDrivers = drivers.filter((d) => !isCommissionDriver(d));
   const companyDriverIds = new Set(companyDrivers.map((d) => d.id));
 
   // Fleet-wide cash metrics (Strictly whole rupees for company fleet only)
   const completedCashRides = bookings.filter(
     (b) =>
       b.status === "completed" &&
-      b.payment_method === "cash" &&
+      (b.payment_method === "cash" || b.payment_method === "driver_upi") &&
       (!b.driver_id || companyDriverIds.has(b.driver_id)),
   );
   const fleetTotalCashDealt = completedCashRides.reduce(

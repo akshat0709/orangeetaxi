@@ -10,6 +10,9 @@ export interface PricingSettings {
   cancellation_charge: number;
   cancellation_free_minutes: number;
   cancellation_free_km: number;
+  cancellation_stuck_minutes: number;
+  cancellation_stuck_km: number;
+  partner_commission_percent: number;
   waiting_charge_per_min: number;
   waiting_free_minutes: number;
 }
@@ -29,6 +32,9 @@ export const DEFAULT_PRICING: PricingSettings = {
   cancellation_charge: 50,
   cancellation_free_minutes: 3,
   cancellation_free_km: 1.5,
+  cancellation_stuck_minutes: 5,
+  cancellation_stuck_km: 0.5,
+  partner_commission_percent: 15,
   waiting_charge_per_min: 2,
   waiting_free_minutes: 3,
 };
@@ -50,6 +56,9 @@ export function normalizePricing(input: object | null | undefined): PricingSetti
     cancellation_charge: num(row.cancellation_charge, d.cancellation_charge),
     cancellation_free_minutes: num(row.cancellation_free_minutes, d.cancellation_free_minutes),
     cancellation_free_km: num(row.cancellation_free_km, d.cancellation_free_km),
+    cancellation_stuck_minutes: num(row.cancellation_stuck_minutes, d.cancellation_stuck_minutes),
+    cancellation_stuck_km: num(row.cancellation_stuck_km, d.cancellation_stuck_km),
+    partner_commission_percent: num(row.partner_commission_percent, d.partner_commission_percent),
     waiting_charge_per_min: num(row.waiting_charge_per_min, d.waiting_charge_per_min),
     waiting_free_minutes: num(row.waiting_free_minutes, d.waiting_free_minutes),
   };
@@ -94,5 +103,5 @@ export interface VehicleCategoryRow extends VehicleTariff {
 }
 
 export function cancellationPolicyText(p: PricingSettings) {
-  return `Free until a driver accepts, and within ${p.cancellation_free_minutes} minutes of acceptance if the driver hasn't travelled more than ${p.cancellation_free_km} km. Otherwise a ₹${p.cancellation_charge} cancellation fee applies.`;
+  return `Free until a driver accepts; within ${p.cancellation_free_minutes} minutes of acceptance if the driver hasn't travelled more than ${p.cancellation_free_km} km; and if, ${p.cancellation_stuck_minutes}+ minutes after accepting, the driver has moved less than ${p.cancellation_stuck_km} km. Otherwise a ₹${p.cancellation_charge} cancellation fee is added to your next ride.`;
 }

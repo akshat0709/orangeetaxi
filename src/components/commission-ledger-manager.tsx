@@ -31,6 +31,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { isCommissionDriver, partnerLedger } from "@/lib/driver-type";
+import { usePricingSettings } from "@/lib/pricing";
 import { toast } from "sonner";
 
 export interface CommissionSettlement {
@@ -43,6 +45,7 @@ export interface CommissionSettlement {
   collected_by: string;
   notes?: string;
   created_at: string;
+  direction?: "driver_to_company" | "company_to_driver";
 }
 
 const DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS: CommissionSettlement[] = [];
@@ -105,6 +108,9 @@ export function CommissionLedgerManager({
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [settleAmount, setSettleAmount] = useState<number | "">("");
   const [paymentMode, setPaymentMode] = useState<"upi" | "bank_transfer" | "cash">("upi");
+  const [direction, setDirection] = useState<"driver_to_company" | "company_to_driver">(
+    "driver_to_company",
+  );
   const [referenceNo, setReferenceNo] = useState("");
   const [collectorName, setCollectorName] = useState("Admin");
   const [settleNotes, setSettleNotes] = useState("");
@@ -117,97 +123,12 @@ export function CommissionLedgerManager({
   async function loadSettlements() {
     setLoading(true);
     cleanupDummyData();
-    try {
-      const { data, error } = await supabase
-        .from("driver_commission_settlements")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!error && Array.isArray(data)) {
-        const cleaned = data.filter(
-          (s: any) =>
-            s.id !== "comm-1001" &&
-            s.id !== "comm-1002" &&
-            s.driver_id !== "partner-sample-1" &&
-            s.driver_id !== "partner-sample-2" &&
-            s.driver_name !== "Vikramaditya Rao" &&
-            s.driver_name !== "Sunil Gowda",
-        );
-        setSettlements(cleaned as CommissionSettlement[]);
-      } else {
-        const stored = localStorage.getItem("orange_commission_settlements");
-        if (stored) {
-          try {
-            const parsed = JSON.parse(stored);
-            const cleaned = parsed.filter(
-              (c: any) =>
-                c.id !== "comm-1001" &&
-                c.id !== "comm-1002" &&
-                c.driver_id !== "partner-sample-1" &&
-                c.driver_id !== "partner-sample-2",
-            );
-            setSettlements(cleaned);
-          } catch (e) {
-            setSettlements([]);
-          }
-        } else {
-          setSettlements([]);
-        }
-      }
-    } catch (e) {
-      const stored = localStorage.getItem("orange_commission_settlements");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setSettlements(
-            parsed.filter(
-              (c: any) =>
-                c.id !== "comm-1001" &&
-                c.id !== "comm-1002" &&
-                c.driver_id !== "partner-sample-1" &&
-                c.driver_id !== "partner-sample-2",
-            ),
-          );
-        } catch (err) {
-          setSettlements([]);
-        }
-      } else {
-        setSettlements([]);
-      }
-    }
-
-    // Also load partner vehicles from DB or localStorage
-    try {
-      const { data: pvData, error: pvErr } = await supabase
-        .from("partner_vehicles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!pvErr && Array.isArray(pvData)) {
-        setPartnerVehicles(
-          pvData.filter(
-            (pv: any) => pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
-          ),
-        );
-      } else {
-        const pCars = localStorage.getItem("orange_partner_vehicles");
-        if (pCars) {
-          try {
-            const parsedPV = JSON.parse(pCars);
-            setPartnerVehicles(
-              parsedPV.filter(
-                (pv: any) =>
-                  pv.owner_name !== "Vikramaditya Rao" && pv.owner_name !== "Sunil Gowda",
-              ),
-            );
-          } catch (e) {
-            setPartnerVehicles([]);
-          }
-        }
-      }
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-
+    const { data, error } = await supabase
+      .from("driver_commission_settlements")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) toast.error("Could not load commission settlements: " + error.message);
+    setSettlements((data as unknown as CommissionSettlement[]) || []);
     setLoading(false);
   }
 
@@ -225,113 +146,39 @@ export function CommissionLedgerManager({
     };
   }, []);
 
-  // Filter partner drivers from live drivers array
-  const activePartnerDrivers = drivers.filter((d) => {
-    if (d.driver_type === "partner") return true;
-    if (d.driver_type === "company") return false;
-    if (d.owns_vehicle) return true;
+  // Commission drivers = drivers.driver_type 'partner' (set in Admin → Drivers). Company drivers
+  // are in Cash Settlements instead, so each driver appears in exactly one place.
+  const activePartnerDrivers = drivers.filter(isCommissionDriver);
+  const pricing = usePricingSettings();
+  const pct = pricing.partner_commission_percent;
 
-    if (d.vehicle_code && typeof d.vehicle_code === "string") {
-      if (d.vehicle_code.includes('"type":"partner"')) return true;
-      if (d.vehicle_code.includes('"type":"company"')) return false;
-    }
-
-    const hasPartnerCar = partnerVehicles.some(
-      (pv) =>
-        (d.id && pv.driver_id === d.id) ||
-        (d.phone &&
-          pv.owner_phone &&
-          pv.owner_phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
-        (d.full_name &&
-          pv.owner_name &&
-          pv.owner_name.toLowerCase().trim() === d.full_name.toLowerCase().trim()),
-    );
-    if (hasPartnerCar) return true;
-
-    if (typeof window !== "undefined") {
-      try {
-        const extApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
-        if (
-          extApps.some(
-            (ea: any) =>
-              (ea.owns_vehicle || ea.driver_type === "partner") &&
-              ((d.phone &&
-                ea.phone &&
-                ea.phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
-                (d.full_name &&
-                  ea.full_name &&
-                  ea.full_name.toLowerCase().trim() === d.full_name.toLowerCase().trim())),
-          )
-        ) {
-          return true;
-        }
-      } catch {
-        // best-effort: failure here is non-fatal and intentionally ignored
-      }
-    }
-
-    return false;
-  });
-
-  // Calculate commission metrics for each partner driver based on real bookings
-  function getPartnerCommissionStats(driverId: string, driverName?: string) {
+  // Cash / own-UPI rides: the driver holds the fare and owes the company its commission.
+  // Online / wallet rides: the company holds the fare and owes the driver their share.
+  function getPartnerCommissionStats(driverId: string, _driverName?: string) {
     const driverRides = bookings.filter(
-      (b) =>
-        (b.driver_id === driverId ||
-          (driverName &&
-            b.driver_name &&
-            b.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim())) &&
-        b.status === "completed",
+      (b) => b.driver_id === driverId && b.status === "completed",
     );
-
-    const grossFare = driverRides.reduce(
-      (sum, b) => sum + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)),
-      0,
-    );
-    const ridesCount = driverRides.length;
-
-    const commissionRate = 0.15; // 15% Platform Commission
-    const commissionPayable = Math.round(grossFare * commissionRate);
-
-    const driverSettlements = settlements.filter(
-      (s) =>
-        s.driver_id === driverId ||
-        (driverName &&
-          s.driver_name &&
-          s.driver_name.toLowerCase().trim() === driverName.toLowerCase().trim()),
-    );
-    const commissionPaid = driverSettlements.reduce(
-      (sum, s) => sum + Math.round(Number(s.amount || 0)),
-      0,
-    );
-
-    const outstandingCommission = Math.max(0, commissionPayable - commissionPaid);
-    const partnerNetEarnings = Math.max(0, grossFare - commissionPayable); // 85%
-
+    const driverSettlements = settlements.filter((s) => s.driver_id === driverId);
+    const l = partnerLedger(driverRides, driverSettlements, pct);
     return {
-      grossFare,
-      ridesCount,
-      commissionRatePct: 15,
-      commissionPayable,
-      commissionPaid,
-      outstandingCommission,
-      partnerNetEarnings,
+      ...l,
+      ridesCount: l.rides,
+      commissionRatePct: l.commissionPct,
+      commissionPayable: l.commissionOnCash,
+      commissionPaid: l.paidByDriver,
+      outstandingCommission: Math.max(0, l.balance),
+      owedToDriver: Math.max(0, -l.balance),
+      partnerNetEarnings: l.grossFare - l.commissionTotal,
       rides: driverRides,
       settlements: driverSettlements,
     };
   }
 
-  // Aggregate totals across all partner drivers
-  const totalPartnerGrossFare = activePartnerDrivers.reduce(
-    (sum, d) => sum + getPartnerCommissionStats(d.id, d.full_name).grossFare,
-    0,
-  );
-  const totalCommissionEarned = Math.round(totalPartnerGrossFare * 0.15);
-  const totalCommissionPaid = settlements.reduce(
-    (sum, s) => sum + Math.round(Number(s.amount || 0)),
-    0,
-  );
-  const totalCommissionOutstanding = Math.max(0, totalCommissionEarned - totalCommissionPaid);
+  const allStats = activePartnerDrivers.map((d) => getPartnerCommissionStats(d.id));
+  const totalCommissionEarned = allStats.reduce((sum, x) => sum + x.commissionTotal, 0);
+  const totalCommissionPaid = allStats.reduce((sum, x) => sum + x.paidByDriver, 0);
+  const totalCommissionOutstanding = allStats.reduce((sum, x) => sum + x.outstandingCommission, 0);
+  const totalOwedToDrivers = allStats.reduce((sum, x) => sum + x.owedToDriver, 0);
 
   // Filtered partner drivers
   const filteredDrivers = activePartnerDrivers.filter((d) => {
@@ -361,71 +208,53 @@ export function CommissionLedgerManager({
     if (!targetDriver) return;
 
     const stats = getPartnerCommissionStats(targetDriver.id, targetDriver.full_name);
-    const maxDue = stats.outstandingCommission;
+    const toCompany = direction === "driver_to_company";
+    const maxDue = toCompany ? stats.outstandingCommission : stats.owedToDriver;
 
     if (maxDue <= 0) {
-      toast.error(`${targetDriver.full_name} has no outstanding commission due (₹0 to be paid).`);
+      toast.error(
+        toCompany
+          ? `${targetDriver.full_name} owes no commission right now.`
+          : `Nothing is owed to ${targetDriver.full_name} right now.`,
+      );
       return;
     }
-
     if (amt > maxDue) {
-      toast.error(
-        `The maximum amount that can be collected cannot exceed ₹${maxDue.toLocaleString("en-IN")} (amount to be paid from ${targetDriver.full_name}).`,
-      );
+      toast.error(`The amount can't be more than ₹${maxDue.toLocaleString("en-IN")}.`);
       return;
     }
 
     setSubmitting(true);
-    const newRecord: CommissionSettlement = {
-      id: "comm-" + Date.now(),
+    const { error } = await supabase.from("driver_commission_settlements").insert({
       driver_id: targetDriver.id,
       driver_name: targetDriver.full_name,
       amount: amt,
+      direction,
       payment_mode: paymentMode,
       reference_no: referenceNo.trim() || `REF-${Date.now().toString().slice(-6)}`,
       collected_by: collectorName.trim() || "Admin",
-      notes: settleNotes.trim() || "15% platform commission settlement received",
-      created_at: new Date().toISOString(),
-    };
-
-    // Try Supabase insert
-    try {
-      const { data } = await supabase
-        .from("driver_commission_settlements")
-        .insert({
-          driver_id: targetDriver.id,
-          driver_name: targetDriver.full_name,
-          amount: amt,
-          payment_mode: paymentMode,
-          reference_no: newRecord.reference_no,
-          collected_by: newRecord.collected_by,
-          notes: newRecord.notes,
-        })
-        .select()
-        .maybeSingle();
-
-      if (data?.id) {
-        newRecord.id = data.id;
-      }
-    } catch (e) {
-      console.warn("Supabase settlement insert error:", e);
+      notes:
+        settleNotes.trim() ||
+        (toCompany
+          ? `${pct}% commission received from driver`
+          : "Driver's share of online / wallet rides paid out"),
+    } as never);
+    setSubmitting(false);
+    if (error) {
+      toast.error("Could not record the payment: " + error.message);
+      return;
     }
-
-    // Update localStorage
-    const stored = localStorage.getItem("orange_commission_settlements");
-    const current: CommissionSettlement[] = stored ? JSON.parse(stored) : [];
-    current.unshift(newRecord);
-    localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
-    window.dispatchEvent(new Event("commission_settlements_updated"));
-
-    setSettlements(current);
-    toast.success(`₹${amt} commission payment recorded for ${targetDriver.full_name}!`);
+    toast.success(
+      toCompany
+        ? `₹${amt} commission received from ${targetDriver.full_name}.`
+        : `₹${amt} paid out to ${targetDriver.full_name}.`,
+    );
+    await loadSettlements();
     setIsRecording(false);
     setSelectedDriverId("");
     setSettleAmount("");
     setReferenceNo("");
     setSettleNotes("");
-    setSubmitting(false);
   }
 
   return (
@@ -439,12 +268,12 @@ export function CommissionLedgerManager({
               variant="outline"
               className="bg-primary/10 text-primary border-primary/30 text-xs"
             >
-              15% Platform Commission
+              {pct}% Platform Commission
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Track ride revenues collected by partner owner-operators, monitor 15% platform fees owed
-            to Orange Taxi, and record settlements.
+            Everything for commission drivers: rides, commission owed on cash rides, their share of
+            online rides, and payments in both directions.
           </p>
         </div>
 
@@ -485,15 +314,16 @@ export function CommissionLedgerManager({
               Partner Owner-Operator Operating Framework
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Drivers bringing their own Orange Standard EV retain <strong>85%</strong> of all ride
-              fares. A <strong>15% platform commission</strong> is payable to Orange Taxi Limited.
-              Partner drivers do not appear in company depot cash surrender.
+              Drivers bringing their own EV keep <strong>{100 - pct}%</strong> of each fare; Orange
+              Taxi keeps <strong>{pct}%</strong>. On cash rides the driver owes the company its{" "}
+              {pct}%; on online / wallet rides the company owes the driver their {100 - pct}%.
+              Commission drivers never appear in company cash settlements.
             </p>
           </div>
         </div>
         <div className="shrink-0 flex items-center gap-2">
           <span className="rounded bg-background border border-border px-3 py-1.5 font-mono font-bold text-primary">
-            Split: 85% Driver / 15% Company
+            Split: {100 - pct}% Driver / {pct}% Company
           </span>
         </div>
       </div>
@@ -521,7 +351,7 @@ export function CommissionLedgerManager({
           <p className="mt-2 text-2xl font-bold font-mono text-blue-600">
             ₹{totalCommissionEarned.toLocaleString("en-IN")}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">15% Orange Taxi fee</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{pct}% of all partner rides</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
@@ -547,7 +377,9 @@ export function CommissionLedgerManager({
           <p className="mt-2 text-2xl font-bold font-mono text-amber-500">
             ₹{totalCommissionOutstanding.toLocaleString("en-IN")}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">Receivable from drivers</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Receivable from drivers · we owe drivers ₹{totalOwedToDrivers.toLocaleString("en-IN")}
+          </p>
         </div>
       </div>
 
@@ -558,7 +390,11 @@ export function CommissionLedgerManager({
           const selectedStats = targetDriver
             ? getPartnerCommissionStats(targetDriver.id, targetDriver.full_name)
             : null;
-          const maxDue = selectedStats ? selectedStats.outstandingCommission : 0;
+          const maxDue = selectedStats
+            ? direction === "driver_to_company"
+              ? selectedStats.outstandingCommission
+              : selectedStats.owedToDriver
+            : 0;
           const isExceeding = Boolean(
             selectedDriverId && settleAmount !== "" && Number(settleAmount) > maxDue,
           );
@@ -598,9 +434,14 @@ export function CommissionLedgerManager({
                       if (dId) {
                         const dObj = activePartnerDrivers.find((d) => d.id === dId);
                         const stats = getPartnerCommissionStats(dId, dObj?.full_name);
-                        setSettleAmount(
-                          stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
-                        );
+                        const dir =
+                          stats.owedToDriver > 0 ? "company_to_driver" : "driver_to_company";
+                        setDirection(dir);
+                        const due =
+                          dir === "company_to_driver"
+                            ? stats.owedToDriver
+                            : stats.outstandingCommission;
+                        setSettleAmount(due > 0 ? due : "");
                       } else {
                         setSettleAmount("");
                       }
@@ -613,8 +454,10 @@ export function CommissionLedgerManager({
                       const stats = getPartnerCommissionStats(d.id, d.full_name);
                       return (
                         <option key={d.id} value={d.id}>
-                          {d.full_name} ({d.vehicle_number || "Partner EV"}) — Due: ₹
-                          {stats.outstandingCommission}
+                          {d.full_name} ({d.vehicle_number || "Partner EV"}) —{" "}
+                          {stats.owedToDriver > 0
+                            ? `we owe ₹${stats.owedToDriver}`
+                            : `owes ₹${stats.outstandingCommission}`}
                         </option>
                       );
                     })}
@@ -682,15 +525,40 @@ export function CommissionLedgerManager({
                   {isExceeding && (
                     <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
                       <AlertCircle className="size-3 shrink-0" />
-                      Cannot exceed ₹{maxDue} (commission due from driver)
+                      Cannot exceed ₹{maxDue}
                     </p>
                   )}
                   {selectedDriverId && maxDue <= 0 && (
                     <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="size-3 shrink-0" />
-                      Driver has cleared all commission due (₹0 to be paid)
+                      Nothing is due in this direction (₹0)
                     </p>
                   )}
+                </div>
+
+                {/* Direction */}
+                <div>
+                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Who paid whom *
+                  </label>
+                  <select
+                    value={direction}
+                    onChange={(e) => {
+                      const dir = e.target.value as typeof direction;
+                      setDirection(dir);
+                      if (selectedStats) {
+                        const due =
+                          dir === "company_to_driver"
+                            ? selectedStats.owedToDriver
+                            : selectedStats.outstandingCommission;
+                        setSettleAmount(due > 0 ? due : "");
+                      }
+                    }}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary"
+                  >
+                    <option value="driver_to_company">Driver paid commission to company</option>
+                    <option value="company_to_driver">Company paid driver their share</option>
+                  </select>
                 </div>
 
                 {/* Payment Mode */}
@@ -824,7 +692,7 @@ export function CommissionLedgerManager({
             </h3>
           </div>
           <span className="text-xs text-muted-foreground">
-            Platform Fee: 15% · Retained by Partner: 85%
+            Platform Fee: {pct}% · Retained by Partner: {100 - pct}%
           </span>
         </div>
 
@@ -838,8 +706,8 @@ export function CommissionLedgerManager({
                 <h4 className="font-bold text-base text-foreground">No Partner Drivers Yet</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Currently, all active drivers are company fleet drivers. Partner owner-operators
-                  who bring their own EV keep 85% of customer ride fares and pay a 15% platform
-                  commission to Orange Taxi.
+                  who bring their own EV keep {100 - pct}% of each fare and pay a {pct}% commission.
+                  Mark a driver as a commission driver in Admin → Drivers.
                 </p>
               </div>
               <div className="pt-2 flex items-center justify-center gap-3">
@@ -927,7 +795,7 @@ export function CommissionLedgerManager({
 
                       <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5">
                         <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">
-                          15% Comm. Due
+                          {pct}% Comm. on cash rides
                         </p>
                         <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">
                           ₹{stats.commissionPayable.toLocaleString("en-IN")}
@@ -941,11 +809,13 @@ export function CommissionLedgerManager({
                             : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
                         }`}
                       >
-                        <p className="text-[10px] uppercase font-semibold">Outstanding</p>
+                        <p className="text-[10px] uppercase font-semibold">Balance</p>
                         <p className="mt-1 font-bold font-mono">
                           {stats.outstandingCommission > 0
-                            ? `₹${stats.outstandingCommission.toLocaleString("en-IN")}`
-                            : "Cleared ✓"}
+                            ? `Driver owes ₹${stats.outstandingCommission.toLocaleString("en-IN")}`
+                            : stats.owedToDriver > 0
+                              ? `We owe ₹${stats.owedToDriver.toLocaleString("en-IN")}`
+                              : "Cleared ✓"}
                         </p>
                       </div>
                     </div>
@@ -954,23 +824,30 @@ export function CommissionLedgerManager({
                     <div className="flex items-center gap-2 shrink-0">
                       <Button
                         size="sm"
-                        disabled={stats.outstandingCommission <= 0}
+                        disabled={stats.outstandingCommission <= 0 && stats.owedToDriver <= 0}
                         onClick={() => {
                           setSelectedDriverId(d.id);
+                          const dir =
+                            stats.owedToDriver > 0 ? "company_to_driver" : "driver_to_company";
+                          setDirection(dir);
                           setSettleAmount(
-                            stats.outstandingCommission > 0 ? stats.outstandingCommission : "",
+                            dir === "company_to_driver"
+                              ? stats.owedToDriver
+                              : stats.outstandingCommission,
                           );
                           setIsRecording(true);
                         }}
                         className={`h-8 text-xs font-semibold gap-1 ${
-                          stats.outstandingCommission > 0
+                          stats.outstandingCommission > 0 || stats.owedToDriver > 0
                             ? "bg-primary"
                             : "opacity-50 cursor-not-allowed"
                         }`}
                         title={
                           stats.outstandingCommission > 0
-                            ? `Settle up to ₹${stats.outstandingCommission}`
-                            : "Driver has no outstanding commission (₹0 to be paid)"
+                            ? `Driver owes ₹${stats.outstandingCommission}`
+                            : stats.owedToDriver > 0
+                              ? `We owe the driver ₹${stats.owedToDriver}`
+                              : "Nothing due either way"
                         }
                       >
                         <Receipt className="size-3.5" /> Settle
@@ -999,7 +876,9 @@ export function CommissionLedgerManager({
                           {d.full_name}
                         </h4>
                         <span className="text-xs text-muted-foreground">
-                          Net partner take-home (85%):{" "}
+                          Cash rides ₹{stats.cashFare.toLocaleString("en-IN")} · Online rides ₹
+                          {stats.onlineFare.toLocaleString("en-IN")} · Net partner take-home (
+                          {100 - pct}%):{" "}
                           <strong className="text-emerald-600 font-mono">
                             ₹{stats.partnerNetEarnings.toLocaleString("en-IN")}
                           </strong>
@@ -1035,8 +914,11 @@ export function CommissionLedgerManager({
                                 )}
                               </div>
                               <div className="text-right shrink-0">
-                                <span className="font-mono font-bold text-emerald-600 text-sm">
-                                  +₹{Math.round(s.amount).toLocaleString("en-IN")}
+                                <span
+                                  className={`font-mono font-bold text-sm ${s.direction === "company_to_driver" ? "text-blue-600" : "text-emerald-600"}`}
+                                >
+                                  {s.direction === "company_to_driver" ? "Paid out " : "Received "}₹
+                                  {Math.round(s.amount).toLocaleString("en-IN")}
                                 </span>
                                 <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">
                                   {s.payment_mode?.replace("_", " ")}

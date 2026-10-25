@@ -40,6 +40,9 @@ const LIMITS: Record<keyof PricingSettings, [number, number] | null> = {
   cancellation_charge: [0, 1000],
   cancellation_free_minutes: [0, 60],
   cancellation_free_km: [0, 50],
+  cancellation_stuck_minutes: [1, 120],
+  cancellation_stuck_km: [0, 20],
+  partner_commission_percent: [0, 60],
   waiting_charge_per_min: [0, 100],
   waiting_free_minutes: [0, 60],
 };
@@ -316,6 +319,22 @@ export function PricingManager() {
               onChange={(v) => set("cancellation_free_km", v)}
             />
           </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <NumberField
+              label="Also free if, after"
+              suffix="min"
+              value={settings.cancellation_stuck_minutes}
+              onChange={(v) => set("cancellation_stuck_minutes", v)}
+            />
+            <NumberField
+              label="…the driver has moved less than"
+              suffix="km"
+              step="0.1"
+              value={settings.cancellation_stuck_km}
+              onChange={(v) => set("cancellation_stuck_km", v)}
+              hint="The driver is stuck or not coming."
+            />
+          </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
             {cancellationPolicyText(settings)}
           </p>
@@ -338,6 +357,20 @@ export function PricingManager() {
               value={settings.waiting_charge_per_min}
               onChange={(v) => set("waiting_charge_per_min", v)}
               hint="Shown to the rider and driver on the waiting timer."
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-4">
+          <h4 className="text-sm font-semibold mb-3">Commission drivers (own vehicle)</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <NumberField
+              label="Company commission"
+              suffix="% of each fare"
+              step="0.5"
+              value={settings.partner_commission_percent}
+              onChange={(v) => set("partner_commission_percent", v)}
+              hint="Used by the Commission Ledger. The driver keeps the rest."
             />
           </div>
         </div>
@@ -486,6 +519,103 @@ export function PricingManager() {
           </p>
         )}
       </section>
+      <UnpaidFees />
     </div>
+  );
+}
+
+interface DueRow {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  booking: { reference: string } | null;
+  carried: { reference: string } | null;
+}
+
+// Unpaid cancellation fees: each is added to the rider's next ride and settled when that ride is
+// paid. Admins can waive one (e.g. after a complaint).
+function UnpaidFees() {
+  const [rows, setRows] = useState<DueRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function load() {
+    const { data, error } = await supabase
+      .from("cancellation_dues" as never)
+      .select(
+        "id, amount, status, created_at, booking:bookings!cancellation_dues_booking_id_fkey(reference), carried:bookings!cancellation_dues_carried_by_fkey(reference)",
+      )
+      .eq("status", "due")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) {
+      toast.error("Could not load unpaid fees: " + error.message);
+      setRows([]);
+      return;
+    }
+    setRows((data as unknown as DueRow[]) || []);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function waive(id: string) {
+    setBusy(id);
+    const { error } = await supabase
+      .from("cancellation_dues" as never)
+      .update({ status: "waived" } as never)
+      .eq("id", id);
+    setBusy(null);
+    if (error) {
+      toast.error("Could not waive: " + error.message);
+      return;
+    }
+    toast.success("Fee waived.");
+    setRows((r) => (r || []).filter((x) => x.id !== id));
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+      <h3 className="font-bold">Unpaid cancellation fees</h3>
+      <p className="text-[11px] text-muted-foreground">
+        Each fee is added to the rider&apos;s next ride and settled when that ride is paid.
+      </p>
+      {rows === null ? (
+        <p className="text-xs text-muted-foreground">Loading…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No unpaid fees.</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {rows.map((r) => (
+            <div
+              key={r.id}
+              className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
+            >
+              <div className="min-w-0">
+                <span className="font-mono font-semibold">#{r.booking?.reference ?? "—"}</span>
+                <span className="ml-2 text-muted-foreground">
+                  {new Date(r.created_at).toLocaleDateString("en-IN")}
+                </span>
+                <span className="ml-2 text-muted-foreground">
+                  {r.carried ? `added to ride #${r.carried.reference}` : "waiting for next ride"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-bold">₹{Number(r.amount)}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === r.id}
+                  onClick={() => waive(r.id)}
+                >
+                  {busy === r.id ? <Loader2 className="size-3.5 animate-spin" /> : "Waive"}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

@@ -52,6 +52,7 @@ import {
   settleRazorpayPayment,
   settleWalletTopup,
   type SettlementConfig,
+  supabaseKeyHeaders,
 } from "./lib/razorpay-settlement";
 
 const invoiceRateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -373,8 +374,7 @@ async function quotedFare(
     const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/fn_fare_quote`, {
       method: "POST",
       headers: {
-        apikey: cfg.supabaseAnonKey,
-        Authorization: `Bearer ${cfg.supabaseAnonKey}`,
+        ...supabaseKeyHeaders(cfg.supabaseAnonKey),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -396,7 +396,7 @@ async function bookedFare(cfg: SettlementConfig, bookingId: string): Promise<num
   try {
     const res = await fetch(
       `${cfg.supabaseUrl}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=estimated_fare,final_fare`,
-      { headers: { apikey: cfg.serviceRoleKey, Authorization: `Bearer ${cfg.serviceRoleKey}` } },
+      { headers: supabaseKeyHeaders(cfg.serviceRoleKey) },
     );
     if (!res.ok) return null;
     const rows = (await res.json()) as Array<{

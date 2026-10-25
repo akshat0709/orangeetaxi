@@ -76,6 +76,8 @@ import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
 import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification } from "@/lib/notifications";
+import { partnerLedger } from "@/lib/driver-type";
+import { usePricingSettings } from "@/lib/pricing";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -252,6 +254,7 @@ function playRideRequestChime() {
 }
 
 function DriverConsolePage() {
+  const commissionPct = usePricingSettings().partner_commission_percent;
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -1290,18 +1293,15 @@ function DriverConsolePage() {
   // Operating model
   const isPartnerDriver = driver.driver_type === "partner" || Boolean((driver as any).owns_vehicle);
 
-  // Partner commission calculations (15% platform commission model)
-  const allTimeFares = recentRides.reduce(
-    (s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)),
-    0,
+  // Partner commission: same rules as the admin Commission Ledger (src/lib/driver-type.ts).
+  const partnerLedgerStats = partnerLedger(
+    recentRides.filter((r) => r.status === "completed"),
+    commissionSettlements,
+    commissionPct,
   );
-  const partnerCommissionPayable = Math.round(allTimeFares * 0.15);
-  const partnerCommissionPaid = commissionSettlements.reduce(
-    (s, c) => s + Math.round(Number(c.amount || 0)),
-    0,
-  );
-  const partnerCommissionDue = Math.max(0, partnerCommissionPayable - partnerCommissionPaid);
-  const partnerNetEarnings = Math.max(0, allTimeFares - partnerCommissionPayable);
+  const partnerCommissionDue = Math.max(0, partnerLedgerStats.balance);
+  const partnerOwedByCompany = Math.max(0, -partnerLedgerStats.balance);
+  const partnerNetEarnings = partnerLedgerStats.grossFare - partnerLedgerStats.commissionTotal;
 
   // Cash calculations & Admin settlement balance (Strict whole rupees)
   const totalCashCollected = recentRides
@@ -1443,7 +1443,7 @@ function DriverConsolePage() {
       payment_mode: "upi" as const,
       reference_no: `UTR: ${cleanUtr}`,
       collected_by: "UPI Auto-Remit",
-      notes: `15% Platform Commission UPI Remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+      notes: `Platform commission UPI remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
       created_at: new Date().toISOString(),
     };
 
@@ -1455,7 +1455,7 @@ function DriverConsolePage() {
         payment_mode: "upi",
         reference_no: `UTR: ${cleanUtr}`,
         collected_by: "UPI Auto-Remit",
-        notes: `15% Platform Commission UPI Remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
+        notes: `Platform commission UPI remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
       });
     } catch (e) {
       console.warn("Could not insert to driver_commission_settlements in DB:", e);
@@ -1516,7 +1516,7 @@ function DriverConsolePage() {
                   }`}
                 >
                   {isPartnerDriver
-                    ? "⚡ Partner Owner-Operator (15% Comm.)"
+                    ? `⚡ Partner Owner-Operator (${commissionPct}% Comm.)`
                     : "🏢 Company Fleet (Fixed Salary)"}
                 </span>
               </div>
@@ -2766,12 +2766,15 @@ function DriverConsolePage() {
                           Partner Commission & Net Earnings
                         </p>
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                          15% Platform Commission Model
+                          {commissionPct}% Platform Commission Model
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        You drive your own EV and retain 85% of all rider fares. 15% platform
-                        commission is settled with Orange Taxi.
+                        You drive your own EV and keep {100 - commissionPct}% of each fare. On cash
+                        rides you owe Orange Taxi {commissionPct}%; on online rides Orange Taxi owes
+                        you {100 - commissionPct}%.
+                        {partnerOwedByCompany > 0 &&
+                          ` Orange Taxi currently owes you ₹${partnerOwedByCompany}.`}
                       </p>
                     </div>
                   </div>
@@ -2809,7 +2812,7 @@ function DriverConsolePage() {
                       Gross Fares Collected
                     </p>
                     <p className="mt-1 text-2xl font-bold font-mono text-foreground">
-                      ₹{Number(allTimeFares).toFixed(2)}
+                      ₹{Number(partnerLedgerStats.grossFare).toFixed(2)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       Cash + UPI from all rides
@@ -2818,7 +2821,7 @@ function DriverConsolePage() {
 
                   <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                     <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 uppercase">
-                      Your Net Take-Home (85%)
+                      Your Net Take-Home ({100 - commissionPct}%)
                     </p>
                     <p className="mt-1 text-2xl font-bold font-mono text-emerald-700 dark:text-emerald-300">
                       ₹{Number(partnerNetEarnings).toFixed(2)}
@@ -2833,7 +2836,7 @@ function DriverConsolePage() {
                       Commission Paid to Admin
                     </p>
                     <p className="mt-1 text-2xl font-bold font-mono text-foreground">
-                      ₹{Number(partnerCommissionPaid).toFixed(2)}
+                      ₹{Number(partnerLedgerStats.paidByDriver).toFixed(2)}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {commissionSettlements.length} recorded settlement

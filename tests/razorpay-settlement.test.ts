@@ -185,3 +185,12 @@ test("safeEqualHex compares case-insensitively and rejects length mismatch", () 
   assert.equal(safeEqualHex("abcd", "abce"), false);
   assert.equal(safeEqualHex("abcd", "abcde"), false);
 });
+
+test("new sb_ keys go only in apikey; legacy JWT keys also get a Bearer header", async () => {
+  const { supabaseKeyHeaders } = await import("../src/lib/razorpay-settlement.ts");
+  assert.deepEqual(supabaseKeyHeaders("sb_secret_abc"), { apikey: "sb_secret_abc" });
+  assert.deepEqual(supabaseKeyHeaders("eyJhbGc.x.y"), {
+    apikey: "eyJhbGc.x.y",
+    Authorization: "Bearer eyJhbGc.x.y",
+  });
+});

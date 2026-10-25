@@ -81,12 +81,14 @@ function configured(config: SettlementConfig): config is SettlementConfig & {
   return Boolean(config.serviceRoleKey && config.razorpayKeyId && config.razorpayKeySecret);
 }
 
+/** Headers for a Supabase key: new `sb_…` keys go only in `apikey` (they are not JWTs);
+ * legacy JWT keys also need `Authorization: Bearer`. */
+export function supabaseKeyHeaders(key: string): Record<string, string> {
+  return key.startsWith("sb_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
+}
+
 function adminHeaders(config: { serviceRoleKey: string }) {
-  return {
-    apikey: config.serviceRoleKey,
-    Authorization: `Bearer ${config.serviceRoleKey}`,
-    "Content-Type": "application/json",
-  };
+  return { ...supabaseKeyHeaders(config.serviceRoleKey), "Content-Type": "application/json" };
 }
 
 function rzpAuth(config: { razorpayKeyId: string; razorpayKeySecret: string }) {

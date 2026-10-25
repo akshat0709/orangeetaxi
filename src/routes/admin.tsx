@@ -69,6 +69,8 @@ import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { PricingManager } from "@/components/pricing-manager";
+import { usePricingSettings } from "@/lib/pricing";
+import { isCommissionDriver as isPartnerDriverType } from "@/lib/driver-type";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
 import { LiveDriversMap } from "@/components/live-drivers-map";
 import {
@@ -292,6 +294,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function AdminPage() {
+  const commissionPct = usePricingSettings().partner_commission_percent;
   const { user, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
@@ -1101,10 +1104,10 @@ function AdminPage() {
       id: "commissions",
       title: "Commission Ledger",
       category: "finance",
-      description: "Automated 80/20 platform-to-driver revenue split calculation and balances.",
+      description: `Commission drivers (${commissionPct}%): rides, commission owed, payouts and balances.`,
       icon: Percent,
       badgeColor: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
-      badgeText: "80/20 Splits",
+      badgeText: `${commissionPct}% Commission`,
       iconColor: "text-indigo-600 dark:text-indigo-400",
       iconBg: "bg-indigo-500/10 dark:bg-indigo-500/20",
     },
@@ -2488,8 +2491,8 @@ function AdminPage() {
                                   {/* Operating Model Badge */}
                                   {isPartner ? (
                                     <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                      <Handshake className="size-3" /> Partner Owner-Operator (15%
-                                      Comm.)
+                                      <Handshake className="size-3" /> Partner Owner-Operator (
+                                      {commissionPct}% Comm.)
                                     </span>
                                   ) : (
                                     <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
@@ -3131,54 +3134,9 @@ function AdminPage() {
   );
 }
 
+// drivers.driver_type is the single source of truth (see src/lib/driver-type.ts).
 function isCommissionDriver(d: Driver): boolean {
-  if (d.driver_type === "partner") return true;
-  if (d.driver_type === "company") return false;
-  if ((d as any).owns_vehicle) return true;
-  if (d.vehicle_code && typeof d.vehicle_code === "string") {
-    if (d.vehicle_code.includes('"type":"partner"')) return true;
-    if (d.vehicle_code.includes('"type":"company"')) return false;
-  }
-  if (typeof window !== "undefined") {
-    try {
-      const pCars = JSON.parse(localStorage.getItem("orange_partner_vehicles") || "[]");
-      if (
-        pCars.some(
-          (pv: any) =>
-            (d.id && pv.driver_id === d.id) ||
-            (d.phone &&
-              pv.owner_phone &&
-              pv.owner_phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
-            (d.full_name &&
-              pv.owner_name &&
-              pv.owner_name.toLowerCase() === d.full_name.toLowerCase()),
-        )
-      ) {
-        return true;
-      }
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-
-    try {
-      const extApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
-      if (
-        extApps.some(
-          (ea: any) =>
-            (ea.owns_vehicle || ea.driver_type === "partner") &&
-            ((d.phone && ea.phone && ea.phone.replace(/\D/g, "") === d.phone.replace(/\D/g, "")) ||
-              (d.full_name &&
-                ea.full_name &&
-                ea.full_name.toLowerCase() === d.full_name.toLowerCase())),
-        )
-      ) {
-        return true;
-      }
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-  }
-  return false;
+  return isPartnerDriverType(d);
 }
 
 function DriverAnalyticsPanel({
@@ -3192,6 +3150,7 @@ function DriverAnalyticsPanel({
   onRefresh: () => void;
   onNavigateTab?: (tab: string) => void;
 }) {
+  const commissionPct = usePricingSettings().partner_commission_percent;
   const [search, setSearch] = useState("");
   const [driverSegment, setDriverSegment] = useState<"company" | "commission" | "all">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -3426,7 +3385,8 @@ function DriverAnalyticsPanel({
       .update({
         vehicle_number: targetPlate,
         vehicle_model: targetModel,
-      })
+        driver_type: targetType,
+      } as never)
       .eq("id", driver.id);
 
     if (error) {
@@ -3546,7 +3506,7 @@ function DriverAnalyticsPanel({
                 </span>
                 {isPartner ? (
                   <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
-                    <Handshake className="size-3" /> Commission Partner (15%)
+                    <Handshake className="size-3" /> Commission Partner ({commissionPct}%)
                   </span>
                 ) : (
                   <span className="rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
@@ -4023,8 +3983,10 @@ function DriverAnalyticsPanel({
               color: "text-green-600",
             },
             {
-              label: isPartner ? "15% Company Comm." : "Today's Rides",
-              value: isPartner ? `₹${Math.round(stats.total * 0.15)}` : stats.todayCount,
+              label: isPartner ? `${commissionPct}% Company Comm.` : "Today's Rides",
+              value: isPartner
+                ? `₹${Math.round((stats.total * commissionPct) / 100)}`
+                : stats.todayCount,
               color: isPartner ? "text-emerald-600 font-extrabold" : "",
             },
             {
@@ -4049,7 +4011,7 @@ function DriverAnalyticsPanel({
               </p>
               {isPartner && (
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  Partner Keeps 85% · Company Receives 15%
+                  Partner Keeps {100 - commissionPct}% · Company Receives {commissionPct}%
                 </span>
               )}
             </div>
@@ -4060,7 +4022,7 @@ function DriverAnalyticsPanel({
                 {rides.slice(0, 50).map((b) => {
                   const ridePlate = getBookingVehiclePlate(b, d);
                   const fare = Math.round(b.final_fare ?? b.estimated_fare);
-                  const comm = Math.round(fare * 0.15);
+                  const comm = Math.round((fare * commissionPct) / 100);
                   const driverNet = fare - comm;
 
                   return (
@@ -4203,7 +4165,7 @@ function DriverAnalyticsPanel({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-emerald-500" />
-            <strong>Commission Partner:</strong> 15% Platform Split · Own EV
+            <strong>Commission Partner:</strong> {commissionPct}% Platform Split · Own EV
           </span>
         </div>
       </div>
@@ -4292,8 +4254,8 @@ function DriverAnalyticsPanel({
                   (Partner Owner-Operators)
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Independent driver-partners bringing their own EV. Operates on a 15% platform
-                  commission model with their verified vehicle plate.
+                  Independent driver-partners bringing their own EV. Operates on a {commissionPct}%
+                  platform commission model with their verified vehicle plate.
                 </p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -4311,7 +4273,9 @@ function DriverAnalyticsPanel({
                   <p className="text-[10px] uppercase font-bold text-muted-foreground">
                     Comm. Split
                   </p>
-                  <p className="text-sm font-bold text-emerald-600">85% / 15%</p>
+                  <p className="text-sm font-bold text-emerald-600">
+                    {100 - commissionPct}% / {commissionPct}%
+                  </p>
                 </div>
                 {onNavigateTab && (
                   <Button
@@ -4392,7 +4356,7 @@ function DriverAnalyticsPanel({
                   </button>
                 )}
                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                  15% Commission
+                  {commissionPct}% Commission
                 </span>
               </div>
             </div>
