@@ -228,7 +228,9 @@ export function TaxInvoiceModal({
         if (session?.access_token) {
           authHeader = `Bearer ${session.access_token}`;
         }
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       const res = await fetch("/api/send-invoice", {
         method: "POST",

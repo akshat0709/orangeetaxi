@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint (errors fail the build; warnings are tracked debt)
+        run: npx eslint .
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Unit tests (payment settlement)
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Dependency audit (production, critical — see DEPLOYMENT.md for the accepted zod advisory)
+        run: npm audit --omit=dev --audit-level=critical
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Replay migrations in PGlite and check RLS / triggers / RPCs
+        working-directory: scripts/db-tests
+        run: |
+          npm ci
+          npm test
+          PHASE2=1 npm test

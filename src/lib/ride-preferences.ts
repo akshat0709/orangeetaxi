@@ -86,7 +86,9 @@ export function parseRidePreferences(
       let decodedStr = rawPayload;
       try {
         decodedStr = decodeURIComponent(rawPayload);
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       const parsed = JSON.parse(decodedStr);
       if (parsed) {
@@ -117,7 +119,9 @@ export function parseRidePreferences(
           prefs.pickupPillar = localParsed.pickupPillar || localParsed.pillar;
         }
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 
   return prefs;

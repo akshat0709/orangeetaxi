@@ -1,5 +1,6 @@
 // @ts-nocheck
 
+import { StorageImage } from "@/components/storage-image";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -441,7 +442,9 @@ function DriverConsolePage() {
           .eq("id", user.id)
           .maybeSingle();
         if (prof?.phone && prof.phone.trim()) loginPhone = prof.phone.trim();
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
     if (!loginPhone) {
       try {
@@ -451,7 +454,9 @@ function DriverConsolePage() {
           .eq("email", user.email)
           .maybeSingle();
         if (appData?.phone && appData.phone.trim()) loginPhone = appData.phone.trim();
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     async function fetchAppForUser(email?: string, phone?: string, fullName?: string) {
@@ -486,7 +491,9 @@ function DriverConsolePage() {
             .maybeSingle();
           if (data) return data;
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
       return null;
     }
 
@@ -503,17 +510,16 @@ function DriverConsolePage() {
         ) {
           parsedNotes = JSON.parse(appData.admin_notes);
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       const isPartner = Boolean(
         appData?.owns_vehicle ||
         appData?.driver_type === "partner" ||
         parsedNotes?.driver_type === "partner",
       );
-      const plate =
-        appData?.vehicle_number ||
-        parsedNotes?.vehicle_number ||
-        (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+      const plate = appData?.vehicle_number || parsedNotes?.vehicle_number || "";
       const model =
         appData?.vehicle_model ||
         parsedNotes?.vehicle_model ||
@@ -570,14 +576,18 @@ function DriverConsolePage() {
         ) {
           parsedNotes = JSON.parse(appData.admin_notes);
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       let storedMeta: any = {};
       try {
         storedMeta = JSON.parse(
           localStorage.getItem(`orange_app_meta_${user.email?.toLowerCase()}`) || "{}",
         );
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       const isPartner = Boolean(
         driverData.driver_type === "partner" ||
@@ -594,7 +604,7 @@ function DriverConsolePage() {
         (driverData.vehicle_number && driverData.vehicle_number !== "Unassigned"
           ? driverData.vehicle_number
           : "") ||
-        (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+        "";
 
       const resolvedModel =
         appData?.vehicle_model ||
@@ -619,7 +629,9 @@ function DriverConsolePage() {
         try {
           const metaDecoded = JSON.parse(driverData.vehicle_code.replace("ORANGE_META:", ""));
           if (!driverData.photo_url && metaDecoded.photo) driverData.photo_url = metaDecoded.photo;
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
 
       const needsPlateSync =
@@ -663,7 +675,9 @@ function DriverConsolePage() {
               `orange_driver_photo_by_phone_${loginPhone.replace(/\D/g, "")}`,
               resolvedPhoto,
             );
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
 
       driverData.driver_type = isPartner ? "partner" : "company";
@@ -780,7 +794,9 @@ function DriverConsolePage() {
           });
           setCustomerProfiles((prev) => ({ ...prev, ...map }));
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     if (reqList.length > prevRequestsCountRef.current && prevRequestsCountRef.current !== -1) {
@@ -823,7 +839,9 @@ function DriverConsolePage() {
         setDriver((prev) =>
           prev ? { ...prev, total_rides: nextRides, rating: calculatedAvgRating } : prev,
         );
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     try {
@@ -842,7 +860,9 @@ function DriverConsolePage() {
         try {
           const all = JSON.parse(stored);
           setSettlements(all.filter((s: any) => s.driver_id === driverData.id));
-        } catch (err) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
     }
 
@@ -859,7 +879,9 @@ function DriverConsolePage() {
           ),
         );
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     try {
       const storedReviews = JSON.parse(localStorage.getItem("orange_driver_reviews") || "[]");
@@ -872,7 +894,9 @@ function DriverConsolePage() {
       } else {
         setDriverReviews(storedReviews);
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     setLoading(false);
   }
@@ -918,28 +942,29 @@ function DriverConsolePage() {
       resolvedDr?.vehicle_number ||
       (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
         ? driver.vehicle_number
-        : "KA 01 EV 4421");
+        : "");
     const activeBooking = newRequests.find((b) => b.id === bookingId);
     const updatedVehicleName = formatVehicleNameWithPlate(
       activeBooking?.vehicle_name || "Orange Signature",
       resolvedPlate,
     );
 
-    const { data: updatedBooking, error } = await supabase
-      .from("bookings")
-      .update({
-        driver_id: driver.id,
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        vehicle_name: updatedVehicleName,
-      })
-      .eq("id", bookingId)
-      .eq("status", "searching")
-      .is("driver_id", null)
-      .select()
-      .maybeSingle();
+    // accept_booking enforces "active driver" and "one ride at a time" on the server.
+    const { data: acceptRes, error } = await supabase.rpc(
+      "accept_booking" as never,
+      {
+        _booking_id: bookingId,
+      } as never,
+    );
+    const accepted = acceptRes as { success?: boolean; error?: string } | null;
+    if (!error && accepted?.success) {
+      await supabase
+        .from("bookings")
+        .update({ vehicle_name: updatedVehicleName })
+        .eq("id", bookingId);
+    }
 
-    if (error || !updatedBooking) {
+    if (error || !accepted?.success) {
       toast.error("Ride Already Claimed", {
         description: "Another chauffeur accepted this ride just before you. Returning to radar...",
       });
@@ -967,26 +992,29 @@ function DriverConsolePage() {
       resolvedDr?.vehicle_number ||
       (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
         ? driver.vehicle_number
-        : "KA 01 EV 4421");
+        : "");
     const schedBooking = scheduledBookings.find((b) => b.id === bookingId);
     const updatedVehicleName = formatVehicleNameWithPlate(
       schedBooking?.vehicle_name || "Orange Signature",
       resolvedPlate,
     );
 
-    const { data: updatedBooking, error } = await supabase
-      .from("bookings")
-      .update({
-        driver_id: driver.id,
-        vehicle_name: updatedVehicleName,
-      })
-      .eq("id", bookingId)
-      .eq("status", "scheduled")
-      .is("driver_id", null)
-      .select()
-      .maybeSingle();
+    // Claims go through the RPC; a direct update of driver_id is rejected by the database.
+    const { data: claimRes, error } = await supabase.rpc(
+      "claim_scheduled_booking" as never,
+      {
+        _booking_id: bookingId,
+      } as never,
+    );
+    const claim = claimRes as { success?: boolean; error?: string } | null;
+    if (!error && claim?.success) {
+      await supabase
+        .from("bookings")
+        .update({ vehicle_name: updatedVehicleName })
+        .eq("id", bookingId);
+    }
 
-    if (error || !updatedBooking) {
+    if (error || !claim?.success) {
       toast.error("Already Claimed", {
         description:
           "Could not claim scheduled booking — it may have already been claimed by another chauffeur.",
@@ -1023,21 +1051,27 @@ function DriverConsolePage() {
       resolvedDr?.vehicle_number ||
       (driver.vehicle_number && driver.vehicle_number !== "Unassigned"
         ? driver.vehicle_number
-        : "KA 01 EV 4421");
+        : "");
     const updatedVehicleName = formatVehicleNameWithPlate(
       booking.vehicle_name || "Orange Signature",
       resolvedPlate,
     );
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-        driver_id: driver.id,
-        vehicle_name: updatedVehicleName,
-      })
-      .eq("id", booking.id);
+    const { data: startRes, error: startErr } = await supabase.rpc(
+      "start_scheduled_booking" as never,
+      {
+        _booking_id: booking.id,
+      } as never,
+    );
+    const start = startRes as { success?: boolean; error?: string } | null;
+    const error =
+      startErr || (start?.success ? null : { message: start?.error || "Could not start ride" });
+    if (!error) {
+      await supabase
+        .from("bookings")
+        .update({ vehicle_name: updatedVehicleName })
+        .eq("id", booking.id);
+    }
 
     if (error) {
       toast.error("Could not activate dispatch for scheduled ride: " + error.message);
@@ -1049,13 +1083,15 @@ function DriverConsolePage() {
   }
 
   async function releaseScheduledRide(bookingId: string) {
-    const { error } = await supabase
-      .from("bookings")
-      .update({
-        driver_id: null,
-      })
-      .eq("id", bookingId)
-      .eq("status", "scheduled");
+    const { data: relRes, error: relErr } = await supabase.rpc(
+      "release_scheduled_booking" as never,
+      {
+        _booking_id: bookingId,
+      } as never,
+    );
+    const rel = relRes as { success?: boolean; error?: string } | null;
+    const error =
+      relErr || (rel?.success ? null : { message: rel?.error || "Could not release ride" });
 
     if (error) {
       toast.error("Failed to release ride: " + error.message);
@@ -1081,33 +1117,8 @@ function DriverConsolePage() {
         _otp: enteredOtp,
       });
 
-      if (verifyErr && verifyErr.message && verifyErr.message.includes("schema cache")) {
-        console.warn(
-          "verify_ride_otp RPC not found in live DB schema cache. Executing resilient transition fallback:",
-          verifyErr.message,
-        );
-        const expected = String((booking as any).ride_otp || "").trim();
-        if (expected && enteredOtp !== expected) {
-          toast.error("Incorrect OTP. Please check with the customer.");
-          return;
-        }
-        const { error: updErr } = await supabase
-          .from("bookings")
-          .update({
-            status: "in_progress",
-            started_at: new Date().toISOString(),
-          })
-          .eq("id", booking.id);
-
-        if (updErr) {
-          toast.error(`Could not start ride: ${updErr.message}`);
-          return;
-        }
-        toast.success("OTP verified! Ride in progress 🍊");
-        loadData();
-        return;
-      }
-
+      // Server verification only. The old "schema cache" fallback compared the OTP in the browser
+      // and pushed the ride to in_progress directly.
       if (verifyErr || !(verifyResult as any)?.success) {
         toast.error(
           (verifyResult as any)?.error ||
@@ -1394,7 +1405,9 @@ function DriverConsolePage() {
       const stored = localStorage.getItem("orange_cash_settlements");
       const all = stored ? JSON.parse(stored) : [];
       localStorage.setItem("orange_cash_settlements", JSON.stringify([newRecord, ...all]));
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("storage"));
@@ -1454,7 +1467,9 @@ function DriverConsolePage() {
     current = [newRecord, ...current];
     try {
       localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     setCommissionSettlements((prev) => [newRecord, ...prev]);
 
@@ -1478,7 +1493,7 @@ function DriverConsolePage() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             {driver.photo_url ? (
-              <img
+              <StorageImage
                 src={driver.photo_url}
                 alt={driver.full_name}
                 className="size-16 rounded-2xl object-cover border-2 border-primary/30 shadow-md shrink-0"

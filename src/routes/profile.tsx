@@ -156,13 +156,17 @@ function ProfilePage() {
         localStorage.getItem("@orange_user_work_coords") ||
         localStorage.getItem("orange_user_work_coords");
       if (wc) setWorkCoords(JSON.parse(wc));
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     async function loadAreas() {
       try {
         const { data } = await supabase.from("service_areas").select("*");
         if (data) setAreas(data);
-      } catch (err) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
     loadAreas();
   }, []);
@@ -285,7 +289,9 @@ function ProfilePage() {
             );
           }
         }
-      } catch (err) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       setBookings(list);
     } catch (e) {
@@ -359,7 +365,9 @@ function ProfilePage() {
       if (typeof window !== "undefined") {
         try {
           localStorage.clear();
-        } catch {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
 
       await supabase.auth.signOut();

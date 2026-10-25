@@ -326,6 +326,7 @@ export type Database = {
           id: string;
           phone: string | null;
           updated_at: string;
+          wallet_balance: number;
         };
         Insert: {
           created_at?: string;
@@ -333,6 +334,7 @@ export type Database = {
           id: string;
           phone?: string | null;
           updated_at?: string;
+          wallet_balance?: number;
         };
         Update: {
           created_at?: string;
@@ -340,6 +342,7 @@ export type Database = {
           id?: string;
           phone?: string | null;
           updated_at?: string;
+          wallet_balance?: number;
         };
         Relationships: [];
       };
@@ -390,6 +393,39 @@ export type Database = {
           created_at?: string;
           id?: string;
           role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      wallet_transactions: {
+        Row: {
+          amount: number;
+          booking_id: string | null;
+          created_at: string;
+          description: string;
+          id: string;
+          reference_id: string | null;
+          type: string;
+          user_id: string;
+        };
+        Insert: {
+          amount: number;
+          booking_id?: string | null;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          reference_id?: string | null;
+          type: string;
+          user_id: string;
+        };
+        Update: {
+          amount?: number;
+          booking_id?: string | null;
+          created_at?: string;
+          description?: string;
+          id?: string;
+          reference_id?: string | null;
+          type?: string;
           user_id?: string;
         };
         Relationships: [];

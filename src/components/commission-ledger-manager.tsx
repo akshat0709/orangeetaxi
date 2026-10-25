@@ -77,7 +77,9 @@ function cleanupDummyData() {
       );
       localStorage.setItem("orange_partner_vehicles", JSON.stringify(cleaned));
     }
-  } catch (e) {}
+  } catch {
+    // best-effort: failure here is non-fatal and intentionally ignored
+  }
 }
 
 interface CommissionLedgerManagerProps {
@@ -202,7 +204,9 @@ export function CommissionLedgerManager({
           }
         }
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     setLoading(false);
   }
@@ -261,7 +265,9 @@ export function CommissionLedgerManager({
         ) {
           return true;
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     return false;

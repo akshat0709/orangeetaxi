@@ -231,7 +231,9 @@ function RootShell({ children }: { children: ReactNode }) {
                   if ((hasSeen || isRecovery) && !isSplashForced) {
                     document.documentElement.classList.add('hide-splash');
                   }
-                } catch(e) {}
+                } catch {
+  // best-effort: failure here is non-fatal and intentionally ignored
+}
               })();
             `,
           }}
@@ -263,7 +265,9 @@ function RootComponent() {
     try {
       sessionStorage.setItem("orange_splash_seen", "true");
       document.documentElement.classList.add("hide-splash");
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   };
 
   useEffect(() => {
@@ -277,7 +281,9 @@ function RootComponent() {
     let hasSeenSplash = false;
     try {
       hasSeenSplash = !!sessionStorage.getItem("orange_splash_seen");
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
     const forceSplash = window.location.search.includes("splash=true");
 
     if ((hasSeenSplash || isRecovery) && !forceSplash) {
@@ -329,7 +335,9 @@ function RootComponent() {
           return undefined;
         }
       }
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {

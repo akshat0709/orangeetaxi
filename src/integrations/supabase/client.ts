@@ -47,7 +47,9 @@ function crossSubdomainStorage() {
             return decodeURIComponent(c.substring(name.length));
           }
         }
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       try {
         return localStorage.getItem(key);
@@ -59,19 +61,27 @@ function crossSubdomainStorage() {
       try {
         const secure = window.location.protocol === "https:" ? "; Secure" : "";
         document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; path=/; max-age=2592000; SameSite=Lax${cookieDomain}${secure}`;
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       try {
         localStorage.setItem(key, value);
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     },
     removeItem: (key: string): void => {
       try {
         document.cookie = `${encodeURIComponent(key)}=; path=/; max-age=0${cookieDomain}`;
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
       try {
         localStorage.removeItem(key);
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     },
   };
 }

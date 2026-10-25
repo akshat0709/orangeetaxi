@@ -12,7 +12,7 @@ Deno.serve(async (_req) => {
 
   const { data: toDispatch, error } = await supabase
     .from("bookings")
-    .select("id, reference, pickup_area, drop_area, user_id, scheduled_at")
+    .select("id, reference, pickup_area, drop_area, customer_id, driver_id, scheduled_at")
     .eq("status", "scheduled")
     .lte("scheduled_at", dispatchWindow.toISOString())
     .gte("scheduled_at", expireWindow.toISOString());
@@ -26,10 +26,15 @@ Deno.serve(async (_req) => {
 
   const dispatched: string[] = [];
   for (const booking of toDispatch || []) {
+    // A chauffeur who pre-accepted (claim_scheduled_booking) gets the ride directly; otherwise broadcast.
+    const update = booking.driver_id
+      ? { status: "accepted", accepted_at: new Date().toISOString() }
+      : { status: "searching" };
     const { error: updateError } = await supabase
       .from("bookings")
-      .update({ status: "searching" })
-      .eq("id", booking.id);
+      .update(update)
+      .eq("id", booking.id)
+      .eq("status", "scheduled");
 
     if (!updateError) {
       dispatched.push(booking.reference);

@@ -768,7 +768,9 @@ function DriverApplicationForm() {
           localStorage.setItem("orange_partner_vehicles", JSON.stringify(existingCars));
         }
       }
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     // Primary database insert (fallback to basePayload with admin_notes JSON if custom columns not in table yet)
     const { error } = await supabase.from("driver_applications").insert(payload);

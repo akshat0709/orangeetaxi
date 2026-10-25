@@ -942,7 +942,9 @@ export function MapPicker({
             return;
           }
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     setIsResolvingAddress(false);

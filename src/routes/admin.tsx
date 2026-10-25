@@ -63,11 +63,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  FleetManager,
-  DEFAULT_SAMPLE_FLEET,
-  registerApprovedPartnerCar,
-} from "@/components/fleet-manager";
+import { FleetManager, registerApprovedPartnerCar } from "@/components/fleet-manager";
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
@@ -439,7 +435,9 @@ function AdminPage() {
     let storedExtApps: any[] = [];
     try {
       storedExtApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
-    } catch (err) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     return appsList.map((app) => {
       let parsedNotes: any = {};
@@ -451,7 +449,9 @@ function AdminPage() {
         ) {
           parsedNotes = JSON.parse(app.admin_notes);
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       const ext = storedExtApps.find(
         (x: any) =>
@@ -465,7 +465,9 @@ function AdminPage() {
             localStorage.getItem(`orange_app_meta_${app.email.toLowerCase()}`) || "{}",
           );
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       return {
         ...app,
@@ -524,7 +526,9 @@ function AdminPage() {
           }
           if (!copy.vehicle_model && metaEncoded.model) copy.vehicle_model = metaEncoded.model;
           if (!copy.driver_type && metaEncoded.type) copy.driver_type = metaEncoded.type;
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
       return copy;
     });
@@ -863,13 +867,10 @@ function AdminPage() {
       // Sync driver table record if driver exists
       if (appObj) {
         try {
-          let { data: existingDr } = await supabase
-            .from("drivers")
-            .select("id, vehicle_number, vehicle_model, vehicle_code")
-            .eq("full_name", appObj.full_name)
-            .maybeSingle();
-
-          if (!existingDr && appObj.phone) {
+          // Match an existing record by phone only. Matching by full name (as before) could update and
+          // link a different chauffeur who happens to share the name.
+          let existingDr: { id: string } | null = null;
+          if (appObj.phone) {
             const { data: byPhone } = await supabase
               .from("drivers")
               .select("id, vehicle_number, vehicle_model, vehicle_code")
@@ -878,7 +879,7 @@ function AdminPage() {
             existingDr = byPhone;
           }
 
-          const plate = appObj.vehicle_number || (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
+          const plate = appObj.vehicle_number || "Unassigned";
           const model = appObj.vehicle_model || (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
           const photo = appObj.photo_url || "";
           const metaObj = {
@@ -888,25 +889,13 @@ function AdminPage() {
             type: isPartner ? "partner" : "company",
           };
 
-          // Look up the driver's Supabase auth user_id by their email via the profiles table
-          let driverAuthUserId: string | null = null;
-          if (email) {
-            const { data: profileRow } = await supabase
-              .from("profiles")
-              .select("id")
-              .eq("email", email)
-              .maybeSingle();
-            if (profileRow?.id) driverAuthUserId = profileRow.id;
-          }
-
           const updates: any = {
             vehicle_number: plate,
             vehicle_model: model,
           };
           if (appObj.phone) updates.phone = appObj.phone;
-          // Crucially: store the auth user_id so the driver app can find this row
-          if (driverAuthUserId) updates.user_id = driverAuthUserId;
 
+          let driverRowId: string | null = existingDr?.id ?? null;
           if (existingDr) {
             await supabase.from("drivers").update(updates).eq("id", existingDr.id);
             if (photo) {
@@ -928,15 +917,32 @@ function AdminPage() {
                 rating: 5,
                 total_rides: 0,
                 is_online: false,
-                // Store user_id so the driver app can find this record on login
-                ...(driverAuthUserId ? { user_id: driverAuthUserId } : {}),
               })
               .select()
               .maybeSingle();
-            if (arguments[0]?.error) console.error("Insert Driver Error:", arguments[0].error);
+            driverRowId = createdDr?.id ?? null;
 
             if (createdDr && photo) {
               localStorage.setItem(`orange_driver_photo_${createdDr.id}`, photo);
+            }
+          }
+
+          // Link the record to the applicant's login (by verified auth email) and grant the driver role.
+          // Previously this looked up profiles.email, which does not exist, so user_id was never set
+          // and approved chauffeurs could not sign in to the app.
+          if (driverRowId && email) {
+            const { data: link, error: linkErr } = await supabase.rpc(
+              "admin_link_driver" as never,
+              {
+                _driver_id: driverRowId,
+                _email: email,
+              } as never,
+            );
+            const linkRes = link as { success?: boolean; error?: string } | null;
+            if (linkErr || !linkRes?.success) {
+              toast.warning(
+                `Driver approved, but the login could not be linked yet: ${linkErr?.message || linkRes?.error || "unknown error"}. Ask the chauffeur to sign up with ${email}, then approve again.`,
+              );
             }
           }
 
@@ -977,7 +983,7 @@ function AdminPage() {
       resolvedDr?.vehicle_number ||
       (driver?.vehicle_number && driver.vehicle_number !== "Unassigned"
         ? driver.vehicle_number
-        : "KA 01 EV 4421");
+        : "");
 
     const { error } = await supabase
       .from("bookings")
@@ -3125,7 +3131,9 @@ function isCommissionDriver(d: Driver): boolean {
       ) {
         return true;
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     try {
       const extApps = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
@@ -3141,7 +3149,9 @@ function isCommissionDriver(d: Driver): boolean {
       ) {
         return true;
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
   return false;
 }
@@ -3170,18 +3180,10 @@ function DriverAnalyticsPanel({
   async function loadFleet() {
     try {
       const { data } = await supabase.from("fleet_vehicles").select("*").order("plate_number");
-      if (data && data.length > 0) {
-        setFleetVehicles(data);
-      } else {
-        const stored = localStorage.getItem("orange_fleet_vehicles");
-        if (stored) {
-          setFleetVehicles(JSON.parse(stored));
-        } else {
-          setFleetVehicles(DEFAULT_SAMPLE_FLEET);
-        }
-      }
+      // Real fleet only — the sample fleet is never shown as live data.
+      setFleetVehicles(data ?? []);
     } catch (e) {
-      setFleetVehicles(DEFAULT_SAMPLE_FLEET);
+      setFleetVehicles([]);
     }
   }
 
@@ -3210,7 +3212,9 @@ function DriverAnalyticsPanel({
           updated_at: new Date().toISOString(),
         })
         .eq("id", v.id);
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     const stored = localStorage.getItem("orange_fleet_vehicles");
     if (stored) {
@@ -3220,7 +3224,9 @@ function DriverAnalyticsPanel({
           item.id === v.id || item.plate_number === v.plate_number ? { ...item, ...v } : item,
         );
         localStorage.setItem("orange_fleet_vehicles", JSON.stringify(updated));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
   }
 
@@ -3355,7 +3361,9 @@ function DriverAnalyticsPanel({
           });
         }
         localStorage.setItem("orange_partner_vehicles", JSON.stringify(pCars));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       toast.success(`Partner EV updated to ${cleanPlate} (${cleanModel})!`);
       setEditingPartnerVehicleId(null);
@@ -3370,12 +3378,9 @@ function DriverAnalyticsPanel({
 
     if (isPartner) {
       if (!targetPlate || targetPlate === "Unassigned") {
-        const p = prompt(
-          `Enter Partner EV Registration Plate for ${driver.full_name}:`,
-          "KA 01 EV 4421",
-        );
-        if (p === null) return;
-        targetPlate = p.trim().toUpperCase() || "KA 01 EV 4421";
+        const p = prompt(`Enter Partner EV Registration Plate for ${driver.full_name}:`, "");
+        if (p === null || !p.trim()) return;
+        targetPlate = p.trim().toUpperCase();
       }
       if (!targetModel) targetModel = "Tata Nexon EV";
     } else {
@@ -3419,7 +3424,9 @@ function DriverAnalyticsPanel({
             });
             localStorage.setItem("orange_partner_vehicles", JSON.stringify(pCars));
           }
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
       toast.success(
         `${driver.full_name} is now classified as ${isPartner ? "Commission Based Driver (Partner)" : "Company Owned Driver (Fleet)"}!`,
@@ -3534,7 +3541,7 @@ function DriverAnalyticsPanel({
                     <span className="font-mono font-bold uppercase">
                       {d.vehicle_number && d.vehicle_number !== "Unassigned"
                         ? d.vehicle_number
-                        : "KA 01 EV 4421"}
+                        : "Plate not set"}
                     </span>
                   </span>
                 ) : (
@@ -3642,9 +3649,7 @@ function DriverAnalyticsPanel({
                   onClick={() => {
                     setEditingPartnerVehicleId(isEditingPartnerVehicle ? null : d.id);
                     setPartnerPlateInput(
-                      d.vehicle_number && d.vehicle_number !== "Unassigned"
-                        ? d.vehicle_number
-                        : "KA 01 EV 4421",
+                      d.vehicle_number && d.vehicle_number !== "Unassigned" ? d.vehicle_number : "",
                     );
                     setPartnerModelInput(d.vehicle_model || "Tata Nexon EV");
                   }}

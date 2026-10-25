@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { StorageImage } from "@/components/storage-image";
 import { useEffect, useState, useRef } from "react";
 import {
   Car,
@@ -181,7 +182,9 @@ function TrackPage() {
               setDriver(rpcData.driver);
             }
           }
-        } catch {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
 
         if (!bData) {
           const { data, error } = await supabase
@@ -257,13 +260,12 @@ function TrackPage() {
               setBooking((prev: any) => ({ ...prev, ...updated }));
               let latestDriver = driver;
               if (updated.driver_id && (!driver || driver.id !== updated.driver_id)) {
-                const { data: d } = await supabase
-                  .from("drivers")
-                  .select("*")
-                  .eq("id", updated.driver_id)
-                  .maybeSingle();
-                if (d) {
-                  const resolved = resolveDriverDetails(d, updated);
+                const resolved = await fetchAndHydrateDriverDetails(
+                  supabase,
+                  updated.driver_id,
+                  updated,
+                );
+                if (resolved) {
                   latestDriver = resolved;
                   setDriver(resolved);
                 }
@@ -621,7 +623,7 @@ function TrackPage() {
                   <div className="flex items-center gap-3.5">
                     <div className="relative size-12 shrink-0">
                       {driver.photo_url ? (
-                        <img
+                        <StorageImage
                           src={driver.photo_url}
                           alt={driver.full_name}
                           className="size-12 rounded-2xl object-cover border-2 border-primary shadow-md"

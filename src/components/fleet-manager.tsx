@@ -52,64 +52,6 @@ export interface FleetVehicle {
   updated_at?: string;
 }
 
-export const DEFAULT_SAMPLE_FLEET: FleetVehicle[] = [
-  {
-    id: "v-1001",
-    plate_number: "DL 01 EV 1001",
-    model: "Mahindra BE.6",
-    color: "Signature Orange",
-    battery_percentage: 96,
-    status: "in_bay",
-    assigned_driver_id: null,
-    assigned_at: null,
-    bay_number: "Bay A-1",
-  },
-  {
-    id: "v-1002",
-    plate_number: "DL 01 EV 1002",
-    model: "Mahindra BE.6",
-    color: "Signature Orange",
-    battery_percentage: 84,
-    status: "in_bay",
-    assigned_driver_id: null,
-    assigned_at: null,
-    bay_number: "Bay A-2",
-  },
-  {
-    id: "v-1003",
-    plate_number: "DL 01 EV 1003",
-    model: "Mahindra BE.6",
-    color: "Signature Orange",
-    battery_percentage: 100,
-    status: "in_bay",
-    assigned_driver_id: null,
-    assigned_at: null,
-    bay_number: "Charging Bay 1",
-  },
-  {
-    id: "v-1004",
-    plate_number: "DL 01 EV 1004",
-    model: "Mahindra BE.6",
-    color: "Signature Orange",
-    battery_percentage: 65,
-    status: "in_bay",
-    assigned_driver_id: null,
-    assigned_at: null,
-    bay_number: "Bay B-1",
-  },
-  {
-    id: "v-1005",
-    plate_number: "DL 01 EV 1005",
-    model: "Mahindra BE.6",
-    color: "Signature Orange",
-    battery_percentage: 24,
-    status: "in_bay",
-    assigned_driver_id: null,
-    assigned_at: null,
-    bay_number: "Charging Bay 2",
-  },
-];
-
 export interface PartnerVehicle {
   id: string;
   plate_number: string;
@@ -165,7 +107,9 @@ export async function registerApprovedPartnerCar(carData: {
         owner_phone: newCar.owner_phone,
         status: newCar.status,
       });
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     // Update localStorage
     const stored = localStorage.getItem("orange_partner_vehicles");
@@ -289,40 +233,6 @@ function BayDropdown({
   );
 }
 
-const SQL_CREATE_TABLE = `-- Run this in Supabase SQL Editor:
-
-CREATE TABLE IF NOT EXISTS public.fleet_vehicles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  plate_number text UNIQUE NOT NULL,
-  model text NOT NULL DEFAULT 'Mahindra BE.6',
-  color text DEFAULT 'Signature Orange',
-  battery_percentage integer NOT NULL DEFAULT 100 CHECK (battery_percentage >= 0 AND battery_percentage <= 100),
-  status text NOT NULL DEFAULT 'in_bay' CHECK (status IN ('in_bay', 'assigned', 'maintenance')),
-  assigned_driver_id uuid REFERENCES public.drivers(id) ON DELETE SET NULL,
-  assigned_at timestamptz,
-  bay_number text DEFAULT 'Bay 1',
-  notes text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.fleet_vehicles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all on fleet_vehicles"
-ON public.fleet_vehicles FOR ALL
-TO public
-USING (true)
-WITH CHECK (true);
-
-INSERT INTO public.fleet_vehicles (plate_number, model, color, battery_percentage, status, bay_number)
-VALUES
-  ('DL 01 EV 1001', 'Mahindra BE.6', 'Signature Orange', 96, 'in_bay', 'Bay A-1'),
-  ('DL 01 EV 1002', 'Mahindra BE.6', 'Signature Orange', 84, 'in_bay', 'Bay A-2'),
-  ('DL 01 EV 1003', 'Mahindra BE.6', 'Signature Orange', 100, 'in_bay', 'Charging Bay 1'),
-  ('DL 01 EV 1004', 'Mahindra BE.6', 'Signature Orange', 65, 'in_bay', 'Bay B-1'),
-  ('DL 01 EV 1005', 'Mahindra BE.6', 'Signature Orange', 24, 'in_bay', 'Charging Bay 2')
-ON CONFLICT (plate_number) DO NOTHING;`;
-
 interface FleetManagerProps {
   drivers: any[];
   onRefresh: () => void;
@@ -378,36 +288,19 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         .order("created_at", { ascending: true });
 
       if (error || !data) {
+        // The table is missing or unreachable. Show nothing rather than sample vehicles as if they
+        // were real; local edits are kept in this browser only (see banner).
         setIsUsingFallback(true);
         const stored = localStorage.getItem("orange_fleet_vehicles");
-        if (stored) {
-          setVehicles(JSON.parse(stored));
-        } else {
-          setVehicles(DEFAULT_SAMPLE_FLEET);
-          localStorage.setItem("orange_fleet_vehicles", JSON.stringify(DEFAULT_SAMPLE_FLEET));
-        }
+        setVehicles(stored ? JSON.parse(stored) : []);
       } else {
         setIsUsingFallback(false);
-        if (data.length === 0) {
-          for (const v of DEFAULT_SAMPLE_FLEET) {
-            await supabase.from("fleet_vehicles").insert({
-              plate_number: v.plate_number,
-              model: v.model,
-              color: v.color,
-              battery_percentage: v.battery_percentage,
-              status: v.status,
-              bay_number: v.bay_number,
-            });
-          }
-          const { data: refreshed } = await supabase.from("fleet_vehicles").select("*");
-          setVehicles((refreshed as any[]) || DEFAULT_SAMPLE_FLEET);
-        } else {
-          setVehicles(data as any[]);
-        }
+        // An empty fleet stays empty: sample vehicles were previously inserted into the live table.
+        setVehicles(data as any[]);
       }
-    } catch (e) {
+    } catch {
       setIsUsingFallback(true);
-      setVehicles(DEFAULT_SAMPLE_FLEET);
+      setVehicles([]);
     }
     setLoading(false);
   }
@@ -426,7 +319,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         setPartnerVehicles(cleaned);
         return;
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     const stored = localStorage.getItem("orange_partner_vehicles");
     if (stored) {
@@ -488,7 +383,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     if (!confirm(`Are you sure you want to remove partner vehicle ${plate}?`)) return;
     try {
       await supabase.from("partner_vehicles").delete().eq("id", id);
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
     const updated = partnerVehicles.filter((v) => v.id !== id);
     setPartnerVehicles(updated);
     localStorage.setItem("orange_partner_vehicles", JSON.stringify(updated));
@@ -780,24 +677,14 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="font-bold">Operating on Local Fleet Storage</p>
+              <p className="font-bold">Fleet database unavailable</p>
               <p className="text-[11px] opacity-80">
-                To sync fleet vehicles to your permanent cloud database, run the SQL setup script in
-                your Supabase SQL Editor.
+                The fleet_vehicles table could not be loaded. It is created (admin-only) by
+                migration 20261025130000_audit_remediation_2.sql — apply it with supabase db push.
+                Until then, changes here are kept only in this browser.
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0 h-8 gap-1.5 border-amber-300 bg-white text-xs text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-            onClick={() => {
-              navigator.clipboard.writeText(SQL_CREATE_TABLE);
-              toast.success("SQL script copied! Paste and run in Supabase SQL Editor.");
-            }}
-          >
-            <Copy className="size-3.5" /> Copy SQL Setup
-          </Button>
         </div>
       )}
 

@@ -115,7 +115,9 @@ function LoginPage() {
         } else {
           setLockoutRemaining(0);
         }
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     };
     checkLockout();
     const interval = setInterval(checkLockout, 1000);
@@ -138,7 +140,9 @@ function LoginPage() {
         } else {
           setOtpLockoutRemaining(0);
         }
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     };
     checkOtpLockout();
     const interval = setInterval(checkOtpLockout, 1000);
@@ -163,7 +167,9 @@ function LoginPage() {
       try {
         const stored = localStorage.getItem("@orange_reset_email");
         if (stored) setResetEmail(stored);
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     // 2. Fetch authenticated user email from recovery session
@@ -183,7 +189,9 @@ function LoginPage() {
           setResetEmail(session.user.email);
           return;
         }
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     };
 
     if (typeof window !== "undefined") {
@@ -203,7 +211,9 @@ function LoginPage() {
         const params = new URLSearchParams(window.location.search);
         const e = params.get("email");
         if (e) setResetEmail(decodeURIComponent(e));
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     const { data: authSub } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -226,7 +236,9 @@ function LoginPage() {
           if (!role) {
             try {
               role = localStorage.getItem("@orange_signup_role") || "customer";
-            } catch {}
+            } catch {
+              // best-effort: failure here is non-fatal and intentionally ignored
+            }
           }
           const dest = redirect ?? (role === "driver" ? "/drive#join" : "/book");
           navigate({ to: dest as any });
@@ -248,7 +260,9 @@ function LoginPage() {
             if (!role) {
               try {
                 role = localStorage.getItem("@orange_signup_role") || "customer";
-              } catch {}
+              } catch {
+                // best-effort: failure here is non-fatal and intentionally ignored
+              }
             }
             const dest = redirect ?? (role === "driver" ? "/drive#join" : "/book");
             navigate({ to: dest as any });
@@ -272,7 +286,9 @@ function LoginPage() {
         );
         return;
       }
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     setSubmitting(true);
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -287,7 +303,9 @@ function LoginPage() {
           severity: "low",
           metadata: { email: values.email.toLowerCase(), reason: error.message },
         });
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       if (error.message?.toLowerCase().includes("email not confirmed")) {
         setOtpEmail(values.email.trim());
@@ -346,7 +364,9 @@ function LoginPage() {
     try {
       localStorage.setItem(ATTEMPTS_KEY, "0");
       localStorage.removeItem(LOCKOUT_KEY);
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
     if (!data.user) {
       setSubmitting(false);
       return;
@@ -389,7 +409,9 @@ function LoginPage() {
             .limit(1)
             .maybeSingle();
           appData = app;
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
 
         let parsedNotes: any = {};
         try {
@@ -400,21 +422,21 @@ function LoginPage() {
           ) {
             parsedNotes = JSON.parse(appData.admin_notes);
           }
-        } catch (e) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
 
         const isPartner = Boolean(
           appData?.owns_vehicle ||
           appData?.driver_type === "partner" ||
           parsedNotes.driver_type === "partner",
         );
-        const plate =
-          appData?.vehicle_number ||
-          parsedNotes.vehicle_number ||
-          (isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001");
-        const model =
-          appData?.vehicle_model ||
-          parsedNotes.vehicle_model ||
-          (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
+        // Never invent a registration plate: passengers check the plate before boarding.
+        // (driver_applications is admin-only under RLS, so appData is normally null here and the
+        // old fallback wrote "KA 01 EV 4421" / "DL 01 EV 1001" onto real chauffeur records.)
+        const plate: string = appData?.vehicle_number || parsedNotes.vehicle_number || "";
+        const model: string =
+          appData?.vehicle_model || parsedNotes.vehicle_model || (isPartner ? "" : "Mahindra BE.6");
         const photo = appData?.photo_url || parsedNotes.photo_url || "";
         const metaObj = { photo, plate, model, type: isPartner ? "partner" : "company" };
 
@@ -479,7 +501,9 @@ function LoginPage() {
     const consentTimestamp = new Date().toISOString();
     try {
       localStorage.setItem("@orange_signup_role", values.role);
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -509,7 +533,9 @@ function LoginPage() {
           role: "customer",
           updated_at: consentTimestamp,
         });
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     if (data.user && !data.session) {
@@ -589,12 +615,16 @@ function LoginPage() {
       try {
         localStorage.removeItem(OTP_ATTEMPTS_KEY);
         localStorage.removeItem(OTP_LOCKOUT_KEY);
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       let signupRole = "customer";
       try {
         signupRole = localStorage.getItem("@orange_signup_role") || "customer";
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       toast.success("Email verified successfully! Welcome to Orange Taxi.");
       const destination = redirect ?? (signupRole === "driver" ? "/drive#join" : "/book");
@@ -649,7 +679,9 @@ function LoginPage() {
       const emailTrimmed = values.email.trim();
       try {
         localStorage.setItem("@orange_reset_email", emailTrimmed);
-      } catch {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
       setResetEmail(emailTrimmed);
 
       const redirectUrl =

@@ -301,7 +301,7 @@ test("Findings 9.1 & 9.2: KYC storage policy restricted and drive form uses stor
   );
   const driveCode = fs.readFileSync(path.join(rootDir, "src/routes/drive.tsx"), "utf-8");
   assert(
-    driveCode.includes('.from("driver_kyc")') && driveCode.includes('.upload('),
+    driveCode.includes('.from("driver_kyc")') && driveCode.includes(".upload("),
     "drive.tsx does not upload to driver_kyc storage",
   );
 });
@@ -443,7 +443,7 @@ test("VULN-OTP-01: Driver App ActiveRideSheet requires verify_ride_otp RPC and l
 });
 
 // 27. Verify VULN-FIN-01 Client: Rider App eliminates direct profile wallet updates
-test("VULN-FIN-01 Client: Rider App ProfileModal and WalletModal invoke RPC without direct profile balance update fallback", () => {
+test("VULN-FIN-01 Client: Rider App never credits or edits the wallet itself; top-ups settle server-side", () => {
   const profileModal = fs.readFileSync(
     path.join(rootDir, "../orange-taxi-rider/src/components/ProfileModal.tsx"),
     "utf-8",
@@ -460,8 +460,28 @@ test("VULN-FIN-01 Client: Rider App ProfileModal and WalletModal invoke RPC with
     !walletModal.includes(".update({ wallet_balance"),
     "WalletModal still directly modifies wallet_balance",
   );
-  assert(profileModal.includes("top_up_wallet"), "ProfileModal does not invoke top_up_wallet RPC");
-  assert(walletModal.includes("top_up_wallet"), "WalletModal does not invoke top_up_wallet RPC");
+  // Top-ups are paid on the website and credited server-side (credit_wallet_topup, service role only).
+  // The apps must not credit wallets themselves (the old top_up_wallet call used a made-up payment id).
+  for (const [name, code] of [
+    ["ProfileModal", profileModal],
+    ["WalletModal", walletModal],
+  ]) {
+    assert(
+      !/\.rpc\(\s*["']top_up_wallet["']/.test(code),
+      `${name} still credits the wallet from the client`,
+    );
+    assert(code.includes("WEB_BASE_URL"), `${name} does not send top-ups to the website checkout`);
+  }
+  const migration = fs.readFileSync(
+    path.join(rootDir, "supabase/migrations/20261025130000_audit_remediation_2.sql"),
+    "utf-8",
+  );
+  assert(
+    migration.includes(
+      "GRANT EXECUTE ON FUNCTION public.credit_wallet_topup(uuid, numeric, text, text) TO service_role",
+    ),
+    "credit_wallet_topup is not restricted to the service role",
+  );
 });
 
 // 28. Verify VULN-PAY-01: Database trigger blocks unverified ride status transitions

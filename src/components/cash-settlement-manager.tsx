@@ -37,24 +37,6 @@ export interface CashSettlement {
   created_at: string;
 }
 
-const SQL_CREATE_SETTLEMENTS_TABLE = `-- Run this in Supabase SQL Editor:
-CREATE TABLE IF NOT EXISTS public.driver_cash_settlements (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  driver_id uuid REFERENCES public.drivers(id) ON DELETE CASCADE NOT NULL,
-  amount numeric NOT NULL CHECK (amount > 0),
-  collected_by text DEFAULT 'Admin',
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.driver_cash_settlements ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all on driver_cash_settlements"
-ON public.driver_cash_settlements FOR ALL
-TO public
-USING (true)
-WITH CHECK (true);`;
-
 interface CashSettlementManagerProps {
   drivers: any[];
   bookings: any[];
@@ -110,7 +92,9 @@ export function CashSettlementManager({
       if (stored) {
         try {
           setSettlements(JSON.parse(stored));
-        } catch (err) {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
     }
     setLoading(false);
@@ -298,24 +282,14 @@ export function CashSettlementManager({
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="font-bold">Operating on Local Settlements Ledger</p>
+              <p className="font-bold">Settlements database unavailable</p>
               <p className="text-[11px] opacity-80">
-                To sync cash collections to your permanent cloud database, execute the table setup
-                script in Supabase.
+                driver_cash_settlements could not be loaded (it is admin-only; see migration
+                20261022_comprehensive_security_remediation.sql). Entries made now are kept only in
+                this browser and are not a record of cash collected.
               </p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0 h-8 gap-1.5 border-amber-300 bg-white text-xs text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
-            onClick={() => {
-              navigator.clipboard.writeText(SQL_CREATE_SETTLEMENTS_TABLE);
-              toast.success("SQL script copied! Paste and run in Supabase SQL Editor.");
-            }}
-          >
-            <Copy className="size-3.5" /> Copy SQL Setup
-          </Button>
         </div>
       )}
 

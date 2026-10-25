@@ -114,6 +114,9 @@ export function SiteHeader() {
                     <Link to="/profile">📅 My Rides & Schedule</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/wallet">👛 Orange Wallet</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/book">🚖 Book a Ride</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

@@ -87,47 +87,16 @@ export function RatingModal({
         .eq("id", booking.id);
 
       if (bookingErr) {
+        // Previously only logged, and the UI still said "Thank you for your rating!".
         console.warn("Could not save rating in bookings table:", bookingErr);
+        toast.error("Could not save your rating. Please try again.");
+        setSubmitting(false);
+        return;
       }
 
-      // 2. Recalculate driver average rating and total rides
+      // Driver rating and trip totals are recomputed by the handle_booking_driver_stats trigger.
+      // The old client-side write to `drivers` was blocked by RLS for passengers.
       const driverId = driver?.id || booking.driver_id;
-      if (driverId) {
-        try {
-          const [{ data: ratedBookings }, { count: completedCount }] = await Promise.all([
-            supabase
-              .from("bookings")
-              .select("id, rating")
-              .eq("driver_id", driverId)
-              .not("rating", "is", null),
-            supabase
-              .from("bookings")
-              .select("id", { count: "exact", head: true })
-              .eq("driver_id", driverId)
-              .eq("status", "completed"),
-          ]);
-
-          const otherRatings = (ratedBookings || [])
-            .filter((b: any) => b.id !== booking.id && b.rating)
-            .map((b: any) => Number(b.rating));
-          otherRatings.push(rating);
-
-          const newAvg = Number(
-            (otherRatings.reduce((a, b) => a + b, 0) / otherRatings.length).toFixed(1),
-          );
-          const totalRides = Math.max(completedCount || 0, otherRatings.length, 1);
-
-          await supabase
-            .from("drivers")
-            .update({
-              rating: newAvg,
-              total_rides: totalRides,
-            })
-            .eq("id", driverId);
-        } catch (e) {
-          console.warn("Driver rating aggregate notice:", e);
-        }
-      }
 
       // Store in local storage as well for audit persistence
       try {
@@ -144,7 +113,9 @@ export function RatingModal({
           created_at: new Date().toISOString(),
         });
         localStorage.setItem("orange_driver_reviews", JSON.stringify(storedReviews));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       setIsSuccess(true);
       toast.success("Thank you for your rating!");

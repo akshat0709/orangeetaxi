@@ -45,7 +45,9 @@ export function getStoredCompanyProfile(): CompanyGSTProfile {
       }
       return { ...DEFAULT_COMPANY_PROFILE, ...parsed };
     }
-  } catch (e) {}
+  } catch {
+    // best-effort: failure here is non-fatal and intentionally ignored
+  }
   return DEFAULT_COMPANY_PROFILE;
 }
 
@@ -55,7 +57,9 @@ export function saveStoredCompanyProfile(profile: Partial<CompanyGSTProfile>) {
     const current = getStoredCompanyProfile();
     const updated = { ...current, ...profile };
     localStorage.setItem("orange_company_gst_profile", JSON.stringify(updated));
-  } catch (e) {}
+  } catch {
+    // best-effort: failure here is non-fatal and intentionally ignored
+  }
 }
 
 /**

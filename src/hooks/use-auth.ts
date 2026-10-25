@@ -77,7 +77,9 @@ function initGlobalAuth() {
       } else {
         localStorage.removeItem("orange_auth_cache");
       }
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     notify();
   });
@@ -107,7 +109,9 @@ function initGlobalAuth() {
       } else {
         localStorage.removeItem("orange_auth_cache");
       }
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     notify();
   });
@@ -134,7 +138,9 @@ export function useAuth(): AuthState {
     globalLoading = false;
     try {
       localStorage.removeItem("orange_auth_cache");
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
     notify();
     await supabase.auth.signOut();
   };

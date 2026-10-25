@@ -27,7 +27,9 @@ export function saveRideVehiclePlate(bookingId?: string, plate?: string, referen
     if (bookingId) registry[bookingId] = cleanPlate;
     if (reference) registry[reference] = cleanPlate;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(registry));
-  } catch (e) {}
+  } catch {
+    // best-effort: failure here is non-fatal and intentionally ignored
+  }
 }
 
 /**
@@ -111,7 +113,9 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
     try {
       const meta = JSON.parse(driver.vehicle_code.replace("ORANGE_META:", ""));
       if (meta.plate && meta.plate !== "Unassigned") return meta.plate.trim().toUpperCase();
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 
   // 6. Check partner vehicles registry from localStorage
@@ -129,7 +133,9 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
           (driver.id && pv.driver_id === driver.id),
       );
       if (matchedCar?.plate_number) return matchedCar.plate_number.trim().toUpperCase();
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     try {
       const storedExt = JSON.parse(localStorage.getItem("orange_extended_apps") || "[]");
@@ -144,16 +150,13 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
             app.full_name.toLowerCase() === driver.full_name.toLowerCase()),
       );
       if (matchedApp?.vehicle_number) return matchedApp.vehicle_number.trim().toUpperCase();
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 
-  // 7. For active rides if driver is assigned: partner EV plate or company EV plate baseline
-  if (driver) {
-    const isPartner = driver.driver_type === "partner" || driver.owns_vehicle;
-    return isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001";
-  }
-
-  return "DL 01 EV 1001";
+  // 7. No real plate on record. Never invent one: passengers use the plate to identify the car.
+  return "";
 }
 
 /**
@@ -182,7 +185,9 @@ export function resolveDriverDetails(driver: any, booking?: any) {
       if (!vehicleNumber && meta.plate && meta.plate !== "Unassigned") vehicleNumber = meta.plate;
       if (!vehicleModel && meta.model) vehicleModel = meta.model;
       if (!driverType && meta.type) driverType = meta.type;
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 
   // 2. Check booking vehicle_name for plate
@@ -245,7 +250,9 @@ export function resolveDriverDetails(driver: any, booking?: any) {
         if (!driverType)
           driverType = matchedApp.driver_type || (matchedApp.owns_vehicle ? "partner" : "company");
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     // Partner vehicles
     try {
@@ -265,7 +272,9 @@ export function resolveDriverDetails(driver: any, booking?: any) {
         if (!vehicleModel) vehicleModel = matchedCar.model;
         if (!driverType) driverType = "partner";
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     // Wildcard photo check
     if (!photoUrl) {
@@ -280,14 +289,16 @@ export function resolveDriverDetails(driver: any, booking?: any) {
             }
           }
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
   }
 
   // 5. Fallback if still unassigned
   const isPartner = driverType === "partner";
   if (!vehicleNumber || vehicleNumber === "Unassigned") {
-    vehicleNumber = isPartner ? "KA 01 EV 4421" : "DL 01 EV 1001";
+    vehicleNumber = ""; // unknown — shown as "Plate pending", never a made-up registration
   }
   if (!vehicleModel) {
     vehicleModel = isPartner ? "Tata Nexon EV" : "Mahindra BE.6";
@@ -349,7 +360,9 @@ export async function lockBookingVehicle(
           vehicle_name: updatedVehicleName,
         })
         .eq("id", bookingId);
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 }
 
@@ -364,13 +377,24 @@ export async function fetchAndHydrateDriverDetails(
 ) {
   if (!driverId) return null;
   try {
-    const { data: d, error } = await supabaseClient
-      .from("drivers")
-      .select("*")
-      .eq("id", driverId)
-      .maybeSingle();
-
-    if (!d || error) return null;
+    // Passengers read their chauffeur through get_assigned_driver (no KYC fields). Fall back to the
+    // table for admins/drivers and until the RPC is deployed.
+    let d: any = null;
+    if (booking?.id) {
+      const { data: rows, error: rpcErr } = await supabaseClient.rpc("get_assigned_driver", {
+        _booking_id: booking.id,
+      });
+      if (!rpcErr && Array.isArray(rows) && rows.length > 0) d = rows[0];
+    }
+    if (!d) {
+      const { data: row, error } = await supabaseClient
+        .from("drivers")
+        .select("*")
+        .eq("id", driverId)
+        .maybeSingle();
+      if (!row || error) return null;
+      d = row;
+    }
 
     let phone = d.phone;
     if ((!phone || phone.trim() === "") && d.user_id) {
@@ -383,7 +407,9 @@ export async function fetchAndHydrateDriverDetails(
         if (prof?.phone && prof.phone.trim()) {
           phone = prof.phone.trim();
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     // Decode existing vehicle_code if encoded with ORANGE_META
@@ -395,7 +421,9 @@ export async function fetchAndHydrateDriverDetails(
     ) {
       try {
         metaEncoded = JSON.parse(d.vehicle_code.replace("ORANGE_META:", ""));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     // Resilient lookup in driver_applications without fragile .or() syntax
@@ -445,7 +473,9 @@ export async function fetchAndHydrateDriverDetails(
       ) {
         parsedNotes = JSON.parse(appData.admin_notes);
       }
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     let photoUrl =
       d.photo_url || metaEncoded.photo || parsedNotes.photo_url || appData?.photo_url || "";

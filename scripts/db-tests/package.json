@@ -1,0 +1,12 @@
+{
+  "name": "orange-taxi-db-tests",
+  "private": true,
+  "type": "module",
+  "description": "Replays supabase/migrations in PGlite (WASM Postgres) and checks RLS / trigger / RPC behaviour as anon, rider and driver.",
+  "scripts": {
+    "test": "node --test db.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11"
+  }
+}

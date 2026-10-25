@@ -45,6 +45,14 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 import { generateInvoiceHtml, SendInvoicePayload } from "./lib/send-invoice-email";
+import {
+  createWalletTopupOrder,
+  processRazorpayWebhookEvent,
+  safeEqualHex,
+  settleRazorpayPayment,
+  settleWalletTopup,
+  type SettlementConfig,
+} from "./lib/razorpay-settlement";
 
 const invoiceRateLimits = new Map<string, { count: number; resetAt: number }>();
 
@@ -106,27 +114,35 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
         },
       });
 
-      if (userRes.status === 401 || userRes.status === 403) {
+      // Fail closed: any non-OK answer (or no user id) means the caller is not authenticated.
+      // Previously only 401/403 were rejected and network errors fell back to "token present",
+      // which let any string send company-branded email to any address.
+      if (!userRes.ok) {
         return new Response(
           JSON.stringify({ error: "Unauthorized: Session invalid or expired." }),
           { status: 401, headers: { "content-type": "application/json" } },
         );
       }
-
-      if (userRes.ok) {
-        const userData = (await userRes.json()) as any;
-        const callerId = userData?.id || "authenticated_user";
-        if (!checkInvoiceRateLimit(callerId, 5, 60000)) {
-          return new Response(
-            JSON.stringify({
-              error: "Rate limit exceeded. Maximum 5 invoice dispatches per minute.",
-            }),
-            { status: 429, headers: { "content-type": "application/json" } },
-          );
-        }
+      const userData = (await userRes.json()) as { id?: string };
+      if (!userData?.id) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: Session invalid or expired." }),
+          { status: 401, headers: { "content-type": "application/json" } },
+        );
       }
-    } catch (e) {
-      // In sandbox/offline testing, fallback to token presence
+      if (!checkInvoiceRateLimit(userData.id, 5, 60000)) {
+        return new Response(
+          JSON.stringify({
+            error: "Rate limit exceeded. Maximum 5 invoice dispatches per minute.",
+          }),
+          { status: 429, headers: { "content-type": "application/json" } },
+        );
+      }
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Authentication service unavailable. Please try again." }),
+        { status: 503, headers: { "content-type": "application/json" } },
+      );
     }
 
     const body = (await request.json()) as SendInvoicePayload;
@@ -234,11 +250,118 @@ async function verifyHmacSha256(
     const signHex = Array.from(new Uint8Array(signBuffer))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
-    return signHex.toLowerCase() === signature.toLowerCase();
+    return safeEqualHex(signHex, signature);
   } catch (e) {
     console.error("Crypto verification error:", e);
     return false;
   }
+}
+
+async function hmacSha256Hex(message: string, secret: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function readEnv(env: unknown, name: string): string | undefined {
+  const fromBinding = (env as Record<string, unknown> | undefined)?.[name];
+  if (typeof fromBinding === "string" && fromBinding) return fromBinding;
+  return typeof process !== "undefined" ? process.env?.[name] : undefined;
+}
+
+function settlementConfig(env: unknown): SettlementConfig {
+  return {
+    supabaseUrl: readEnv(env, "VITE_SUPABASE_URL") || "https://ndaollycrvlawemhwvky.supabase.co",
+    supabaseAnonKey:
+      readEnv(env, "VITE_SUPABASE_PUBLISHABLE_KEY") ||
+      "sb_publishable_baABGadHhpQI6LtkZcyI0g_HJX39Y_d",
+    serviceRoleKey: readEnv(env, "SUPABASE_SERVICE_ROLE_KEY"),
+    razorpayKeyId: readEnv(env, "RAZORPAY_KEY_ID") || readEnv(env, "VITE_RAZORPAY_KEY_ID"),
+    razorpayKeySecret: readEnv(env, "RAZORPAY_KEY_SECRET"),
+  };
+}
+
+const settlementDeps = {
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init),
+  hmacSha256Hex,
+};
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
+}
+
+async function readJsonBody(request: Request): Promise<Record<string, unknown> | null> {
+  try {
+    const body = (await request.json()) as unknown;
+    return body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function str(v: unknown): string | undefined {
+  return typeof v === "string" ? v : undefined;
+}
+
+function bearer(request: Request): string | undefined {
+  const h = request.headers.get("authorization") || "";
+  return h.startsWith("Bearer ") ? h.slice(7).trim() : undefined;
+}
+
+async function handleSettleRazorpayPayment(request: Request, env: unknown): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { settled: false, error: "Invalid JSON body" });
+  const result = await settleRazorpayPayment(
+    {
+      bookingId: str(body["bookingId"]),
+      razorpay_order_id: str(body["razorpay_order_id"]),
+      razorpay_payment_id: str(body["razorpay_payment_id"]),
+      razorpay_signature: str(body["razorpay_signature"]),
+      accessToken: bearer(request),
+    },
+    settlementConfig(env),
+    settlementDeps,
+  );
+  return jsonResponse(result.status, result.body);
+}
+
+async function handleWalletTopupOrder(request: Request, env: unknown): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { error: "Invalid JSON body" });
+  const result = await createWalletTopupOrder(
+    { accessToken: bearer(request), amount: body["amount"] },
+    settlementConfig(env),
+    settlementDeps,
+  );
+  return jsonResponse(result.status, result.body);
+}
+
+async function handleWalletTopupSettle(request: Request, env: unknown): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { settled: false, error: "Invalid JSON body" });
+  const result = await settleWalletTopup(
+    {
+      razorpay_order_id: str(body["razorpay_order_id"]),
+      razorpay_payment_id: str(body["razorpay_payment_id"]),
+      razorpay_signature: str(body["razorpay_signature"]),
+      accessToken: bearer(request),
+    },
+    settlementConfig(env),
+    settlementDeps,
+  );
+  return jsonResponse(result.status, result.body);
 }
 
 async function handleCreateRazorpayOrder(request: Request, env: unknown): Promise<Response> {
@@ -247,7 +370,14 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       amount?: number;
       distanceKm?: number;
       vehicleCode?: string;
+      bookingId?: string;
     };
+    // Tag mid-ride payments with the booking so the verified webhook can settle them too.
+    const bookingNotes =
+      typeof body.bookingId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.bookingId)
+        ? { kind: "booking", booking_id: body.bookingId }
+        : undefined;
 
     const dist = Math.max(0, Number(body.distanceKm) || 0);
     // Authoritative calculation: Base ₹99 + ₹18/km, minimum ₹149, + 5% GST
@@ -283,6 +413,7 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
             amount: amountInPaise,
             currency: "INR",
             receipt: `rcpt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            ...(bookingNotes ? { notes: bookingNotes } : {}),
           }),
         });
 
@@ -304,18 +435,13 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       }
     }
 
-    // Standard client checkout fallback when keySecret is not provisioned or order creation fails
-    // Do NOT return a fake/synthetic orderId because Razorpay's checkout SDK verifies it against its servers
-    return new Response(
-      JSON.stringify({
-        success: true,
-        amount: amountInPaise,
-        currency: "INR",
-        keyId,
-        mock: true,
-      }),
-      { status: 200, headers: { "content-type": "application/json" } },
-    );
+    // No order, no checkout: an order-less checkout can never be verified or settled, so the
+    // customer could be charged for a ride that is never booked.
+    return jsonResponse(503, {
+      success: false,
+      error:
+        "Online payments are temporarily unavailable. Please choose cash or try again shortly.",
+    });
   } catch (err: any) {
     return new Response(
       JSON.stringify({ error: err.message || "Failed to initialize payment order" }),
@@ -348,7 +474,8 @@ async function handleVerifyRazorpayPayment(request: Request, env: unknown): Prom
       return new Response(
         JSON.stringify({
           verified: false,
-          error: "Payment verification unavailable: RAZORPAY_KEY_SECRET is not configured on the server",
+          error:
+            "Payment verification unavailable: RAZORPAY_KEY_SECRET is not configured on the server",
         }),
         { status: 503, headers: { "content-type": "application/json" } },
       );
@@ -396,32 +523,18 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
       (env as any)?.RAZORPAY_WEBHOOK_SECRET ||
       (typeof process !== "undefined" ? process.env?.["RAZORPAY_WEBHOOK_SECRET"] : undefined);
 
-    if (webhookSecret) {
-      if (!signature) {
-        return new Response(JSON.stringify({ error: "Missing x-razorpay-signature header" }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      }
-      const isValid = await verifyHmacSha256(rawBody, webhookSecret, signature);
-      if (!isValid) {
-        return new Response(JSON.stringify({ error: "Invalid webhook signature" }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      }
-    } else {
-      const isProd =
-        (env as any)?.NODE_ENV === "production" ||
-        (typeof process !== "undefined" && process.env?.["NODE_ENV"] === "production");
-      if (isProd) {
-        return new Response(
-          JSON.stringify({
-            error: "Webhook verification unavailable: RAZORPAY_WEBHOOK_SECRET not configured",
-          }),
-          { status: 500, headers: { "content-type": "application/json" } },
-        );
-      }
+    // The webhook credits wallets and settles bookings, so it must never run unverified
+    // (previously a missing secret was tolerated outside NODE_ENV=production).
+    if (!webhookSecret) {
+      return jsonResponse(503, {
+        error: "Webhook verification unavailable: RAZORPAY_WEBHOOK_SECRET not configured",
+      });
+    }
+    if (!signature) {
+      return jsonResponse(400, { error: "Missing x-razorpay-signature header" });
+    }
+    if (!(await verifyHmacSha256(rawBody, webhookSecret, signature))) {
+      return jsonResponse(400, { error: "Invalid webhook signature" });
     }
 
     let eventData: any;
@@ -451,10 +564,17 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
     }
 
     const eventType = eventData?.event;
-    return new Response(JSON.stringify({ success: true, event: eventType }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
+    const outcome = await processRazorpayWebhookEvent(
+      eventData,
+      settlementConfig(env),
+      settlementDeps,
+    );
+    if (outcome.status >= 500) {
+      // Let Razorpay retry transient failures; drop the dedupe mark so the retry is processed.
+      if (eventId) processedWebhookEvents.delete(eventId);
+      return jsonResponse(outcome.status, { error: outcome.body.error });
+    }
+    return jsonResponse(200, { success: true, event: eventType, settled: outcome.body.settled });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message || "Webhook processing error" }), {
       status: 500,
@@ -684,6 +804,19 @@ export default {
       if (url.pathname === "/api/verify-razorpay-payment" && request.method === "POST") {
         const verifyRes = await handleVerifyRazorpayPayment(request, env);
         return applySecurityHeaders(verifyRes);
+      }
+
+      if (url.pathname === "/api/settle-razorpay-payment" && request.method === "POST") {
+        const settleRes = await handleSettleRazorpayPayment(request, env);
+        return applySecurityHeaders(settleRes);
+      }
+
+      if (url.pathname === "/api/wallet-topup/order" && request.method === "POST") {
+        return applySecurityHeaders(await handleWalletTopupOrder(request, env));
+      }
+
+      if (url.pathname === "/api/wallet-topup/settle" && request.method === "POST") {
+        return applySecurityHeaders(await handleWalletTopupSettle(request, env));
       }
 
       if (url.pathname === "/api/razorpay-webhook" && request.method === "POST") {

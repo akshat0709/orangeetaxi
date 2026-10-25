@@ -1,4 +1,5 @@
 /// <reference types="google.maps" />
+import { StorageImage } from "@/components/storage-image";
 import React, { useState, useEffect, useMemo } from "react";
 import { APIProvider, Map as GoogleMap, Marker, useMap } from "@vis.gl/react-google-maps";
 import {
@@ -485,7 +486,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                     {/* Driver Avatar */}
                     <div className="relative size-10 shrink-0 rounded-full bg-muted flex items-center justify-center font-bold text-xs border border-border overflow-hidden">
                       {d.photo_url ? (
-                        <img
+                        <StorageImage
                           src={d.photo_url}
                           alt={d.full_name}
                           className="size-full object-cover"
@@ -629,7 +630,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                   <div className="flex items-center gap-3">
                     <div className="relative size-12 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center font-bold text-base text-primary overflow-hidden shrink-0">
                       {selectedDriver.photo_url ? (
-                        <img
+                        <StorageImage
                           src={selectedDriver.photo_url}
                           alt={selectedDriver.full_name}
                           className="size-full object-cover"

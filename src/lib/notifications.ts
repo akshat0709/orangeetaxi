@@ -89,7 +89,9 @@ export function playNotificationChime() {
     gain2.connect(ctx.destination);
     osc2.start(now + 0.12);
     osc2.stop(now + 0.6);
-  } catch (e) {}
+  } catch {
+    // best-effort: failure here is non-fatal and intentionally ignored
+  }
 }
 
 /**
@@ -99,7 +101,9 @@ export function triggerHapticVibration(pattern: number[] = [250, 100, 250, 100, 
   if (typeof window !== "undefined" && typeof navigator !== "undefined" && navigator.vibrate) {
     try {
       navigator.vibrate(pattern);
-    } catch (e) {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
   }
 }
 

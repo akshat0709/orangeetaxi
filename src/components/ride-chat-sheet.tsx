@@ -126,7 +126,9 @@ export function RideChatSheet({
 
       try {
         localStorage.setItem(storageKey, JSON.stringify(merged));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       // Trigger chime and notification if any message is from the other party
       const fromOther = brandNew.filter((m) => m.sender !== currentUserTypeRef.current);
@@ -214,7 +216,9 @@ export function RideChatSheet({
             );
           });
         }
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
 
       // Broadcast history request so the other party sends any messages we might have missed
       if (channelRef.current) {
@@ -268,7 +272,9 @@ export function RideChatSheet({
 
       // 3. Supabase Realtime Broadcast (cross-device)
       channel = supabase.channel(`ride-chat-${bookingId}`, {
-        config: { broadcast: { self: false, ack: true } },
+        // Private channel: Realtime Authorization (RLS on realtime.messages, migration
+        // 20261025130000) admits only this ride's passenger and chauffeur.
+        config: { private: true, broadcast: { self: false, ack: true } },
       });
 
       channel
@@ -308,7 +314,9 @@ export function RideChatSheet({
             else mergeIncomingMessages([event.data]);
           }
         };
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
     }
 
     setupAuthorizedChat();
@@ -319,7 +327,9 @@ export function RideChatSheet({
         try {
           const parsed: ChatMessage[] = JSON.parse(e.newValue);
           mergeIncomingMessages(parsed);
-        } catch {}
+        } catch {
+          // best-effort: failure here is non-fatal and intentionally ignored
+        }
       }
     };
     window.addEventListener("storage", handleStorageEvent);
@@ -364,7 +374,9 @@ export function RideChatSheet({
       const updated = [...prev, newMsg];
       try {
         localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch (e) {}
+      } catch {
+        // best-effort: failure here is non-fatal and intentionally ignored
+      }
       return updated;
     });
 
@@ -377,13 +389,17 @@ export function RideChatSheet({
           detail: { bookingId, message: newMsg },
         }),
       );
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     try {
       const bc = new BroadcastChannel(`orange_chat_bc_${bookingId}`);
       bc.postMessage(newMsg);
       bc.close();
-    } catch {}
+    } catch {
+      // best-effort: failure here is non-fatal and intentionally ignored
+    }
 
     // 3. Broadcast across Supabase Realtime channel to other devices
     if (channelRef.current) {
