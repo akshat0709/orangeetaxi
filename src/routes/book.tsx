@@ -1121,7 +1121,7 @@ function PassengerPage() {
             </div>
           )}
 
-          <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start min-w-0 max-w-full">
+          <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start min-w-0 max-w-full">
             <div className="min-w-0 max-w-full rounded-2xl border border-border bg-card p-4 sm:p-7 shadow-lg dark:border-white/15 dark:bg-card">
               {loading ? (
                 <div className="flex justify-center py-16">

@@ -414,7 +414,8 @@ function ProfilePage() {
       </div>
 
       <div className="section-shell py-10">
-        <div className="grid gap-10 lg:grid-cols-[340px_1fr] lg:items-start">
+        {/* minmax(0,1fr): long addresses must truncate instead of widening the column off-screen */}
+        <div className="grid gap-10 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
           <div className="space-y-6">
             {/* Profile Card */}
             <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
@@ -675,7 +676,7 @@ function ProfilePage() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="history">
+          <Tabs defaultValue="history" className="min-w-0">
             <TabsList className="w-full">
               <TabsTrigger value="history" className="flex-1">
                 Ride History

@@ -744,8 +744,35 @@ function applySecurityHeaders(res: Response): Response {
   });
 }
 
+// Nitro calls this entry without the Worker's env, and its process polyfill doesn't expose
+// Worker variables or secrets. Read them from Cloudflare's runtime module instead.
+let cachedWorkerEnv: Record<string, unknown> | null = null;
+async function workerEnv(passed: unknown): Promise<unknown> {
+  if (passed && typeof passed === "object" && Object.keys(passed as object).length > 0)
+    return passed;
+  if (cachedWorkerEnv) return cachedWorkerEnv;
+  try {
+    const mod = (await import(/* @vite-ignore */ "cloudflare:workers")) as {
+      env?: Record<string, unknown>;
+    };
+    if (mod?.env) {
+      cachedWorkerEnv = mod.env;
+      // Code that reads process.env directly (server functions, auth middleware) needs them too.
+      if (typeof process !== "undefined" && process.env) {
+        for (const [k, v] of Object.entries(mod.env)) {
+          if (typeof v === "string" && process.env[k] === undefined) process.env[k] = v;
+        }
+      }
+    }
+  } catch {
+    // Not running on Cloudflare (local Node dev): process.env is used instead.
+  }
+  return cachedWorkerEnv ?? passed;
+}
+
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request: Request, rawEnv: unknown, ctx: unknown) {
+    const env = await workerEnv(rawEnv);
     try {
       const url = new URL(request.url);
       const host = url.hostname.toLowerCase();
