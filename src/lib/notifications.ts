@@ -223,7 +223,7 @@ export function getStatusNotificationContent(
     case "cancelled":
       return {
         title: "Ride Cancelled ⚠️",
-        body: "Your booking has been cancelled. Zero cancellation fee applied.",
+        body: "Your booking has been cancelled.",
         tag: `ride-cancelled-${reference || "active"}`,
       };
     default:

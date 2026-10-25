@@ -48,6 +48,7 @@ import {
   AlertCircle,
   Activity,
   Plane,
+  IndianRupee,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ import { FleetManager, registerApprovedPartnerCar } from "@/components/fleet-man
 import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
+import { PricingManager } from "@/components/pricing-manager";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
 import { LiveDriversMap } from "@/components/live-drivers-map";
 import {
@@ -1107,6 +1109,18 @@ function AdminPage() {
       iconBg: "bg-indigo-500/10 dark:bg-indigo-500/20",
     },
     {
+      id: "pricing",
+      title: "Pricing & Fees",
+      category: "finance",
+      description:
+        "Vehicle fares per km, platform fee, GST, surge, cancellation and waiting charges.",
+      icon: IndianRupee,
+      badgeColor: "bg-primary/10 text-primary border-primary/20",
+      badgeText: "Fares",
+      iconColor: "text-primary",
+      iconBg: "bg-primary/10",
+    },
+    {
       id: "gst",
       title: "GST & Corporate Invoicing",
       category: "finance",
@@ -1151,7 +1165,7 @@ function AdminPage() {
       id: "finance",
       title: "Financials & Enterprise Accounts",
       icon: BadgeIndianRupee,
-      moduleIds: ["commissions", "gst", "enquiries"],
+      moduleIds: ["pricing", "commissions", "gst", "enquiries"],
     },
   ];
 
@@ -1716,6 +1730,7 @@ function AdminPage() {
                     <SelectItem value="fleet">🅿️ Fleet & Bays</SelectItem>
                     <SelectItem value="cash">💵 Cash Settlements</SelectItem>
                     <SelectItem value="commissions">📊 Commission Ledger</SelectItem>
+                    <SelectItem value="pricing">💰 Pricing & Fees</SelectItem>
                     <SelectItem value="gst">🧾 GST & Invoicing</SelectItem>
                     <SelectItem value="drivers">👤 Chauffeur Directory</SelectItem>
                     <SelectItem value="applications">📋 Driver Applications</SelectItem>
@@ -1808,6 +1823,9 @@ function AdminPage() {
                   </TabsTrigger>
                   <TabsTrigger value="commissions" className="gap-1.5 font-semibold">
                     <Percent className="size-3.5 text-blue-600" /> Commission Ledger
+                  </TabsTrigger>
+                  <TabsTrigger value="pricing" className="gap-1.5 font-semibold">
+                    <IndianRupee className="size-3.5 text-primary" /> Pricing
                   </TabsTrigger>
                   <TabsTrigger value="gst" className="gap-1.5 font-semibold">
                     <FileSpreadsheet className="size-3.5 text-amber-600" /> GST & Invoicing
@@ -2818,6 +2836,13 @@ function AdminPage() {
                         navigate({ to: "/admin", search: { tab }, replace: true });
                       }}
                     />
+                  </TabErrorBoundary>
+                </TabsContent>
+
+                {/* PRICING */}
+                <TabsContent value="pricing">
+                  <TabErrorBoundary tabName="Pricing" onRetry={loadAll}>
+                    <PricingManager />
                   </TabErrorBoundary>
                 </TabsContent>
 

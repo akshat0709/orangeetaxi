@@ -47,7 +47,7 @@ export const Route = createFileRoute("/business")({
       {
         property: "og:description",
         content:
-          "Transform corporate transit with our 100% Mahindra BE.6 electric SUV fleet. Dedicated account management and zero surge pricing.",
+          "Transform corporate transit with our 100% Mahindra BE.6 electric SUV fleet. Dedicated account management and monthly GST billing.",
       },
       { property: "og:type", content: "website" },
     ],
@@ -77,9 +77,9 @@ const ENTERPRISE_BENEFITS = [
   },
   {
     icon: Zap,
-    title: "Contracted Zero Surge Pricing",
+    title: "Transparent Per-Kilometre Pricing",
     description:
-      "Predictable travel costs without peak hour multipliers. Lock in transparent per-kilometer corporate fares for both scheduled journeys and airport transfers.",
+      "Clear base and per-kilometre fares for scheduled journeys and airport transfers, with every trip itemised on your monthly statement.",
   },
   {
     icon: Plane,
@@ -197,8 +197,8 @@ function BusinessPage() {
             </h1>
             <p className="mt-6 text-base sm:text-lg text-white/80 leading-relaxed max-w-2xl">
               Equip your executives, traveling teams, and visiting clients with premium Mahindra
-              BE.6 electric SUVs. Streamlined monthly GST billing, zero surge, and certified ESG
-              carbon offset reporting.
+              BE.6 electric SUVs. Streamlined monthly GST billing and certified ESG carbon offset
+              reporting.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a

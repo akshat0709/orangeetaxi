@@ -5,9 +5,34 @@ import path from "node:path";
 
 const here = path.dirname(new URL(import.meta.url).pathname);
 
-export async function makeDb(sqlFiles, { drift = "" } = {}) {
+/** The live project's schema dump, minus what PGlite can't load (extensions, empty search_path). */
+export function liveSchema() {
+  return (
+    fs
+      .readFileSync(path.join(here, "fixtures/live_schema_2026-10-25.sql"), "utf8")
+      .replace(/^CREATE EXTENSION.*$/gm, "")
+      .replace(/^SELECT pg_catalog\.set_config\('search_path'.*$/gm, "") +
+    "\nRESET ALL; -- the dump sets row_security = off for its session; psql runs the catch-up in a new one\nSET search_path = public, extensions;\n"
+  );
+}
+
+export async function makeDb(sqlFiles, { drift = "", base = [], singleTransaction = false } = {}) {
   const db = new PGlite();
   await db.exec(fs.readFileSync(path.join(here, "supabase_shim.sql"), "utf8"));
+  for (const sql of base) await db.exec(sql);
+  if (singleTransaction) {
+    // Mirrors `psql --single-transaction -v ON_ERROR_STOP=1 -f a -f b ...`: all files or none.
+    try {
+      await db.exec(
+        "BEGIN;\n" + sqlFiles.map((f) => fs.readFileSync(f, "utf8")).join("\n;\n") + "\nCOMMIT;",
+      );
+    } catch (e) {
+      await db.exec("ROLLBACK").catch(() => {});
+      db.failedFiles = [`single transaction: ${e.message}`];
+      console.log(`FAIL single transaction -> ${e.message}`);
+    }
+    return db;
+  }
   for (const f of sqlFiles) {
     try {
       await db.exec(

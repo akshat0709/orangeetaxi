@@ -308,7 +308,7 @@ function ProfilePage() {
   async function handleCancelScheduledRide(booking: any) {
     if (
       !confirm(
-        `Are you sure you want to cancel scheduled ride #${booking.reference}? (Zero cancellation fee)`,
+        `Are you sure you want to cancel scheduled ride #${booking.reference}? (No cancellation fee)`,
       )
     ) {
       return;
@@ -320,7 +320,7 @@ function ProfilePage() {
     if (error) {
       toast.error("Failed to cancel: " + error.message);
     } else {
-      toast.success("Scheduled ride cancelled. Zero cancellation fee applied.");
+      toast.success("Scheduled ride cancelled. No cancellation fee.");
       fetchBookings();
     }
   }
@@ -745,7 +745,7 @@ function ProfilePage() {
                         Ride{bookings.filter((b) => b.status === "scheduled").length > 1 ? "s" : ""}
                       </p>
                       <p className="text-[11px] text-orange-700 dark:text-orange-400">
-                        Zero surge locked fare • Dedicated EV Chauffeur dispatch
+                        Dedicated EV Chauffeur dispatch
                       </p>
                     </div>
                   </div>

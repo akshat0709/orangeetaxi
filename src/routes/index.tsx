@@ -124,7 +124,7 @@ const FAQS = [
   ],
   [
     "How are Orange Taxi fares calculated?",
-    "Fares start at ₹99 base fare (including 2 km), then ₹18 per kilometer thereafter (minimum fare ₹149). Fares are shown transparently upfront before booking, with no hidden surge pricing on advance scheduled rides.",
+    "Each fare is a base fare plus a per-kilometre rate (with a minimum fare), plus GST and any platform fee or surge in effect. The exact fare is shown before you book.",
   ],
   [
     "Where is Orange Taxi available?",
@@ -348,7 +348,7 @@ function HomePage() {
               Elevate your corporate travel with 100% electric luxury.
             </h2>
             <p className="mt-5 text-base sm:text-lg text-primary-foreground/90 max-w-lg leading-relaxed">
-              Consolidated monthly GST tax invoices, contracted zero-surge pricing, and audited
+              Consolidated monthly GST tax invoices, transparent per-kilometre pricing, and audited
               Scope 3 ESG carbon offset reporting for forward-thinking enterprises.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">

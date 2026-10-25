@@ -1,16 +1,18 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { usePricingSettings } from "@/lib/pricing";
 
 interface WaitingFeeTimerProps {
   arrivedAt?: string | null;
   isDriver?: boolean;
 }
 
-const FREE_WAITING_SECONDS = 180; // 3 minutes complimentary under pricing settings
-const WAITING_RATE_PER_MIN = 2; // ₹2 per minute thereafter
-
 export function WaitingFeeTimer({ arrivedAt, isDriver = false }: WaitingFeeTimerProps) {
+  // Free minutes and the per-minute rate come from the admin Pricing tab.
+  const pricing = usePricingSettings();
+  const FREE_WAITING_SECONDS = Math.round(pricing.waiting_free_minutes * 60);
+  const WAITING_RATE_PER_MIN = pricing.waiting_charge_per_min;
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function WaitingFeeTimer({ arrivedAt, isDriver = false }: WaitingFeeTimer
   const overdueMins = Math.ceil(overdueSec / 60);
   const accumulatedCharge = overdueMins * WAITING_RATE_PER_MIN;
 
-  const progressPercent = Math.min(100, (elapsedSeconds / FREE_WAITING_SECONDS) * 100);
+  const progressPercent = Math.min(100, (elapsedSeconds / Math.max(1, FREE_WAITING_SECONDS)) * 100);
 
   return (
     <div
@@ -68,7 +70,7 @@ export function WaitingFeeTimer({ arrivedAt, isDriver = false }: WaitingFeeTimer
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>
               {isDriver
-                ? "Customer has 3 minutes complimentary waiting upon arrival."
+                ? `Customer has ${pricing.waiting_free_minutes} minutes complimentary waiting upon arrival.`
                 : "Driver is waiting at pickup. Please meet at vehicle."}
             </span>
             <span className="font-semibold text-foreground font-mono">

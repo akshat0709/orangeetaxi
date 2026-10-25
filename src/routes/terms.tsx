@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LiveTariffList } from "@/components/live-tariff";
 import { Shield, ArrowLeft, Building2, Phone, Mail, FileText, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/terms")({
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/terms")({
       {
         name: "description",
         content:
-          "Official Terms of Service, passenger rights, fare policies, waiting charges, and zero cancellation rules for Orange Taxi Limited.",
+          "Official Terms of Service, passenger rights, fare policies, waiting charges, and cancellation rules for Orange Taxi Limited.",
       },
     ],
   }),
@@ -109,19 +110,10 @@ function TermsPage() {
               4. Transparent Fare Schedule, Tolls & Taxes
             </h2>
             <p className="text-muted-foreground">
-              Fares are computed systematically based on transparent distance and time tariffs:
+              Current fares (the exact fare for your trip is shown before you book):
             </p>
+            <LiveTariffList />
             <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
-              <li>
-                <strong>Base Fare:</strong> ₹99 (includes initial 2 kilometers of travel).
-              </li>
-              <li>
-                <strong>Distance Tariff:</strong> Standard ₹18 per kilometer thereafter for the
-                Mahindra BE.6 Premier EV.
-              </li>
-              <li>
-                <strong>Minimum Fare:</strong> ₹149 per completed trip.
-              </li>
               <li>
                 <strong>Toll Charges & Parking:</strong> State border taxes, airport entry fees, and
                 expressway tolls (e.g. DND Flyway, NICE Road, Airport Expressway) are passed through
@@ -147,8 +139,9 @@ function TermsPage() {
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
               <li>
-                <strong>Complimentary Grace Period:</strong> Passengers receive{" "}
-                <strong>5 minutes of free waiting time</strong> from the moment the vehicle arrives.
+                <strong>Grace Period and Waiting Fee:</strong> free waiting time and the per-minute
+                charge after it are listed in section 4 and shown in the app while the chauffeur
+                waits.
               </li>
               <li>
                 <strong>Airport Terminal Grace Period:</strong> For flight-linked bookings at Delhi
@@ -156,9 +149,8 @@ function TermsPage() {
                 <strong>45 minutes post flight touchdown</strong> is provided.
               </li>
               <li>
-                <strong>Standard Waiting Fee:</strong> After the complimentary window expires,
-                waiting is charged at <strong>₹3 per minute</strong>, capped at 30 minutes before
-                the ride may be deemed a passenger no-show.
+                <strong>No-show:</strong> after 30 minutes of waiting the ride may be deemed a
+                passenger no-show.
               </li>
             </ul>
           </section>

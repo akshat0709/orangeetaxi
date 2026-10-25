@@ -135,7 +135,7 @@ const SCHEMA_JSON_LD = JSON.stringify({
         { "@type": "City", name: "Faridabad" },
       ],
       description:
-        "Orange Taxi is a premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC, zero surge pricing, and professional chauffeurs.",
+        "Orange Taxi is a premier 100% electric cab service featuring an exclusive fleet of Mahindra BE.6 electric SUVs with guaranteed AC and professional chauffeurs.",
     },
   ],
 });
@@ -172,7 +172,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "Experience premium electric rides in signature Mahindra BE.6 SUVs. Zero surge pricing, pre-cooled AC cabins, and disciplined chauffeurs.",
+          "Experience premium electric rides in signature Mahindra BE.6 SUVs with pre-cooled AC cabins and disciplined chauffeurs.",
       },
       { property: "og:url", content: "https://orange-taxi.com/" },
       { property: "og:image", content: "https://orange-taxi.com/be6-exterior.jpg" },

@@ -7,7 +7,7 @@ import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { makeDb, attempt, su } from "./harness.mjs";
+import { makeDb, attempt, su, liveSchema } from "./harness.mjs";
 
 const MIG = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
@@ -61,6 +61,10 @@ const otpOf = async (id) =>
     )
   )[0]?.ride_otp;
 const PHASE2 = !!process.env.PHASE2;
+// CATCHUP=1: start from the live project's dumped schema plus legacy rows, then apply
+// supabase/catch-up/production_catch_up.sql + the audit migrations in one transaction (as psql would).
+const CATCHUP = !!process.env.CATCHUP;
+const HERE = path.dirname(new URL(import.meta.url).pathname);
 
 before(async () => {
   const files = fs
@@ -69,7 +73,24 @@ before(async () => {
     .sort()
     .map((f) => path.join(MIG, f));
   if (PHASE2) files.push(path.resolve(MIG, "../deferred/phase2_lock_down_after_app_update.sql"));
-  db = await makeDb(files, { drift: DRIFT });
+  if (CATCHUP) {
+    // The catch-up, then every migration from 20261025120000 on, in order (DEPLOYMENT.md step 2).
+    const live = [
+      path.resolve(MIG, "../catch-up/production_catch_up.sql"),
+      ...fs
+        .readdirSync(MIG)
+        .filter((f) => f.endsWith(".sql") && f >= "20261025120000")
+        .sort()
+        .map((f) => path.join(MIG, f)),
+    ];
+    if (PHASE2) live.push(path.resolve(MIG, "../deferred/phase2_lock_down_after_app_update.sql"));
+    db = await makeDb(live, {
+      base: [liveSchema(), fs.readFileSync(path.join(HERE, "fixtures/live_rows.sql"), "utf8")],
+      singleTransaction: true,
+    });
+  } else {
+    db = await makeDb(files, { drift: DRIFT });
+  }
   await su(
     db,
     `INSERT INTO auth.users (id, email, phone, raw_user_meta_data) VALUES
@@ -661,3 +682,372 @@ test(
     );
   },
 );
+
+// ---- Live-project catch-up (CATCHUP=1) ---------------------------------------------------------
+const LEGACY_RIDER = "11111111-0000-4000-8000-000000000001";
+const LEGACY_DRIVER_USER = "11111111-0000-4000-8000-000000000002";
+const LEGACY_BOOKING = "33333333-0000-4000-8000-000000000001";
+
+test(
+  "catch-up: legacy rows survive and existing drivers stay able to work",
+  { skip: !CATCHUP },
+  async () => {
+    const counts = await su(
+      db,
+      `SELECT (SELECT count(*) FROM public.bookings WHERE reference LIKE 'LEGACY%') b,
+    (SELECT count(*) FROM public.drivers WHERE id::text LIKE '22222222%' AND status = 'active') d`,
+    );
+    assert.equal(Number(counts[0].b), 2);
+    assert.equal(Number(counts[0].d), 2);
+    const gh = await su(db, `SELECT geohash FROM public.drivers WHERE user_id = $1`, [
+      LEGACY_DRIVER_USER,
+    ]);
+    assert.ok(gh[0].geohash, "driver geohash backfilled");
+    const cats = await su(
+      db,
+      `SELECT code, base_fare, per_km, minimum_fare, is_active FROM public.vehicle_categories`,
+    );
+    assert.deepEqual(
+      cats.map((c) => [
+        c.code,
+        Number(c.base_fare),
+        Number(c.per_km),
+        Number(c.minimum_fare),
+        c.is_active,
+      ]),
+      [["ORANGE_SEDAN", 59, 15, 129, true]],
+      "live prices and categories untouched",
+    );
+  },
+);
+
+test(
+  "catch-up: rider can rate a ride completed before the catch-up",
+  { skip: !CATCHUP },
+  async () => {
+    const r = await authed(
+      LEGACY_RIDER,
+      `UPDATE public.bookings SET rating = 5, review = 'great' WHERE id = $1 RETURNING rating`,
+      [LEGACY_BOOKING],
+    );
+    assert.ok(r.ok, r.error);
+    assert.equal(r.rows.length, 1);
+    const d = await su(db, `SELECT rating FROM public.drivers WHERE user_id = $1`, [
+      LEGACY_DRIVER_USER,
+    ]);
+    assert.equal(Number(d[0].rating), 5);
+  },
+);
+
+test(
+  "catch-up: a legacy driver can accept a new booking and sees the server OTP flow",
+  { skip: !CATCHUP },
+  async () => {
+    const b = await book(LEGACY_RIDER);
+    assert.match(b.ride_otp || (await otpOf(b.id)) || "", /^\d{4}$/);
+    const acc = await authed(LEGACY_DRIVER_USER, `SELECT public.accept_booking($1) AS r`, [b.id]);
+    assert.ok(acc.ok, acc.error);
+    const st = await su(db, `SELECT status FROM public.bookings WHERE id = $1`, [b.id]);
+    assert.equal(st[0].status, "accepted");
+  },
+);
+
+test(
+  "catch-up: the live 'Allow all' fleet policy and driver-reads-all-profiles policy are gone",
+  { skip: !CATCHUP },
+  async () => {
+    const pols = await su(
+      db,
+      `SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public'
+    AND (policyname ILIKE 'allow all%' OR policyname = 'profiles read' OR (tablename = 'fleet_vehicles' AND policyname ILIKE 'allow%'))`,
+    );
+    assert.deepEqual(pols, []);
+    const anonFleet = await anon(`SELECT count(*) FROM public.fleet_vehicles`);
+    assert.ok(!anonFleet.ok || Number(anonFleet.rows[0].count) === 0);
+    // A customer with no bookings (drivers may see requesters of open "searching" rides, by design).
+    const STRANGER = "11111111-0000-4000-8000-0000000000ff";
+    await su(
+      db,
+      `INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES ($1, 'stranger@x.in', '{"full_name":"S","phone":"+910000000000"}')`,
+      [STRANGER],
+    );
+    const peek = await authed(LEGACY_DRIVER_USER, `SELECT id FROM public.profiles WHERE id = $1`, [
+      STRANGER,
+    ]);
+    assert.ok(peek.ok, peek.error);
+    assert.equal(peek.rows.length, 0, "a driver cannot read an unrelated customer's profile");
+  },
+);
+
+// ---- Account deletion keeps anonymised ride/wallet records (20261025140000) ---------------------
+const newUser = async (id, email) => {
+  await su(
+    db,
+    `INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES ($1, $2, '{"full_name":"To Delete","phone":"+911111111111"}')`,
+    [id, email],
+  );
+  return id;
+};
+
+test("account deletion: rider with past rides is erased, rides kept anonymised", async () => {
+  const U = await newUser("44444444-0000-4000-8000-000000000001", "leaver@x.in");
+  const b = await book(U, { fare: 500 });
+  await force(
+    `UPDATE public.bookings SET status = 'completed', final_fare = estimated_fare, payment_status = 'paid' WHERE id = $1`,
+    [b.id],
+  );
+  const s = await book(U, { scheduled: new Date(Date.now() + 86400000).toISOString() });
+
+  const del = await authed(U, `SELECT public.delete_user_account() AS r`);
+  assert.ok(del.ok, del.error);
+  assert.equal(del.rows[0].r.success, true);
+
+  assert.equal((await su(db, `SELECT count(*) FROM auth.users WHERE id = $1`, [U]))[0].count, 0);
+  assert.equal(
+    (await su(db, `SELECT count(*) FROM public.profiles WHERE id = $1`, [U]))[0].count,
+    0,
+  );
+  const [kept] = await su(
+    db,
+    `SELECT customer_id, pickup_address, estimated_fare, final_fare, payment_status, status FROM public.bookings WHERE id = $1`,
+    [b.id],
+  );
+  assert.equal(kept.customer_id, null);
+  assert.equal(kept.pickup_address, "[Redacted on Account Deletion]");
+  assert.equal(Number(kept.final_fare), Number(b.estimated_fare), "fare kept for the tax invoice");
+  assert.equal(kept.payment_status, "paid");
+  const [sched] = await su(db, `SELECT status FROM public.bookings WHERE id = $1`, [s.id]);
+  assert.equal(sched.status, "cancelled", "future scheduled ride cancelled");
+});
+
+test("account deletion: blocked while the wallet holds money or a ride is active", async () => {
+  const W = await newUser("44444444-0000-4000-8000-000000000002", "wallet.leaver@x.in");
+  await force(`UPDATE public.profiles SET wallet_balance = 250 WHERE id = $1`, [W]);
+  const r1 = await authed(W, `SELECT public.delete_user_account()`);
+  assert.ok(!r1.ok && /wallet still holds/.test(r1.error), r1.error);
+
+  const A = await newUser("44444444-0000-4000-8000-000000000003", "active.leaver@x.in");
+  await book(A);
+  const r2 = await authed(A, `SELECT public.delete_user_account()`);
+  assert.ok(!r2.ok && /active trip/.test(r2.error), r2.error);
+  assert.equal(
+    (await su(db, `SELECT count(*) FROM auth.users WHERE id IN ($1, $2)`, [W, A]))[0].count,
+    2,
+  );
+});
+
+test("account deletion: a driver's record is anonymised and past trips stay linked", async () => {
+  const D = await newUser("44444444-0000-4000-8000-000000000004", "driver.leaver@x.in");
+  await force(
+    `INSERT INTO public.user_roles (user_id, role) VALUES ($1, 'driver') ON CONFLICT DO NOTHING`,
+    [D],
+  );
+  const [{ id: drv }] = await force(
+    `INSERT INTO public.drivers (user_id, full_name, phone, city, status, vehicle_number) VALUES ($1, 'Leaving Driver', '+912222222222', 'Bengaluru', 'active', 'KA 09 ZZ 0001') RETURNING id`,
+    [D],
+  );
+  const b = await book(RIDER);
+  await force(
+    `UPDATE public.bookings SET driver_id = $2, status = 'completed', final_fare = estimated_fare WHERE id = $1`,
+    [b.id, drv],
+  );
+
+  const del = await authed(D, `SELECT public.delete_user_account() AS r`);
+  assert.ok(del.ok, del.error);
+  const [row] = await su(
+    db,
+    `SELECT user_id, full_name, phone, status, vehicle_number FROM public.drivers WHERE id = $1`,
+    [drv],
+  );
+  assert.deepEqual(
+    [row.user_id, row.full_name, row.phone, row.status, row.vehicle_number],
+    [null, "Former Chauffeur", "", "deleted", "REDACTED"],
+  );
+  const [trip] = await su(db, `SELECT driver_id FROM public.bookings WHERE id = $1`, [b.id]);
+  assert.equal(trip.driver_id, drv);
+});
+
+// ---- Admin pricing + cancellation fee (20261025150000) ------------------------------------------
+const setPricing = (sql) => force(`UPDATE public.pricing_settings SET ${sql} WHERE id = 1`);
+// Earlier tests can leave the shared test driver mid-ride; clear that so they can accept again.
+const freeDriver = () =>
+  force(
+    `UPDATE public.bookings SET status = 'cancelled' WHERE driver_id = $1 AND status IN ('accepted', 'arrived', 'in_progress')`,
+    [DRIVER_ROW],
+  );
+const acceptAs = async (uid, bookingId) => {
+  await freeDriver();
+  const r = await authed(uid, `SELECT public.accept_booking($1) AS res`, [bookingId]);
+  assert.ok(r.ok && r.rows[0].res.success, r.error || JSON.stringify(r.rows?.[0]));
+};
+
+test("pricing: admin settings (tax, platform fee, surge) drive the server fare", async () => {
+  const [orig] = await su(
+    db,
+    `SELECT tax_percent, platform_fee, surge_enabled, surge_multiplier FROM public.pricing_settings WHERE id = 1`,
+  );
+  try {
+    await setPricing(
+      `tax_percent = 5, platform_fee = 20, surge_enabled = true, surge_multiplier = 1.5`,
+    );
+    // 40 km Signature fallback tariff: ride = max(149, 99 + 720) = 819; surged 1228.5 -> 1229 (round half up)
+    const b = await book(RIDER, { fare: 1 });
+    const surged = Math.round(819 * 1.5);
+    assert.equal(Number(b.estimated_fare), surged + Math.round(surged * 0.05) + 20);
+    const [q] = await su(db, `SELECT * FROM public.fn_fare_quote('ORANGE_SIGNATURE', 40)`);
+    assert.equal(Number(q.total), Number(b.estimated_fare));
+    const [row] = await su(db, `SELECT surge_multiplier FROM public.bookings WHERE id = $1`, [
+      b.id,
+    ]);
+    assert.equal(Number(row.surge_multiplier), 1.5);
+    assert.equal(Number((await su(db, `SELECT public.get_surge_multiplier() AS s`))[0].s), 1.5);
+
+    await setPricing(`surge_enabled = false`);
+    assert.equal(Number((await su(db, `SELECT public.get_surge_multiplier() AS s`))[0].s), 1);
+  } finally {
+    await force(
+      `UPDATE public.pricing_settings SET tax_percent = $1, platform_fee = $2, surge_enabled = $3, surge_multiplier = $4 WHERE id = 1`,
+      [orig.tax_percent, orig.platform_fee, orig.surge_enabled, orig.surge_multiplier],
+    );
+  }
+});
+
+test("pricing: fn_fare_quote matches the web and rider-app fare cases", async () => {
+  const [orig] = await su(db, `SELECT * FROM public.pricing_settings WHERE id = 1`);
+  await force(
+    `INSERT INTO public.vehicle_categories (code, name, seats, base_fare, per_km, minimum_fare, is_active)
+     VALUES ('TEST_SEDAN', 'Test Sedan', 4, 59, 15, 129, true) ON CONFLICT (code) DO NOTHING`,
+  );
+  // Same cases as tests/pricing.test.ts (web) and tests/pricing.test.ts (rider app).
+  const cases = [
+    [
+      "ORANGE_SIGNATURE",
+      40,
+      "tax_percent = 5, platform_fee = 20, surge_enabled = true, surge_multiplier = 1.5",
+      1310,
+    ],
+    ["ORANGE_SIGNATURE", 2, "tax_percent = 5, platform_fee = 0, surge_enabled = false", 156],
+    ["TEST_SEDAN", 10, "tax_percent = 0, platform_fee = 0, surge_enabled = false", 209],
+    [
+      "TEST_SEDAN",
+      10,
+      "tax_percent = 0, platform_fee = 0, surge_enabled = false, surge_multiplier = 2",
+      209,
+    ],
+  ];
+  try {
+    for (const [code, km, sql, total] of cases) {
+      await setPricing(sql);
+      const [q] = await su(db, `SELECT total FROM public.fn_fare_quote($1, $2)`, [code, km]);
+      assert.equal(Number(q.total), total, `${code} ${km} km with ${sql}`);
+    }
+  } finally {
+    await force(`DELETE FROM public.vehicle_categories WHERE code = 'TEST_SEDAN'`);
+    await force(
+      `UPDATE public.pricing_settings SET tax_percent = $1, platform_fee = $2, surge_enabled = $3, surge_multiplier = $4 WHERE id = 1`,
+      [orig.tax_percent, orig.platform_fee, orig.surge_enabled, orig.surge_multiplier],
+    );
+  }
+});
+
+test("pricing: only admins can change prices; absurd values are rejected", async () => {
+  const r1 = await authed(
+    RIDER,
+    `UPDATE public.pricing_settings SET platform_fee = 0 WHERE id = 1 RETURNING id`,
+  );
+  assert.ok(!r1.ok || r1.rows.length === 0, "rider cannot change pricing");
+  const r2 = await authed(DRV, `UPDATE public.vehicle_categories SET per_km = 1 RETURNING id`);
+  assert.ok(!r2.ok || r2.rows.length === 0, "driver cannot change tariffs");
+  const ok = await authed(
+    ADMIN,
+    `UPDATE public.pricing_settings SET cancellation_charge = 50 WHERE id = 1 RETURNING id`,
+  );
+  assert.ok(ok.ok && ok.rows.length === 1, ok.error);
+  const bad = await authed(
+    ADMIN,
+    `UPDATE public.pricing_settings SET surge_multiplier = 9 WHERE id = 1`,
+  );
+  assert.ok(!bad.ok && /pricing_settings_sane/.test(bad.error), bad.error);
+});
+
+test("cancellation: free before a driver accepts, and when the driver cancels", async () => {
+  const b = await book(RIDER);
+  const c = await authed(
+    RIDER,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee, cancelled_by`,
+    [b.id],
+  );
+  assert.ok(c.ok, c.error);
+  assert.deepEqual([Number(c.rows[0].cancellation_fee), c.rows[0].cancelled_by], [0, "passenger"]);
+
+  const b2 = await book(RIDER);
+  await acceptAs(DRV, b2.id);
+  const d = await authed(
+    DRV,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee, cancelled_by`,
+    [b2.id],
+  );
+  assert.ok(d.ok, d.error);
+  assert.deepEqual([Number(d.rows[0].cancellation_fee), d.rows[0].cancelled_by], [0, "driver"]);
+});
+
+test("cancellation: within 3 min and under 1.5 km is free; otherwise ₹50", async () => {
+  await force(`UPDATE public.drivers SET current_lat = 12.97, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+
+  // Quick cancel, driver hasn't moved -> free.
+  const a = await book(RIDER);
+  await acceptAs(DRV, a.id);
+  const pa = await authed(RIDER, `SELECT public.get_cancellation_fee($1) AS p`, [a.id]);
+  assert.ok(pa.ok, pa.error);
+  assert.equal(Number(pa.rows[0].p.fee), 0);
+  const ca = await authed(
+    RIDER,
+    `UPDATE public.bookings SET status = 'cancelled', cancellation_fee = 0 WHERE id = $1 RETURNING cancellation_fee`,
+    [a.id],
+  );
+  assert.equal(Number(ca.rows[0].cancellation_fee), 0);
+
+  // Driver drove ~2.2 km towards pickup -> ₹50, even within 3 minutes.
+  const m = await book(RIDER);
+  await acceptAs(DRV, m.id);
+  await force(`UPDATE public.drivers SET current_lat = 12.99, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+  const pm = await authed(RIDER, `SELECT public.get_cancellation_fee($1) AS p`, [m.id]);
+  assert.equal(Number(pm.rows[0].p.fee), 50);
+  const cm = await authed(
+    RIDER,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee`,
+    [m.id],
+  );
+  assert.equal(Number(cm.rows[0].cancellation_fee), 50);
+  await force(`UPDATE public.drivers SET current_lat = 12.97, current_lng = 77.59 WHERE id = $1`, [
+    DRIVER_ROW,
+  ]);
+
+  // More than 3 minutes since acceptance -> ₹50 even if the driver hasn't moved.
+  const t = await book(RIDER);
+  await acceptAs(DRV, t.id);
+  await force(
+    `UPDATE public.bookings SET accepted_at = now() - interval '5 minutes' WHERE id = $1`,
+    [t.id],
+  );
+  const ct = await authed(
+    RIDER,
+    `UPDATE public.bookings SET status = 'cancelled' WHERE id = $1 RETURNING cancellation_fee`,
+    [t.id],
+  );
+  assert.equal(Number(ct.rows[0].cancellation_fee), 50);
+
+  // Nobody else can see the preview; the rider can't write the fee themselves.
+  const peek = await authed(OTHER, `SELECT public.get_cancellation_fee($1)`, [t.id]);
+  assert.ok(!peek.ok);
+  const tamper = await authed(
+    RIDER,
+    `UPDATE public.bookings SET cancellation_fee = 0 WHERE id = $1 RETURNING cancellation_fee`,
+    [t.id],
+  );
+  assert.ok(!tamper.ok || Number(tamper.rows[0]?.cancellation_fee ?? 50) === 50);
+});

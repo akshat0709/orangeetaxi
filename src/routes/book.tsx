@@ -109,6 +109,7 @@ import { RatingModal } from "@/components/rating-modal";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import { RideChatSheet } from "@/components/ride-chat-sheet";
 import { WaitingFeeTimer } from "@/components/waiting-fee-timer";
+import { calcFare, normalizePricing, DEFAULT_PRICING, type PricingSettings } from "@/lib/pricing";
 import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
 import {
@@ -224,10 +225,18 @@ const comforts = [
   },
 ];
 
+// Recorded on the booking for support; the fee depends only on timing and driver distance.
+const CANCEL_REASONS = [
+  { id: "delay", label: "Driver is taking too long" },
+  { id: "mismatch", label: "Driver or vehicle plate doesn't match" },
+  { id: "offline", label: "Driver asked for an off-app / cash-only fare" },
+  { id: "plans", label: "Change of plans" },
+];
+
 const DEFAULT_VEHICLES: VehicleCategory[] = [
   {
     id: "v-signature",
-    code: "signature",
+    code: "ORANGE_SIGNATURE",
     name: "Orange Signature",
     tagline: "Spotless, Pre-Cooled Mahindra BE 6 EV",
     seats: 4,
@@ -260,19 +269,6 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function calcFare(
-  vehicle: VehicleCategory,
-  distKm: number,
-  settings: { tax_percent: number; platform_fee: number },
-) {
-  const distFare = Math.round(vehicle.per_km * distKm);
-  const raw = Math.max(vehicle.minimum_fare, vehicle.base_fare + distFare);
-  const tax = Math.round((raw * (settings.tax_percent || 0)) / 100);
-  const platform = Math.round(settings.platform_fee || 0);
-  const total = Math.round(raw + tax + platform);
-  return { base: vehicle.base_fare, distance: distFare, tax, total, platform };
 }
 
 async function reverseGeocodeCoords(lat: number, lng: number): Promise<string> {
@@ -361,8 +357,7 @@ function PassengerPage() {
   const [vehicles, setVehicles] = useState<VehicleCategory[]>(() => {
     if (typeof window !== "undefined") {
       try {
-        localStorage.removeItem("orange_cached_vehicles");
-        const c = null; // localStorage.getItem("orange_cached_vehicles");
+        const c = localStorage.getItem("orange_cached_vehicles_v2");
         if (c) {
           const parsed = JSON.parse(c);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -387,16 +382,16 @@ function PassengerPage() {
     }
     return DEFAULT_AREAS;
   });
-  const [pricingSettings, setPricingSettings] = useState(() => {
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(() => {
     if (typeof window !== "undefined") {
       try {
-        const c = localStorage.getItem("orange_cached_pricing");
-        if (c) return JSON.parse(c);
+        const c = localStorage.getItem("orange_cached_pricing_v2");
+        if (c) return normalizePricing(JSON.parse(c));
       } catch {
         // best-effort: failure here is non-fatal and intentionally ignored
       }
     }
-    return { tax_percent: 5, platform_fee: 0 };
+    return DEFAULT_PRICING;
   });
   const [loading, setLoading] = useState(false);
 
@@ -577,7 +572,7 @@ function PassengerPage() {
   useEffect(() => {
     async function fetchData() {
       const [{ data: v }, { data: a }, { data: p }] = await Promise.all([
-        Promise.resolve({ data: DEFAULT_VEHICLES }), // supabase.from("vehicle_categories").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("vehicle_categories").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("service_areas").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("pricing_settings").select("*").eq("id", 1).single(),
       ]);
@@ -585,12 +580,13 @@ function PassengerPage() {
       const aData = (a as ServiceArea[]) ?? [];
       if (vData.length > 0) {
         setVehicles(vData);
+        // Keep the rider's choice if it is still offered; otherwise fall back to the first one.
+        setSelectedVehicle((prev) => vData.find((x) => x.code === prev?.code) || vData[0]);
         try {
-          localStorage.setItem("orange_cached_vehicles", JSON.stringify(vData));
+          localStorage.setItem("orange_cached_vehicles_v2", JSON.stringify(vData));
         } catch {
           // best-effort: failure here is non-fatal and intentionally ignored
         }
-        setSelectedVehicle((prev) => prev || vData[0]);
       }
       if (aData.length > 0) {
         setAreas(aData);
@@ -601,13 +597,10 @@ function PassengerPage() {
         }
       }
       if (p) {
-        const nextPricing = {
-          tax_percent: (p as any).tax_percent,
-          platform_fee: (p as any).platform_fee,
-        };
+        const nextPricing = normalizePricing(p);
         setPricingSettings(nextPricing);
         try {
-          localStorage.setItem("orange_cached_pricing", JSON.stringify(nextPricing));
+          localStorage.setItem("orange_cached_pricing_v2", JSON.stringify(nextPricing));
         } catch {
           // best-effort: failure here is non-fatal and intentionally ignored
         }
@@ -905,7 +898,7 @@ function PassengerPage() {
       setLiveRideStatus(isAdvanceBooking ? "scheduled" : "searching");
       setStep(4);
       if (isAdvanceBooking) {
-        toast.success("Advance Ride Scheduled! 🍊 Zero-surge fare locked.");
+        toast.success("Advance ride scheduled! 🍊");
       } else {
         toast.success("Ride confirmed! Searching for nearest EV chauffeur.");
       }
@@ -1167,6 +1160,7 @@ function PassengerPage() {
                 />
               ) : step === 3 ? (
                 <Step3Confirm
+                  pricing={pricingSettings}
                   selectedVehicle={selectedVehicle!}
                   pickup={pickup!}
                   drop={drop!}
@@ -1421,6 +1415,11 @@ function Step2Journey({
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-wider text-primary">
               Fare estimate ({selectedVehicle?.name})
+              {fareBreakdown.surge > 1 && (
+                <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300">
+                  {fareBreakdown.surge}× surge
+                </span>
+              )}
             </p>
             <span className="text-[11px] text-muted-foreground shrink-0">
               ~{Math.round(distKm * 10) / 10} km · {Math.max(1, Math.round(distKm / 0.5))} min
@@ -1442,6 +1441,7 @@ function Step2Journey({
 }
 
 function Step3Confirm({
+  pricing,
   selectedVehicle,
   pickup,
   drop,
@@ -1484,6 +1484,27 @@ function Step3Confirm({
             value={pickupPillar ? `${pickup.name} (${pickupPillar})` : pickup.name}
           />
           <Row label="Drop-off" value={drop.name} />
+          <div className="space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+            <div className="flex justify-between">
+              <span>
+                Ride fare
+                {fareBreakdown.surge > 1 ? ` (incl. ${fareBreakdown.surge}× surge)` : ""}
+              </span>
+              <span className="font-mono">₹{fareBreakdown.rideFare}</span>
+            </div>
+            {fareBreakdown.tax > 0 && (
+              <div className="flex justify-between">
+                <span>GST ({pricing?.tax_percent}%)</span>
+                <span className="font-mono">₹{fareBreakdown.tax}</span>
+              </div>
+            )}
+            {fareBreakdown.platform > 0 && (
+              <div className="flex justify-between">
+                <span>Platform fee</span>
+                <span className="font-mono">₹{fareBreakdown.platform}</span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="font-bold text-foreground">Total Fare</span>
             <span className="text-xl font-bold text-primary font-mono">
@@ -1632,9 +1653,8 @@ function Step3Confirm({
                 className="w-full rounded-lg border border-input bg-black/60 px-3.5 py-2.5 text-sm font-semibold text-foreground focus:border-orange-400 focus:outline-none"
               />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                • <strong>Zero-Surge Fare Locked</strong>: Your fare will never increase.
-                <br />• <strong>Chauffeur Assignment</strong>: Verified EV Chauffeur dispatched
-                15–30 mins prior.
+                • <strong>Chauffeur Assignment</strong>: Verified EV Chauffeur dispatched 15–30 mins
+                prior.
                 <br />• <strong>Pre-Cooling SLA</strong>: Chauffeur arrives 5–10 mins prior with
                 Dual-Zone AC at 22°C.
               </p>
@@ -1681,7 +1701,10 @@ function Step3Confirm({
         <Link to="/privacy" target="_blank" className="text-primary underline">
           Privacy Policy
         </Link>
-        , and fee-exempt cancellation rules under MV Aggregator Guidelines 2025.
+        , and the cancellation policy: free until a driver accepts, and within{" "}
+        {pricing?.cancellation_free_minutes ?? 3} minutes of acceptance if the driver hasn&apos;t
+        travelled more than {pricing?.cancellation_free_km ?? 1.5} km; otherwise ₹
+        {pricing?.cancellation_charge ?? 50}.
       </div>
       <div className="mt-5 flex gap-3 min-w-0">
         <Button
@@ -1749,6 +1772,7 @@ function Step4Confirmed({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("delay");
+  const [cancelPreview, setCancelPreview] = useState<{ fee: number; reason: string } | null>(null);
   const lastNotifiedStatusRef = useRef<string>("");
   const isFirstLoadRef = useRef<boolean>(true);
 
@@ -1785,21 +1809,50 @@ function Step4Confirmed({
     }
   };
 
+  // The server decides the fee (free within the admin-set minutes of acceptance while the driver
+  // hasn't travelled past the admin-set distance); this preview uses the same rule.
+  useEffect(() => {
+    if (!cancelModalOpen) return;
+    setCancelPreview(null);
+    supabase
+      .rpc("get_cancellation_fee" as never, { _booking_id: bookingData.id } as never)
+      .then(({ data, error }) => {
+        if (error || !data) {
+          // Preview unavailable: still let the rider cancel; the server applies the rule anyway.
+          setCancelPreview({
+            fee: -1,
+            reason: "The fee follows our cancellation policy and is shown after you cancel.",
+          });
+          return;
+        }
+        const d = data as { fee: number; reason: string };
+        setCancelPreview({ fee: Number(d.fee) || 0, reason: d.reason });
+      });
+  }, [cancelModalOpen, bookingData.id]);
+
   async function handleCancelRide() {
     setCancelling(true);
-    const { error } = await supabase
+    const reasonLabel = CANCEL_REASONS.find((r) => r.id === cancelReason)?.label || cancelReason;
+    const { data, error } = await supabase
       .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", bookingData.id);
+      .update({ status: "cancelled", cancel_reason: reasonLabel } as never)
+      .eq("id", bookingData.id)
+      .select("cancellation_fee" as never)
+      .maybeSingle();
     if (error) {
       toast.error("Failed to cancel ride: " + error.message);
       setCancelling(false);
     } else {
+      const fee = Number((data as { cancellation_fee?: number } | null)?.cancellation_fee) || 0;
       setStatus("cancelled");
       onStatusUpdate?.("cancelled");
       triggerRideNotification("cancelled");
       setCancelModalOpen(false);
-      toast.success("Ride cancelled. ₹0 fee applied under statutory exemption.");
+      toast.success(
+        fee > 0
+          ? `Ride cancelled. A ₹${fee} cancellation fee applies.`
+          : "Ride cancelled. No cancellation fee.",
+      );
       setCancelling(false);
       onReset?.();
     }
@@ -2036,10 +2089,9 @@ function Step4Confirmed({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 text-xs border-t border-orange-400/30">
             <div className="rounded-lg bg-black/40 p-2.5 border border-border">
               <span className="text-[10px] uppercase text-muted-foreground font-semibold">
-                Locked Fare
+                Fare
               </span>
               <p className="font-mono text-base font-bold text-primary">₹{fare}</p>
-              <span className="text-[10px] text-muted-foreground">Zero surge guaranteed</span>
             </div>
             <div className="rounded-lg bg-black/40 p-2.5 border border-border">
               <span className="text-[10px] uppercase text-muted-foreground font-semibold">
@@ -2369,8 +2421,8 @@ function Step4Confirmed({
         </div>
       </div>
 
-      {/* Fee-Exempt Cancellation Option (Clause 18 MV Aggregator Guidelines) */}
-      {(status === "searching" || status === "accepted" || status === "arrived") && (
+      {/* Cancellation (the server allows it until the driver arrives) */}
+      {(status === "searching" || status === "accepted") && (
         <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-xs">
           <span className="text-muted-foreground">Need to change your ride?</span>
           <button
@@ -2378,12 +2430,12 @@ function Step4Confirmed({
             onClick={() => setCancelModalOpen(true)}
             className="text-xs font-semibold text-rose-400 hover:text-rose-300 underline"
           >
-            Cancel Ride (Fee-Exempt Options)
+            Cancel ride
           </button>
         </div>
       )}
 
-      {/* Fee-Exempt Cancel Dialog */}
+      {/* Cancel Dialog */}
       <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
         <DialogContent className="max-w-md bg-background text-foreground border-border">
           <DialogHeader>
@@ -2392,31 +2444,26 @@ function Step4Confirmed({
               Cancel Ride Request
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Under Clause 18 of the MV Aggregator Guidelines 2025, cancellations meeting statutory
-              grounds carry <strong>₹0 cancellation fee</strong>.
+              {cancelPreview === null ? (
+                "Checking cancellation fee…"
+              ) : cancelPreview.fee < 0 ? (
+                cancelPreview.reason
+              ) : cancelPreview.fee > 0 ? (
+                <>
+                  A <strong>₹{cancelPreview.fee} cancellation fee</strong> applies.{" "}
+                  {cancelPreview.reason}
+                </>
+              ) : (
+                <>
+                  <strong>No cancellation fee.</strong> {cancelPreview.reason}
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-4 space-y-2 text-xs">
             <p className="font-semibold text-foreground">Select Reason for Cancellation:</p>
-            {[
-              { id: "delay", label: "Driver delayed (> 5 mins past ETA)", fee: "₹0 Fee" },
-              {
-                id: "mismatch",
-                label: "Driver or vehicle plate mismatch at pickup",
-                fee: "₹0 Fee",
-              },
-              {
-                id: "offline",
-                label: "Driver asked for off-app / offline cash fare",
-                fee: "₹0 Fee",
-              },
-              {
-                id: "plans",
-                label: "Change of plans (Within free cancellation window)",
-                fee: "₹0 Fee",
-              },
-            ].map((item) => (
+            {CANCEL_REASONS.map((item) => (
               <label
                 key={item.id}
                 className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -2435,9 +2482,6 @@ function Step4Confirmed({
                   />
                   <span>{item.label}</span>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  {item.fee}
-                </span>
               </label>
             ))}
           </div>
@@ -2450,9 +2494,15 @@ function Step4Confirmed({
               variant="destructive"
               size="sm"
               onClick={handleCancelRide}
-              disabled={cancelling}
+              disabled={cancelling || cancelPreview === null}
             >
-              {cancelling ? <Loader2 className="size-3.5 animate-spin" /> : "Confirm Cancellation"}
+              {cancelling ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : cancelPreview && cancelPreview.fee > 0 ? (
+                `Cancel and pay ₹${cancelPreview.fee}`
+              ) : (
+                "Confirm Cancellation"
+              )}
             </Button>
           </div>
         </DialogContent>

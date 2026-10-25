@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "node --test \"tests/*.test.ts\"",
     "test:db": "cd scripts/db-tests && npm install --no-audit --no-fund && npm test",
-    "test:db:phase2": "cd scripts/db-tests && npm install --no-audit --no-fund && PHASE2=1 npm test"
+    "test:db:phase2": "cd scripts/db-tests && npm install --no-audit --no-fund && PHASE2=1 npm test",
+    "test:db:catchup": "cd scripts/db-tests && npm install --no-audit --no-fund && CATCHUP=1 npm test && CATCHUP=1 PHASE2=1 npm test"
   },
   "overrides": {
     "rolldown": "1.2.1"

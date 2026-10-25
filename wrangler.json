@@ -2,7 +2,9 @@
   "name": "orangeetaxi",
   "main": ".output/server/index.mjs",
   "compatibility_date": "2026-09-13",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "assets": {
     "binding": "ASSETS",
     "directory": ".output/public"
@@ -11,7 +13,17 @@
   "rules": [
     {
       "type": "ESModule",
-      "globs": ["**/*.mjs", "**/*.js"]
+      "globs": [
+        "**/*.mjs",
+        "**/*.js"
+      ]
     }
-  ]
+  ],
+  "keep_vars": true,
+  "vars": {
+    "SUPABASE_URL": "https://qcrpzrrzjddwqebaktyu.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx",
+    "VITE_SUPABASE_URL": "https://qcrpzrrzjddwqebaktyu.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx"
+  }
 }

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { calcFare, normalizePricing, surgeOf, type PricingSettings } from "@/lib/pricing";
 
 export const Route = createFileRoute("/talk-to-orange")({
   head: () => ({
@@ -53,14 +54,6 @@ interface VehicleCategory {
   per_km: number;
   minimum_fare: number;
 }
-interface PricingSettings {
-  tax_percent: number;
-  platform_fee: number;
-  currency: string;
-  demo_note: string;
-  surge_enabled: boolean;
-  surge_multiplier: number;
-}
 
 const enquirySchema = z.object({
   company_name: z.string().min(2, "Enter your company name"),
@@ -75,8 +68,30 @@ const enquirySchema = z.object({
 type EnquiryValues = z.infer<typeof enquirySchema>;
 
 const SAMPLE_DISTANCES = [5, 10, 20];
-function sampleFare(v: VehicleCategory, km: number) {
-  return Math.max(v.minimum_fare, v.base_fare + v.per_km * km);
+// Totals include surge, tax and platform fee, exactly as the booking page charges them.
+function sampleFare(v: VehicleCategory, km: number, pricing: PricingSettings | null) {
+  return calcFare(v, km, pricing ?? undefined).total;
+}
+
+function tariffLines(vehicles: VehicleCategory[]) {
+  return vehicles
+    .map(
+      (v) =>
+        `- ${v.name} (${v.code}): ₹${v.base_fare} base + ₹${v.per_km}/km, minimum ₹${v.minimum_fare}, ${v.seats} seats. ${v.tagline}`,
+    )
+    .join("\n");
+}
+
+function feeNotes(p: PricingSettings | null) {
+  if (!p) return "";
+  const notes = [];
+  if (surgeOf(p) > 1) notes.push(`Surge is currently ${surgeOf(p)}×.`);
+  if (p.tax_percent > 0) notes.push(`${p.tax_percent}% GST is added.`);
+  if (p.platform_fee > 0) notes.push(`A ₹${p.platform_fee} platform fee is added.`);
+  notes.push(
+    `Cancellation: free until a driver accepts, and within ${p.cancellation_free_minutes} minutes of acceptance if the driver hasn't travelled more than ${p.cancellation_free_km} km; otherwise ₹${p.cancellation_charge}.`,
+  );
+  return notes.join(" ");
 }
 
 // AI Chat
@@ -85,23 +100,26 @@ interface Message {
   content: string;
 }
 const GEMINI_KEY = import.meta.env["VITE_GEMINI_API_KEY"] as string | undefined;
-const SYSTEM_PROMPT = `You are Orangee, a highly helpful AI booking assistant for Orange Taxi, a premium electric ride service in Delhi NCR.
+function buildSystemPrompt(vehicles: VehicleCategory[], pricing: PricingSettings | null) {
+  return `You are Orangee, a highly helpful AI booking assistant for Orange Taxi, a premium electric ride service in Delhi NCR.
 
 Service areas: Delhi, Gurugram, Noida, Ghaziabad, Faridabad, IGI Airport.
 Vehicles:
-- be6_premier: ₹99 base + ₹18/km, min ₹149, 4 seats, Mahindra BE.6 Premier EV SUV (In-seat HD screen, pre-cooled AC, studio audio, newspapers, water)
-- be6_executive: ₹129 base + ₹22/km, min ₹199, 4 seats, Mahindra BE.6 Executive EV SUV (Airport priority terminal bay, premium chauffeur, quiet ride)
+${tariffLines(vehicles) || "- Orange Signature: see the booking page for current fares."}
+${feeNotes(pricing)}
+Only quote these prices; never promise other fares, discounts or "fixed" prices.
 
 If the user wants to book a taxi:
-1. Ask for their pickup location, drop-off location, desired vehicle type (BE.6 Premier or Executive), and pickup time.
+1. Ask for their pickup location, drop-off location, desired vehicle type (one of the vehicles above), and pickup time.
 2. Ensure their locations match our service areas.
 3. DO NOT generate the booking command until you have ALL 4 pieces of information clearly confirmed.
 4. Once you have all 4, reply EXACTLY with this JSON block on a new line, and nothing else after it:
 BOOKING_COMMAND: {"pickup": "...", "drop": "...", "vehicle": "...", "time": "..."}
 
 Be friendly, concise, and proactive. Use ₹ for currency.`;
+}
 
-async function callGemini(messages: Message[]): Promise<string> {
+async function callGemini(messages: Message[], systemPrompt: string): Promise<string> {
   const contents = messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
@@ -112,7 +130,7 @@ async function callGemini(messages: Message[]): Promise<string> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        system_instruction: { parts: [{ text: systemPrompt }] },
         contents,
         generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
       }),
@@ -125,7 +143,11 @@ async function callGemini(messages: Message[]): Promise<string> {
   );
 }
 
-function getLocalConciergeReply(userQuery: string): string {
+function getLocalConciergeReply(
+  userQuery: string,
+  vehicles: VehicleCategory[] = [],
+  pricing: PricingSettings | null = null,
+): string {
   const query = userQuery.toLowerCase().trim();
 
   if (
@@ -135,7 +157,13 @@ function getLocalConciergeReply(userQuery: string): string {
     query.includes("rate") ||
     query.includes("charge")
   ) {
-    return "🏷️ Transparent Orange Taxi Pricing:\n\n• Orange Signature (Mahindra BE 6): ₹99 Base + ₹18/km (Min ₹149, 4 seats)\n\n✅ Zero surge pricing on advance scheduled rides.\n✅ 5% GST included with full Input Tax Credit (ITC).\n✅ No cancellation penalties.";
+    const lines = vehicles
+      .map(
+        (v) =>
+          `• ${v.name}: ₹${v.base_fare} base + ₹${v.per_km}/km (min ₹${v.minimum_fare}, ${v.seats} seats)`,
+      )
+      .join("\n");
+    return `🏷️ Orange Taxi pricing:\n\n${lines || "• See the booking page for current fares."}\n\n${feeNotes(pricing)}\n\nYou always see the exact fare before you book.`;
   }
 
   if (
@@ -209,7 +237,7 @@ function TalkToOrangePage() {
         supabase.from("pricing_settings").select("*").eq("id", 1).single(),
       ]);
       setVehicles((v as VehicleCategory[]) ?? []);
-      if (p) setPricing(p as unknown as PricingSettings);
+      if (p) setPricing(normalizePricing(p));
     }
     fetchData();
   }, []);
@@ -264,13 +292,13 @@ function TalkToOrangePage() {
       let reply: string;
       if (GEMINI_KEY) {
         try {
-          reply = await callGemini(newMessages);
+          reply = await callGemini(newMessages, buildSystemPrompt(vehicles, pricing));
         } catch {
-          reply = getLocalConciergeReply(text);
+          reply = getLocalConciergeReply(text, vehicles, pricing);
         }
       } else {
         await new Promise((r) => setTimeout(r, 400));
-        reply = getLocalConciergeReply(text);
+        reply = getLocalConciergeReply(text, vehicles, pricing);
       }
 
       const bookingMatch = reply.match(/BOOKING_COMMAND:\s*({.*})/);
@@ -287,7 +315,7 @@ function TalkToOrangePage() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: getLocalConciergeReply(text) },
+        { role: "assistant", content: getLocalConciergeReply(text, vehicles, pricing) },
       ]);
     }
     setChatLoading(false);
@@ -611,7 +639,7 @@ function TalkToOrangePage() {
                       <td className="px-6 py-5 text-muted-foreground">₹{v.minimum_fare}</td>
                       {SAMPLE_DISTANCES.map((d) => (
                         <td key={d} className="px-6 py-5 font-bold text-primary">
-                          ₹{Math.round(sampleFare(v, d))}
+                          ₹{sampleFare(v, d, pricing)}
                         </td>
                       ))}
                     </tr>
@@ -622,19 +650,15 @@ function TalkToOrangePage() {
             {pricing && (
               <div className="border-t border-border px-6 py-4">
                 <p className="text-xs text-muted-foreground">
-                  {pricing.surge_enabled && (
+                  {surgeOf(pricing) > 1 && (
                     <span className="mr-4 rounded bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40">
-                      Surge active: {pricing.surge_multiplier}×
+                      Surge active: {surgeOf(pricing)}×
                     </span>
                   )}
-                  {pricing.tax_percent > 0 && (
-                    <span className="mr-4">+{pricing.tax_percent}% tax applies</span>
-                  )}
-                  {pricing.platform_fee > 0 && (
-                    <span className="mr-4">+₹{pricing.platform_fee} platform fee</span>
-                  )}
-                  Fares shown are estimates. Actual fares may vary by traffic and demand.{" "}
-                  {pricing.demo_note}
+                  Sample fares include
+                  {pricing.tax_percent > 0 ? ` ${pricing.tax_percent}% GST` : " tax"}
+                  {pricing.platform_fee > 0 ? ` and a ₹${pricing.platform_fee} platform fee` : ""}.
+                  Your exact fare is shown before you book.
                 </p>
               </div>
             )}

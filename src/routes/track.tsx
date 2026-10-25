@@ -534,7 +534,7 @@ function TrackPage() {
                       onClick={async () => {
                         if (
                           !confirm(
-                            `Are you sure you want to cancel this scheduled ride #${booking.reference}? (Zero cancellation fee)`,
+                            `Are you sure you want to cancel this scheduled ride #${booking.reference}? (No cancellation fee)`,
                           )
                         )
                           return;
@@ -543,7 +543,7 @@ function TrackPage() {
                           .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
                           .eq("id", booking.id);
                         if (!error) {
-                          toast.success("Scheduled ride cancelled. Zero cancellation fee applied.");
+                          toast.success("Scheduled ride cancelled. No cancellation fee.");
                           setBooking((b: any) => ({ ...b, status: "cancelled" }));
                         } else {
                           toast.error("Failed to cancel: " + error.message);
@@ -559,12 +559,11 @@ function TrackPage() {
                 <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs border-t border-orange-200/50 dark:border-orange-800/40">
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
                     <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                      Locked Fare
+                      Fare
                     </span>
                     <p className="font-mono text-base font-bold text-primary">
                       ₹{Math.round(booking.estimated_fare || 0)}
                     </p>
-                    <span className="text-[10px] text-muted-foreground">Zero surge guarantee</span>
                   </div>
                   <div className="rounded-lg bg-background/60 p-2.5 border border-border/50">
                     <span className="text-[10px] uppercase font-bold text-muted-foreground">

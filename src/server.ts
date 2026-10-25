@@ -98,13 +98,13 @@ async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Res
     const supabaseUrl =
       (env as any)?.VITE_SUPABASE_URL ||
       (typeof process !== "undefined" ? process.env?.["VITE_SUPABASE_URL"] : undefined) ||
-      "https://ndaollycrvlawemhwvky.supabase.co";
+      "https://qcrpzrrzjddwqebaktyu.supabase.co";
     const supabaseAnonKey =
       (env as any)?.VITE_SUPABASE_PUBLISHABLE_KEY ||
       (typeof process !== "undefined"
         ? process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]
         : undefined) ||
-      "sb_publishable_baABGadHhpQI6LtkZcyI0g_HJX39Y_d";
+      "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx";
 
     try {
       const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -280,10 +280,10 @@ function readEnv(env: unknown, name: string): string | undefined {
 
 function settlementConfig(env: unknown): SettlementConfig {
   return {
-    supabaseUrl: readEnv(env, "VITE_SUPABASE_URL") || "https://ndaollycrvlawemhwvky.supabase.co",
+    supabaseUrl: readEnv(env, "VITE_SUPABASE_URL") || "https://qcrpzrrzjddwqebaktyu.supabase.co",
     supabaseAnonKey:
       readEnv(env, "VITE_SUPABASE_PUBLISHABLE_KEY") ||
-      "sb_publishable_baABGadHhpQI6LtkZcyI0g_HJX39Y_d",
+      "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx",
     serviceRoleKey: readEnv(env, "SUPABASE_SERVICE_ROLE_KEY"),
     razorpayKeyId: readEnv(env, "RAZORPAY_KEY_ID") || readEnv(env, "VITE_RAZORPAY_KEY_ID"),
     razorpayKeySecret: readEnv(env, "RAZORPAY_KEY_SECRET"),
@@ -364,6 +364,52 @@ async function handleWalletTopupSettle(request: Request, env: unknown): Promise<
   return jsonResponse(result.status, result.body);
 }
 
+async function quotedFare(
+  cfg: SettlementConfig,
+  vehicleCode: unknown,
+  distanceKm: number,
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${cfg.supabaseUrl}/rest/v1/rpc/fn_fare_quote`, {
+      method: "POST",
+      headers: {
+        apikey: cfg.supabaseAnonKey,
+        Authorization: `Bearer ${cfg.supabaseAnonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        _vehicle_code: typeof vehicleCode === "string" ? vehicleCode : "ORANGE_SIGNATURE",
+        _distance_km: Math.max(0, distanceKm),
+      }),
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ total?: number | string }>;
+    const total = Number(rows?.[0]?.total);
+    return Number.isFinite(total) && total > 0 ? total : null;
+  } catch {
+    return null;
+  }
+}
+
+async function bookedFare(cfg: SettlementConfig, bookingId: string): Promise<number | null> {
+  if (!cfg.serviceRoleKey) return null;
+  try {
+    const res = await fetch(
+      `${cfg.supabaseUrl}/rest/v1/bookings?id=eq.${encodeURIComponent(bookingId)}&select=estimated_fare,final_fare`,
+      { headers: { apikey: cfg.serviceRoleKey, Authorization: `Bearer ${cfg.serviceRoleKey}` } },
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{
+      estimated_fare?: number | string;
+      final_fare?: number | string | null;
+    }>;
+    const fare = Number(rows?.[0]?.final_fare ?? rows?.[0]?.estimated_fare);
+    return Number.isFinite(fare) && fare > 0 ? fare : null;
+  } catch {
+    return null;
+  }
+}
+
 async function handleCreateRazorpayOrder(request: Request, env: unknown): Promise<Response> {
   try {
     const body = (await request.json()) as {
@@ -379,15 +425,21 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
         ? { kind: "booking", booking_id: body.bookingId }
         : undefined;
 
-    const dist = Math.max(0, Number(body.distanceKm) || 0);
-    // Authoritative calculation: Base ₹99 + ₹18/km, minimum ₹149, + 5% GST
-    const baseFare = 99;
-    const distanceFare = Math.round(dist * 18);
-    const subtotal = Math.max(149, baseFare + distanceFare);
-    const tax = Math.round(subtotal * 0.05);
-    const authoritativeTotal = subtotal + tax;
-
-    const effectiveFare = Math.max(authoritativeTotal, Number(body.amount) || authoritativeTotal);
+    // The order must match what the database will charge: the booked fare for a mid-ride payment,
+    // otherwise the admin-set tariff (public.fn_fare_quote, same formula as the booking check).
+    const cfg = settlementConfig(env);
+    const serverFare = bookingNotes
+      ? await bookedFare(cfg, bookingNotes.booking_id)
+      : await quotedFare(cfg, body.vehicleCode, Number(body.distanceKm) || 0);
+    if (serverFare === null) {
+      return jsonResponse(503, {
+        success: false,
+        error: "Pricing is unavailable. Please try again.",
+      });
+    }
+    const effectiveFare = bookingNotes
+      ? serverFare
+      : Math.max(serverFare, Number(body.amount) || serverFare);
     const amountInPaise = Math.round(effectiveFare * 100);
 
     const keyId =
