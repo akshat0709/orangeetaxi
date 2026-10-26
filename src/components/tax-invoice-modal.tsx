@@ -24,7 +24,7 @@ import {
   CompanyGSTProfile,
 } from "@/lib/gst-utils";
 import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
-import { SendInvoicePayload } from "@/lib/send-invoice-email";
+import { generateInvoiceHtml, type SendInvoicePayload } from "@/lib/send-invoice-email";
 import { supabase } from "@/integrations/supabase/client";
 
 interface TaxInvoiceModalProps {

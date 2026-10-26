@@ -184,6 +184,7 @@ export function CommissionLedgerManager({
   }
 
   const allStats = activePartnerDrivers.map((d) => getPartnerCommissionStats(d.id));
+  const totalPartnerGrossFare = allStats.reduce((sum, x) => sum + x.grossFare, 0);
   const totalCommissionEarned = allStats.reduce((sum, x) => sum + x.commissionTotal, 0);
   const totalCommissionPaid = allStats.reduce((sum, x) => sum + x.paidByDriver, 0);
   const totalCommissionOutstanding = allStats.reduce((sum, x) => sum + x.outstandingCommission, 0);

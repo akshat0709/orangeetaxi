@@ -753,15 +753,6 @@ function DriverConsolePage() {
     if (driverData.is_online) {
       reqList = rawReqList
         .filter((r) => {
-          if (driverData.current_lat && driverData.current_lng && r.pickup_lat && r.pickup_lng) {
-            const d = getDistanceInKm(
-              driverData.current_lat,
-              driverData.current_lng,
-              r.pickup_lat,
-              r.pickup_lng,
-            );
-            if (d > 5) return false;
-          }
           const dec = declines[r.id];
           if (dec) {
             if (dec.count >= 2) return false;
@@ -2719,7 +2710,6 @@ function DriverConsolePage() {
                         type="button"
                         onClick={() => {
                           setCommissionPayAmount(Math.round(partnerCommissionDue));
-                          setCommissionUtr("");
                           setUpiCommissionModalOpen(true);
                         }}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1.5 shadow-md active:scale-95"
@@ -3027,7 +3017,6 @@ function DriverConsolePage() {
                           type="button"
                           onClick={() => {
                             setDepositAmount(Math.round(currentCashHolding));
-                            setDepositUtr("");
                             setUpiDepositModalOpen(true);
                           }}
                           className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-md active:scale-95"
