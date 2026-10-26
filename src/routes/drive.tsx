@@ -1007,7 +1007,7 @@ function DriverApplicationForm() {
               <Label htmlFor="da-name">Full Name</Label>
               <Input
                 id="da-name"
-                placeholder="Rajesh Kumar"
+                placeholder="Full name"
                 className="mt-1.5 bg-background"
                 {...form.register("full_name")}
               />
@@ -1037,7 +1037,7 @@ function DriverApplicationForm() {
               <Input
                 id="da-phone"
                 type="tel"
-                placeholder="+91 98765 43210"
+                placeholder="10-digit mobile number"
                 className="mt-1.5 bg-background"
                 {...form.register("phone")}
               />

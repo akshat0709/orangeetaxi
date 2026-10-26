@@ -314,7 +314,7 @@ export function GuardianSafetyModal({
                 <Input
                   id="guardian-phone"
                   type="tel"
-                  placeholder="e.g. +91 98765 43210"
+                  placeholder="10-digit mobile number"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
                   className="mt-1.5 font-mono"
@@ -472,7 +472,7 @@ export function GuardianSafetyModal({
                   <LifeBuoy className="size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold uppercase">Orange 24/7 Desk</p>
-                    <p className="text-xs font-bold font-mono">+91 98100 12345</p>
+                    <p className="text-xs font-bold font-mono">+91 72940 73222</p>
                   </div>
                 </a>
               </div>

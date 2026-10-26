@@ -103,7 +103,7 @@ export function TaxInvoiceModal({
 
   if (!booking) return null;
 
-  const fare = Number(booking.final_fare || booking.estimated_fare || 500);
+  const fare = Number(booking.final_fare || booking.estimated_fare || 0);
   const gst = calculateRideGST(fare, booking.pickup_area, booking.drop_area);
   const rawDate = booking.completed_at || booking.created_at;
   const invoiceNumber = formatInvoiceNumber(booking.reference, rawDate);
@@ -475,7 +475,7 @@ export function TaxInvoiceModal({
                   <p className="font-mono text-primary font-bold">GSTIN: {corporateGSTIN.trim()}</p>
                 )}
                 <p className="text-muted-foreground">
-                  Phone: {customer?.phone || booking.customer_phone || "+91 98100 12345"}
+                  Phone: {customer?.phone || booking.customer_phone || "—"}
                 </p>
                 {customer?.email && (
                   <p className="text-muted-foreground">Email: {customer.email}</p>
@@ -552,8 +552,8 @@ export function TaxInvoiceModal({
                       Passenger Transportation by Motor Cab
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      Point-to-point journey: {booking.pickup_area} to {booking.drop_area} (
-                      {booking.distance_km || 15} km)
+                      Point-to-point journey: {booking.pickup_area} to {booking.drop_area}
+                      {booking.distance_km ? ` (${booking.distance_km} km)` : ""}
                     </p>
                   </td>
                   <td className="px-4 py-3 font-mono font-semibold">{profile.sacCode}</td>

@@ -12,6 +12,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+/** "none" | "unconfirmed" | "exists" | null (unknown). Server-checked and rate-limited. */
+async function accountStatus(email: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/auth/email-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { status?: string };
+    return res.ok ? (json.status ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createFileRoute("/login")({
   validateSearch: z.object({
     redirect: z.string().optional(),
@@ -336,6 +351,30 @@ function LoginPage() {
         );
         setSubmitting(false);
         return;
+      }
+
+      // Supabase answers "Invalid login credentials" both for a wrong password and for an email
+      // with no account. Ask the server which one it is, so new visitors are sent to sign up.
+      if (error.message?.toLowerCase().includes("invalid login credentials")) {
+        const status = await accountStatus(values.email);
+        if (status === "none") {
+          toast.error("No account found with this email. Please create an account first.");
+          signUpForm.setValue("email", values.email.trim());
+          setMode("signup");
+          setSubmitting(false);
+          return;
+        }
+        if (status === "unconfirmed") {
+          setOtpEmail(values.email.trim());
+          setResendCooldown(30);
+          setOtpDigits("");
+          setMode("verify_otp");
+          supabase.auth.resend({ type: "signup", email: values.email.trim() }).catch(() => {});
+          toast.info("Please verify your email first. We've sent you a new verification code.");
+          setSubmitting(false);
+          return;
+        }
+        if (status === "exists") error.message = "Incorrect password.";
       }
 
       try {
@@ -1179,7 +1218,7 @@ function LoginPage() {
                     <Label htmlFor="su-name">Full Name</Label>
                     <Input
                       id="su-name"
-                      placeholder="Priya Sharma"
+                      placeholder="Full name"
                       className="mt-1.5"
                       {...signUpForm.register("fullName")}
                     />
@@ -1194,7 +1233,7 @@ function LoginPage() {
                     <Input
                       id="su-phone"
                       type="tel"
-                      placeholder="+91 98765 43210"
+                      placeholder="10-digit mobile number"
                       className="mt-1.5"
                       {...signUpForm.register("phone")}
                     />

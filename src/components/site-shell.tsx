@@ -392,6 +392,7 @@ export function SiteFooter() {
             items={[
               ["Privacy Policy", "/privacy"],
               ["Terms & Conditions", "/terms"],
+              ["Cancellation & Refunds", "/refunds"],
               ["Customer Care & SLA", "/support"],
               ["Driver Code & Safety", "/drive"],
               ["Sitemap (XML)", "/sitemap.xml"],

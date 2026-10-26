@@ -444,9 +444,9 @@ export function PrivacyPolicy() {
           <div className="rounded-xl border border-border bg-card p-5 space-y-3 text-xs">
             <div className="flex items-center gap-2">
               <UserCheck className="size-4 text-primary" />
-              <span className="font-bold text-foreground">Name:</span>
+              <span className="font-bold text-foreground">Contact:</span>
               <span className="text-muted-foreground">
-                Rajesh Kumar, Data Protection &amp; Grievance Officer
+                Grievance &amp; Data Protection Officer, Orange Taxi Limited
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -461,11 +461,17 @@ export function PrivacyPolicy() {
               </a>
             </div>
             <div className="flex items-center gap-2">
+              <PhoneCall className="size-4 text-primary" />
+              <span className="font-bold text-foreground">Phone:</span>
+              <a href="tel:+917294073222" className="text-primary hover:underline">
+                +91 72940 73222
+              </a>
+            </div>
+            <div className="flex items-center gap-2">
               <Building className="size-4 text-primary" />
               <span className="font-bold text-foreground">Registered Office:</span>
               <span className="text-muted-foreground">
-                Orange Electric Mobility Hub, Outer Ring Road, Bellandur, Bengaluru, Karnataka
-                560103, India
+                S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017, India
               </span>
             </div>
             <div className="flex items-center gap-2">

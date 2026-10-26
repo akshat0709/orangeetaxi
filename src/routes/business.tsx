@@ -379,7 +379,7 @@ function BusinessPage() {
                       </Label>
                       <Input
                         id="contact_name"
-                        placeholder="e.g. Rajesh Sharma"
+                        placeholder="Full name"
                         {...register("contact_name")}
                         className="mt-1.5"
                       />
@@ -413,7 +413,7 @@ function BusinessPage() {
                       </Label>
                       <Input
                         id="phone"
-                        placeholder="+91 98765 43210"
+                        placeholder="10-digit mobile number"
                         {...register("phone")}
                         className="mt-1.5"
                       />

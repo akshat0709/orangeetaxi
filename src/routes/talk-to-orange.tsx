@@ -471,7 +471,7 @@ function TalkToOrangePage() {
                   <Label htmlFor="cq-contact">Your Name</Label>
                   <Input
                     id="cq-contact"
-                    placeholder="Priya Sharma"
+                    placeholder="Full name"
                     className="mt-1.5 bg-background"
                     {...form.register("contact_name")}
                   />
@@ -515,7 +515,7 @@ function TalkToOrangePage() {
                   <Input
                     id="cq-phone"
                     type="tel"
-                    placeholder="+91 98765 43210"
+                    placeholder="10-digit mobile number"
                     className="mt-1.5 bg-background"
                     {...form.register("phone")}
                   />

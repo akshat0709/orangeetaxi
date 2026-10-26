@@ -1725,10 +1725,14 @@ function Step3Confirm({
         <Link to="/privacy" target="_blank" className="text-primary underline">
           Privacy Policy
         </Link>
-        , and the cancellation policy: free until a driver accepts, and within{" "}
-        {pricing?.cancellation_free_minutes ?? 3} minutes of acceptance if the driver hasn&apos;t
-        travelled more than {pricing?.cancellation_free_km ?? 1.5} km; otherwise ₹
-        {pricing?.cancellation_charge ?? 50}.
+        , and the{" "}
+        <Link to="/refunds" target="_blank" className="text-primary underline">
+          cancellation &amp; refund policy
+        </Link>
+        : free until a driver accepts, and within {pricing?.cancellation_free_minutes ?? 3} minutes
+        of acceptance if the driver hasn&apos;t travelled more than{" "}
+        {pricing?.cancellation_free_km ?? 1.5} km; otherwise ₹{pricing?.cancellation_charge ?? 50}{" "}
+        added to your next ride.
       </div>
       <div className="mt-5 flex gap-3 min-w-0">
         <Button
@@ -2316,7 +2320,7 @@ function Step4Confirmed({
                       </p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                         <span className="text-amber-400 font-bold">
-                          ⭐ {driverInfo?.rating ? Number(driverInfo.rating).toFixed(1) : "4.9"}
+                          ⭐ {driverInfo?.rating ? Number(driverInfo.rating).toFixed(1) : "New"}
                         </span>
                         <span>·</span>
                         <span className="text-muted-foreground">

@@ -39,6 +39,8 @@ import {
   Building2,
   Handshake,
   Percent,
+  Headphones,
+  Ban,
   Sparkles,
   ShieldCheck,
   BadgeIndianRupee,
@@ -69,6 +71,8 @@ import { CashSettlementManager } from "@/components/cash-settlement-manager";
 import { CommissionLedgerManager } from "@/components/commission-ledger-manager";
 import { GSTAccountingManager } from "@/components/gst-accounting-manager";
 import { PricingManager } from "@/components/pricing-manager";
+import { SupportManager } from "@/components/support-manager";
+import { CancellationFeesManager } from "@/components/cancellation-fees-manager";
 import { usePricingSettings } from "@/lib/pricing";
 import { isCommissionDriver as isPartnerDriverType } from "@/lib/driver-type";
 import { TabErrorBoundary } from "@/components/tab-error-boundary";
@@ -1124,6 +1128,29 @@ function AdminPage() {
       iconBg: "bg-primary/10",
     },
     {
+      id: "cancellation-fees",
+      title: "Cancellation Fees",
+      category: "finance",
+      description:
+        "Every cancellation fee: unpaid, paid on the next ride, or waived. Search and waive.",
+      icon: Ban,
+      badgeColor: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badgeText: "Fees",
+      iconColor: "text-amber-600 dark:text-amber-400",
+      iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
+    },
+    {
+      id: "support",
+      title: "Support & Refunds",
+      category: "network",
+      description: "Passenger complaints, lost items and refund requests; refunds ledger.",
+      icon: Headphones,
+      badgeColor: "bg-primary/10 text-primary border-primary/20",
+      badgeText: "Tickets",
+      iconColor: "text-primary",
+      iconBg: "bg-primary/10",
+    },
+    {
       id: "gst",
       title: "GST & Corporate Invoicing",
       category: "finance",
@@ -1162,13 +1189,13 @@ function AdminPage() {
       id: "network",
       title: "Chauffeur Network & Workforce",
       icon: Users,
-      moduleIds: ["applications", "drivers", "cash"],
+      moduleIds: ["applications", "drivers", "cash", "support"],
     },
     {
       id: "finance",
       title: "Financials & Enterprise Accounts",
       icon: BadgeIndianRupee,
-      moduleIds: ["pricing", "commissions", "gst", "enquiries"],
+      moduleIds: ["pricing", "cancellation-fees", "commissions", "gst", "enquiries"],
     },
   ];
 
@@ -1734,10 +1761,12 @@ function AdminPage() {
                     <SelectItem value="cash">💵 Cash Settlements</SelectItem>
                     <SelectItem value="commissions">📊 Commission Ledger</SelectItem>
                     <SelectItem value="pricing">💰 Pricing & Fees</SelectItem>
+                    <SelectItem value="cancellation-fees">🚫 Cancellation Fees</SelectItem>
                     <SelectItem value="gst">🧾 GST & Invoicing</SelectItem>
                     <SelectItem value="drivers">👤 Chauffeur Directory</SelectItem>
                     <SelectItem value="applications">📋 Driver Applications</SelectItem>
                     <SelectItem value="enquiries">🏢 Corporate Enquiries</SelectItem>
+                    <SelectItem value="support">🎧 Support & Refunds</SelectItem>
                   </SelectContent>
                 </Select>
                 {/* Live Sync Status & Auto Refresh */}
@@ -1830,6 +1859,9 @@ function AdminPage() {
                   <TabsTrigger value="pricing" className="gap-1.5 font-semibold">
                     <IndianRupee className="size-3.5 text-primary" /> Pricing
                   </TabsTrigger>
+                  <TabsTrigger value="cancellation-fees" className="gap-1.5 font-semibold">
+                    <Ban className="size-3.5 text-amber-600" /> Cancellation Fees
+                  </TabsTrigger>
                   <TabsTrigger value="gst" className="gap-1.5 font-semibold">
                     <FileSpreadsheet className="size-3.5 text-amber-600" /> GST & Invoicing
                   </TabsTrigger>
@@ -1839,6 +1871,9 @@ function AdminPage() {
                   </TabsTrigger>
                   <TabsTrigger value="enquiries">
                     Enquiries <CountBadge n={stats.newEnquiries} color="blue" />
+                  </TabsTrigger>
+                  <TabsTrigger value="support" className="gap-1.5 font-semibold">
+                    <Headphones className="size-3.5 text-primary" /> Support
                   </TabsTrigger>
                 </TabsList>
 
@@ -2839,6 +2874,20 @@ function AdminPage() {
                         navigate({ to: "/admin", search: { tab }, replace: true });
                       }}
                     />
+                  </TabErrorBoundary>
+                </TabsContent>
+
+                {/* CANCELLATION FEES */}
+                <TabsContent value="cancellation-fees">
+                  <TabErrorBoundary tabName="Cancellation Fees" onRetry={loadAll}>
+                    <CancellationFeesManager />
+                  </TabErrorBoundary>
+                </TabsContent>
+
+                {/* SUPPORT & REFUNDS */}
+                <TabsContent value="support">
+                  <TabErrorBoundary tabName="Support" onRetry={loadAll}>
+                    <SupportManager />
                   </TabErrorBoundary>
                 </TabsContent>
 

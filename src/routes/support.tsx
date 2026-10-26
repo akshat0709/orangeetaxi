@@ -38,12 +38,20 @@ export const Route = createFileRoute("/support")({
       },
     ],
   }),
+  // /support?type=refund&ref=OT123ABC opens the form ready for a refund request.
+  validateSearch: (search: Record<string, unknown>) => ({
+    type: typeof search["type"] === "string" ? (search["type"] as string) : undefined,
+    ref: typeof search["ref"] === "string" ? (search["ref"] as string) : undefined,
+  }),
   component: SupportPage,
 });
 
 function SupportPage() {
-  const [complaintType, setComplaintType] = useState("general");
-  const [reference, setReference] = useState("");
+  const search = Route.useSearch();
+  const [complaintType, setComplaintType] = useState(
+    search.type === "refund" ? "refund" : "general",
+  );
+  const [reference, setReference] = useState(search.ref ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -323,7 +331,7 @@ function SupportPage() {
                     </Label>
                     <Input
                       id="c-phone"
-                      placeholder="+91 98765 43210"
+                      placeholder="10-digit mobile number"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="mt-1.5 text-xs"
@@ -370,6 +378,7 @@ function SupportPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="general">General Service Inquiry</SelectItem>
+                      <SelectItem value="refund">Refund Request (fare or fee)</SelectItem>
                       <SelectItem value="lost_found">Lost & Found / Property in Cab</SelectItem>
                       <SelectItem value="billing">
                         Fare, Overcharge or GST Invoicing Dispute

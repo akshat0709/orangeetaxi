@@ -1610,7 +1610,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     type="text"
                     value={partnerOwnerName}
                     onChange={(e) => setPartnerOwnerName(e.target.value)}
-                    placeholder="e.g. Rajesh Sharma"
+                    placeholder="Full name"
                     required
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
@@ -1624,7 +1624,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     type="tel"
                     value={partnerOwnerPhone}
                     onChange={(e) => setPartnerOwnerPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
+                    placeholder="10-digit mobile number"
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>

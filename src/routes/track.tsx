@@ -643,7 +643,7 @@ function TrackPage() {
                           Assigned EV Chauffeur
                         </span>
                         <span className="text-xs font-bold text-amber-500">
-                          ★ {driver.rating || "4.9"}
+                          ★ {driver.rating ? Number(driver.rating).toFixed(1) : "New"}
                         </span>
                       </div>
                       <h3 className="font-bold text-base text-foreground mt-0.5">

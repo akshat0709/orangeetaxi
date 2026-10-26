@@ -461,7 +461,7 @@ function ProfilePage() {
                       <Input
                         id="phone"
                         className="mt-1.5"
-                        placeholder="+91 98765 43210"
+                        placeholder="10-digit mobile number"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                       />
@@ -537,7 +537,7 @@ function ProfilePage() {
                   <Input
                     id="guardianPhone"
                     className="mt-1.5 font-mono"
-                    placeholder="e.g. +91 98765 43210"
+                    placeholder="10-digit mobile number"
                     value={guardianPhone}
                     onChange={(e) => setGuardianPhone(e.target.value)}
                   />

@@ -61,6 +61,7 @@ import {
   qrStatus,
   settleQrFromWebhook,
 } from "./lib/razorpay-qr";
+import { createRefund, emailStatus } from "./lib/support-refunds";
 
 const invoiceRateLimits = new Map<string, { count: number; resetAt: number }>();
 
@@ -375,6 +376,53 @@ async function handleQr(
             cfg,
             settlementDeps,
           );
+  return jsonResponse(r.status, r.body);
+}
+
+// "No account with this email" on sign-in. Rate-limited per IP and per email so it can't be used to
+// test long lists of addresses.
+const emailStatusLimits = new Map<string, { count: number; resetAt: number }>();
+function allowEmailCheck(key: string, limit: number): boolean {
+  const now = Date.now();
+  const entry = emailStatusLimits.get(key);
+  if (!entry || entry.resetAt < now) {
+    if (emailStatusLimits.size > 5000) emailStatusLimits.clear();
+    emailStatusLimits.set(key, { count: 1, resetAt: now + 10 * 60_000 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= limit;
+}
+
+async function handleEmailStatus(request: Request, env: unknown): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { error: "Invalid JSON body" });
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const email = String(body["email"] || "")
+    .trim()
+    .toLowerCase();
+  if (!allowEmailCheck(`ip:${ip}`, 20) || !allowEmailCheck(`em:${email}`, 10)) {
+    return jsonResponse(429, { error: "Too many attempts. Please wait a few minutes." });
+  }
+  const r = await emailStatus(email, settlementConfig(env), settlementDeps);
+  return jsonResponse(r.status, r.body);
+}
+
+async function handleAdminRefund(request: Request, env: unknown): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { ok: false, error: "Invalid JSON body" });
+  const r = await createRefund(
+    {
+      accessToken: bearer(request),
+      bookingId: body["bookingId"],
+      amount: body["amount"],
+      reason: body["reason"],
+      method: body["method"],
+      ticketId: body["ticketId"],
+    },
+    settlementConfig(env),
+    settlementDeps,
+  );
   return jsonResponse(r.status, r.body);
 }
 
@@ -782,6 +830,12 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://orange-taxi.com/refunds</loc>
+    <lastmod>2026-10-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://orange-taxi.com/privacy</loc>
     <lastmod>2026-09-15</lastmod>
     <changefreq>monthly</changefreq>
@@ -966,6 +1020,12 @@ export default {
       }
       if (url.pathname === "/api/qr/deposit" && request.method === "POST") {
         return applySecurityHeaders(await handleQr(request, env, "deposit"));
+      }
+      if (url.pathname === "/api/auth/email-status" && request.method === "POST") {
+        return applySecurityHeaders(await handleEmailStatus(request, env));
+      }
+      if (url.pathname === "/api/admin/refund" && request.method === "POST") {
+        return applySecurityHeaders(await handleAdminRefund(request, env));
       }
       if (url.pathname === "/api/pay/ride-link" && request.method === "POST") {
         return applySecurityHeaders(await handleQr(request, env, "ride_link"));

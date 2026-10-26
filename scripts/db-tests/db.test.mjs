@@ -1348,3 +1348,86 @@ test("rating: a passenger (also an admin account) can rate a completed ride", as
     assert.equal(rate.rows.length, 1, "rating row updated");
   }
 });
+
+// ---- Support, refunds, sign-in account check (20261026100000) ----------------------------------
+test("support/refunds: account check is server-only; tickets can't be forged; refunds read-only", async () => {
+  const svc = (sql, params) =>
+    db.transaction(async (tx) => {
+      await tx.query(
+        `SELECT set_config('request.jwt.claim.role','service_role',true), set_config('request.jwt.claim.sub','',true)`,
+      );
+      await tx.exec("SET LOCAL ROLE service_role");
+      return (await tx.query(sql, params)).rows;
+    });
+  // Account check
+  assert.ok(
+    !(await anon(`SELECT public.auth_email_status('r@x') AS s`)).ok,
+    "anon can't probe emails",
+  );
+  assert.ok(!(await authed(RIDER, `SELECT public.auth_email_status('r@x') AS s`)).ok);
+  const [none] = await svc(`SELECT public.auth_email_status('nobody-here@example.org') AS s`);
+  assert.equal(none.s, "none");
+  const [{ email }] = await su(db, `SELECT email FROM auth.users WHERE id = $1`, [RIDER]);
+  const [some] = await svc(`SELECT public.auth_email_status($1) AS s`, [
+    String(email).toUpperCase(),
+  ]);
+  assert.notEqual(some.s, "none");
+
+  // Tickets: a visitor can open one, but not as someone else, pre-resolved, or with admin notes.
+  const ok = await anon(
+    `INSERT INTO public.support_tickets (docket_number, name, phone, complaint_type, message) VALUES ('T-1','A','1','refund','x')`,
+  );
+  assert.ok(ok.ok, ok.error);
+  const spoof = await authed(
+    RIDER,
+    `INSERT INTO public.support_tickets (docket_number, user_id, name, phone, complaint_type, message) VALUES ('T-2',$1,'A','1','general','x')`,
+    [OTHER],
+  );
+  assert.ok(!spoof.ok, "can't file a ticket as another user");
+  const resolved = await anon(
+    `INSERT INTO public.support_tickets (docket_number, name, phone, complaint_type, message, status) VALUES ('T-3','A','1','general','x','resolved')`,
+  );
+  assert.ok(!resolved.ok);
+  const edit = await authed(
+    RIDER,
+    `UPDATE public.support_tickets SET status='resolved' WHERE docket_number='T-1' RETURNING id`,
+  );
+  assert.ok(!edit.ok || edit.rows.length === 0, "riders can't edit tickets");
+  const adm = await authed(
+    ADMIN,
+    `UPDATE public.support_tickets SET status='resolved' WHERE docket_number='T-1' RETURNING resolution_at`,
+  );
+  assert.ok(adm.ok, adm.error);
+  assert.ok(adm.rows[0].resolution_at, "resolution time recorded");
+
+  // Refunds: written by the server only; a rider reads only their own.
+  const b = await book(RIDER, { method: "cash" });
+  assert.ok(
+    !(
+      await authed(
+        RIDER,
+        `INSERT INTO public.refunds (booking_id, customer_id, amount, method, reason) VALUES ($1,$2,10,'manual','x')`,
+        [b.id, RIDER],
+      )
+    ).ok,
+  );
+  await svc(
+    `INSERT INTO public.refunds (booking_id, customer_id, amount, method, reason) VALUES ($1,$2,10,'manual','test')`,
+    [b.id, RIDER],
+  );
+  assert.equal(
+    (await authed(RIDER, `SELECT id FROM public.refunds WHERE booking_id = $1`, [b.id])).rows
+      .length,
+    1,
+  );
+  assert.equal(
+    (await authed(OTHER, `SELECT id FROM public.refunds WHERE booking_id = $1`, [b.id])).rows
+      .length,
+    0,
+  );
+  assert.equal(
+    (await authed(ADMIN, `SELECT id FROM public.refunds WHERE booking_id = $1`, [b.id])).rows
+      .length,
+    1,
+  );
+});
