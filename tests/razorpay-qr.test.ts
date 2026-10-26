@@ -59,7 +59,12 @@ function world(opts: { paymentStatus?: string; paidAmount?: number; driverType?:
       return json(200, [
         { id: DRIVER, full_name: "Ravi", driver_type: opts.driverType ?? "company" },
       ]);
-    if (url.includes("/rest/v1/bookings?id=eq.") && method === "GET") return json(200, [booking]);
+    if (url.includes("/rest/v1/bookings?id=eq.") && method === "GET")
+      return json(200, [
+        url.includes("driver:drivers")
+          ? { ...booking, driver: booking.driver_id === DRIVER ? { user_id: DRIVER_USER } : null }
+          : booking,
+      ]);
     if (url.includes("/rest/v1/bookings?driver_id=eq."))
       return json(200, [
         { final_fare: 600, payment_method: "cash" },

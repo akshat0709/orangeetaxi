@@ -190,29 +190,36 @@ export async function createRideQr(
   if (!configured(config)) return bad(503, "UPI QR payments are not configured on the server.");
   const bookingId = String(input.bookingId || "");
   if (!UUID_RE.test(bookingId)) return bad(400, "Invalid booking.");
-  const uid = await getUserId(input.accessToken, config, deps);
+  // Independent lookups run together: one round trip to Supabase instead of four.
+  const [uid, b, open] = await Promise.all([
+    getUserId(input.accessToken, config, deps),
+    db<
+      Array<{
+        id: string;
+        driver_id: string | null;
+        status: string;
+        reference: string;
+        estimated_fare: number | string;
+        final_fare: number | string | null;
+        payment_status: string;
+        driver: { user_id: string | null } | null;
+      }>
+    >(
+      config,
+      deps,
+      `bookings?id=eq.${bookingId}&select=id,driver_id,status,reference,estimated_fare,final_fare,payment_status,driver:drivers!bookings_driver_id_fkey(user_id)`,
+    ),
+    db<QrRow[]>(
+      config,
+      deps,
+      `payment_qr_codes?booking_id=eq.${bookingId}&status=eq.pending&order=created_at.desc&limit=1&select=*`,
+    ),
+  ]);
   if (!uid) return bad(401, "Please sign in again.");
-
-  const b = await db<
-    Array<{
-      id: string;
-      driver_id: string | null;
-      status: string;
-      reference: string;
-      estimated_fare: number | string;
-      final_fare: number | string | null;
-      payment_status: string;
-    }>
-  >(
-    config,
-    deps,
-    `bookings?id=eq.${bookingId}&select=id,driver_id,status,reference,estimated_fare,final_fare,payment_status`,
-  );
   const booking = b.data?.[0];
   if (!booking) return bad(404, "Booking not found.");
-  const d = await db<Array<{ id: string }>>(config, deps, `drivers?user_id=eq.${uid}&select=id`);
-  const driverId = d.data?.[0]?.id;
-  if (!driverId || driverId !== booking.driver_id) return bad(403, "This is not your ride.");
+  const driverId = booking.driver_id;
+  if (!driverId || booking.driver?.user_id !== uid) return bad(403, "This is not your ride.");
   if (!["in_progress", "completed"].includes(booking.status)) {
     return bad(409, "Start the ride before collecting payment.");
   }
@@ -221,11 +228,6 @@ export async function createRideQr(
   if (amount <= 0) return bad(409, "This ride has no fare to collect.");
 
   // Reuse a QR that is still open for the same amount (e.g. the driver reopened the screen).
-  const open = await db<QrRow[]>(
-    config,
-    deps,
-    `payment_qr_codes?booking_id=eq.${bookingId}&status=eq.pending&order=created_at.desc&limit=1&select=*`,
-  );
   const existing = open.data?.[0];
   if (
     existing &&
