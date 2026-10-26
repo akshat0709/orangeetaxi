@@ -45,6 +45,29 @@ const STAR_LABELS: Record<number, string> = {
 };
 
 const TIP_OPTIONS = [0, 20, 50, 100];
+const TIP_MIN = 10;
+const TIP_MAX = 2000;
+
+/** Creates a Razorpay payment link for the tip (the server records it once paid). */
+async function createTipLink(bookingId: string, amount: number): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Please sign in again.");
+  const res = await fetch("/api/pay/tip-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ bookingId, amount }),
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    error?: string;
+    qr?: { image_url?: string };
+  };
+  if (!res.ok || !body.ok || !body.qr?.image_url) {
+    throw new Error(body.error || `Request failed (${res.status})`);
+  }
+  return body.qr.image_url;
+}
 
 export function RatingModal({
   open,
@@ -71,6 +94,10 @@ export function RatingModal({
 
   async function handleSubmit() {
     if (!booking) return;
+    if (tip > 0 && (tip < TIP_MIN || tip > TIP_MAX)) {
+      toast.error(`Tips can be from ₹${TIP_MIN} to ₹${TIP_MAX}.`);
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -116,6 +143,20 @@ export function RatingModal({
         localStorage.setItem("orange_driver_reviews", JSON.stringify(storedReviews));
       } catch {
         // best-effort: failure here is non-fatal and intentionally ignored
+      }
+
+      // A tip is paid through Razorpay; the page moves to the payment screen.
+      if (tip > 0) {
+        try {
+          const payUrl = await createTipLink(booking.id, tip);
+          toast.success("Rating saved. Opening Razorpay to pay your tip…");
+          window.location.assign(payUrl);
+          return;
+        } catch (e: any) {
+          toast.error("Your rating is saved, but the tip could not be started.", {
+            description: e?.message,
+          });
+        }
       }
 
       setIsSuccess(true);
@@ -246,7 +287,7 @@ export function RatingModal({
                     }}
                     className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all border ${
                       !isCustomTip && tip === amt
-                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm font-extrabold scale-105"
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                         : "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
                     }`}
                   >
@@ -261,7 +302,7 @@ export function RatingModal({
                   }}
                   className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all border ${
                     isCustomTip
-                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm font-extrabold scale-105"
+                      ? "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                       : "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
                   }`}
                 >
@@ -274,8 +315,8 @@ export function RatingModal({
                   <span className="text-sm font-bold text-muted-foreground pl-1">₹</span>
                   <input
                     type="number"
-                    min="1"
-                    max="10000"
+                    min={TIP_MIN}
+                    max={TIP_MAX}
                     placeholder="Enter custom tip amount..."
                     value={customTipVal}
                     onChange={(e) => {
@@ -324,7 +365,7 @@ export function RatingModal({
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <>Submit Rating {tip > 0 && `(₹${tip} Tip)`}</>
+                  <>{tip > 0 ? `Submit and pay ₹${tip} tip` : "Submit rating"}</>
                 )}
               </Button>
             </div>

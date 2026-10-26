@@ -4,6 +4,7 @@ import {
   createDepositQr,
   createRideLink,
   createRideQr,
+  createTipLink,
   qrStatus,
   settleQrFromWebhook,
 } from "../src/lib/razorpay-qr.ts";
@@ -37,6 +38,7 @@ function world(opts: { paymentStatus?: string; paidAmount?: number; driverType?:
   const qrs: Array<Record<string, any>> = [];
   const cashSettlements: unknown[] = [];
   const commission: unknown[] = [];
+  const tips: Array<Record<string, any>> = [];
   let rzpPayments: unknown[] = [];
   let created = 0;
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
@@ -94,6 +96,12 @@ function world(opts: { paymentStatus?: string; paidAmount?: number; driverType?:
       }
       return json(200, qrs.filter(match));
     }
+    if (url.includes("/rest/v1/driver_tips") && method === "POST") {
+      if (tips.some((t) => t["razorpay_payment_id"] === body.razorpay_payment_id))
+        return json(409, { message: "duplicate" });
+      tips.push(body);
+      return json(201, null);
+    }
     if (url.includes("/rest/v1/driver_cash_settlements") && method === "GET")
       return json(200, [{ amount: 100 }]);
     if (url.includes("/rest/v1/driver_commission_settlements") && method === "GET")
@@ -132,6 +140,7 @@ function world(opts: { paymentStatus?: string; paidAmount?: number; driverType?:
     qrs,
     cashSettlements,
     commission,
+    tips,
     pay: (amountPaise: number, status = "captured") => {
       rzpPayments = [{ id: "pay_QR1234", status, amount: amountPaise, currency: "INR" }];
     },
@@ -300,4 +309,51 @@ test("a driver paying from their phone gets a payment link, recorded as a hand-i
   const s = await qrStatus({ accessToken: "driver", qrId: r.body.qr!.id }, config, w.deps);
   assert.equal(s.body.qr?.status, "paid");
   assert.equal(w.cashSettlements.length, 1);
+});
+
+test("passenger tips the chauffeur through a payment link; recorded once for the driver", async () => {
+  const w = world();
+  const tooBig = await createTipLink(
+    { accessToken: "rider", bookingId: BOOKING, amount: 99999 },
+    config,
+    w.deps,
+  );
+  assert.equal(tooBig.status, 400);
+  const notMine = await createTipLink(
+    { accessToken: "driver", bookingId: BOOKING, amount: 50 },
+    config,
+    w.deps,
+  );
+  assert.equal(notMine.status, 403);
+  w.booking["status"] = "in_progress";
+  const early = await createTipLink(
+    { accessToken: "rider", bookingId: BOOKING, amount: 50 },
+    config,
+    w.deps,
+  );
+  assert.equal(early.status, 409);
+  w.booking["status"] = "completed";
+  const r = await createTipLink(
+    { accessToken: "rider", bookingId: BOOKING, amount: 50 },
+    config,
+    w.deps,
+  );
+  assert.equal(r.status, 200);
+  assert.equal(r.body.qr?.kind, "tip");
+  assert.equal(r.body.qr?.amount, 50);
+  w.pay(5000);
+  const hook = await settleQrFromWebhook(
+    { event: "payment_link.paid", payload: { payment_link: { entity: { id: r.body.qr!.id } } } },
+    config,
+    w.deps,
+  );
+  assert.equal(hook.settled, true);
+  assert.equal(w.tips.length, 1);
+  assert.equal(w.tips[0]!["driver_id"], DRIVER);
+  assert.equal(w.tips[0]!["amount"], 50);
+  // The ride itself is untouched by a tip.
+  assert.equal(w.booking["payment_status"], "pending");
+  const polled = await qrStatus({ accessToken: "rider", qrId: r.body.qr!.id }, config, w.deps);
+  assert.equal(polled.body.qr?.status, "paid");
+  assert.equal(w.tips.length, 1);
 });

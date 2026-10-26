@@ -97,7 +97,7 @@ export function UpiQrDialog({
 
   return (
     <Dialog open={!!request} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-h-[95svh] overflow-y-auto sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="size-5 text-primary" /> {title}
@@ -134,7 +134,7 @@ export function UpiQrDialog({
               <img
                 src={qr.image_url}
                 alt="UPI QR code"
-                className="w-full max-w-[280px] rounded-lg border bg-white"
+                className="h-auto max-h-[min(52svh,460px)] w-auto max-w-full rounded-lg border bg-white object-contain"
               />
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="size-3 animate-spin" /> Waiting for payment…

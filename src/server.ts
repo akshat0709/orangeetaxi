@@ -57,6 +57,7 @@ import {
 import {
   createDepositQr,
   createRideLink,
+  createTipLink,
   createRideQr,
   qrStatus,
   settleQrFromWebhook,
@@ -349,7 +350,7 @@ async function handleSettleRazorpayPayment(request: Request, env: unknown): Prom
 async function handleQr(
   request: Request,
   env: unknown,
-  which: "ride" | "deposit" | "status" | "ride_link",
+  which: "ride" | "deposit" | "status" | "ride_link" | "tip_link",
 ) {
   const cfg = settlementConfig(env);
   const accessToken = bearer(request);
@@ -365,17 +366,23 @@ async function handleQr(
       ? await createRideQr({ accessToken, bookingId: body["bookingId"] }, cfg, settlementDeps)
       : which === "ride_link"
         ? await createRideLink({ accessToken, bookingId: body["bookingId"] }, cfg, settlementDeps)
-        : await createDepositQr(
-            {
-              accessToken,
-              driverId: body["driverId"],
-              amount: body["amount"],
-              kind: body["kind"],
-              link: body["link"],
-            },
-            cfg,
-            settlementDeps,
-          );
+        : which === "tip_link"
+          ? await createTipLink(
+              { accessToken, bookingId: body["bookingId"], amount: body["amount"] },
+              cfg,
+              settlementDeps,
+            )
+          : await createDepositQr(
+              {
+                accessToken,
+                driverId: body["driverId"],
+                amount: body["amount"],
+                kind: body["kind"],
+                link: body["link"],
+              },
+              cfg,
+              settlementDeps,
+            );
   return jsonResponse(r.status, r.body);
 }
 
@@ -1026,6 +1033,9 @@ export default {
       }
       if (url.pathname === "/api/admin/refund" && request.method === "POST") {
         return applySecurityHeaders(await handleAdminRefund(request, env));
+      }
+      if (url.pathname === "/api/pay/tip-link" && request.method === "POST") {
+        return applySecurityHeaders(await handleQr(request, env, "tip_link"));
       }
       if (url.pathname === "/api/pay/ride-link" && request.method === "POST") {
         return applySecurityHeaders(await handleQr(request, env, "ride_link"));

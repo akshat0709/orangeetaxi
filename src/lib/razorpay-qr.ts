@@ -18,7 +18,7 @@ import {
   type SettlementDeps,
 } from "./razorpay-settlement.ts";
 
-export type QrKind = "ride" | "cash_deposit" | "commission" | "ride_link";
+export type QrKind = "ride" | "cash_deposit" | "commission" | "ride_link" | "tip";
 
 export interface QrView {
   id: string;
@@ -328,6 +328,71 @@ export async function createRideLink(
   });
 }
 
+export const TIP_MIN = 10;
+export const TIP_MAX = 2000;
+
+/** Passenger tips the chauffeur after a ride: a Razorpay payment link for the tip. The tip goes
+ * to Orange Taxi's account and is recorded in driver_tips for the chauffeur (100% theirs). */
+export async function createTipLink(
+  input: { accessToken?: string | undefined; bookingId?: unknown; amount?: unknown },
+  config: SettlementConfig,
+  deps: SettlementDeps,
+): Promise<QrResult> {
+  if (!configured(config)) return bad(503, "Online payment is not configured on the server.");
+  const bookingId = String(input.bookingId || "");
+  if (!UUID_RE.test(bookingId)) return bad(400, "Invalid booking.");
+  const amount = Number(input.amount);
+  if (!Number.isInteger(amount) || amount < TIP_MIN || amount > TIP_MAX) {
+    return bad(400, `Tips can be from ₹${TIP_MIN} to ₹${TIP_MAX}.`);
+  }
+  const [uid, b, open] = await Promise.all([
+    getUserId(input.accessToken, config, deps),
+    db<BookingRow[]>(
+      config,
+      deps,
+      `bookings?id=eq.${bookingId}&select=id,customer_id,driver_id,status,reference,estimated_fare,final_fare,payment_status,payment_method`,
+    ),
+    db<QrRow[]>(
+      config,
+      deps,
+      `payment_qr_codes?booking_id=eq.${bookingId}&kind=eq.tip&status=eq.pending&order=created_at.desc&limit=1&select=*`,
+    ),
+  ]);
+  if (!uid) return bad(401, "Please sign in again.");
+  const booking = b.data?.[0];
+  if (!booking) return bad(404, "Booking not found.");
+  if (booking.customer_id !== uid) return bad(403, "This is not your ride.");
+  if (booking.status !== "completed" || !booking.driver_id) {
+    return bad(409, "You can tip once the ride is complete.");
+  }
+  const existing = open.data?.[0];
+  if (
+    existing &&
+    Number(existing.amount) === amount &&
+    (!existing.close_by || new Date(existing.close_by).getTime() - Date.now() > 5 * 60_000)
+  ) {
+    return { status: 200, body: { ok: true, qr: view(existing) } };
+  }
+  const link = await createRazorpayLink(
+    config,
+    deps,
+    amount,
+    `Tip for your Orange Taxi chauffeur (${booking.reference})`,
+    { kind: "tip", booking_id: bookingId },
+  );
+  if ("error" in link) return bad(502, link.error);
+  return saveQr(config, deps, {
+    id: link.id,
+    kind: "tip",
+    booking_id: bookingId,
+    driver_id: booking.driver_id,
+    amount,
+    image_url: link.image_url,
+    created_by: uid,
+    close_by: new Date(link.close_by * 1000).toISOString(),
+  });
+}
+
 const fareOf = (r: { final_fare?: unknown; estimated_fare?: unknown }) =>
   Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)) || 0;
 
@@ -528,6 +593,19 @@ async function applyPayment(
       },
     );
     return r.ok;
+  }
+  if (row.kind === "tip" && row.booking_id && row.driver_id) {
+    const r = await db(config, deps, "driver_tips", {
+      method: "POST",
+      body: JSON.stringify({
+        booking_id: row.booking_id,
+        driver_id: row.driver_id,
+        customer_id: row.created_by,
+        amount: Number(row.amount),
+        razorpay_payment_id: paymentId,
+      }),
+    });
+    return r.ok || r.status === 409; // 409: this payment is already recorded
   }
   if (row.kind === "cash_deposit" && row.driver_id) {
     const r = await db(config, deps, "driver_cash_settlements", {
