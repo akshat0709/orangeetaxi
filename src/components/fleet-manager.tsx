@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Car,
   Zap,
-  Battery,
   BatteryCharging,
   BatteryFull,
   BatteryLow,
@@ -12,14 +11,10 @@ import {
   X,
   Check,
   RotateCcw,
-  ArrowLeftRight,
   ParkingSquare,
   AlertTriangle,
   Loader2,
-  SlidersHorizontal,
   ChevronDown,
-  ChevronUp,
-  Clock,
   Phone,
   Copy,
   Building2,
@@ -28,8 +23,6 @@ import {
   Sparkles,
   CheckCircle2,
   Trash2,
-  Calendar,
-  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,10 +207,10 @@ function BayDropdown({
           <option value="Bay B-4">Bay B-4</option>
         </optgroup>
         <optgroup label="Charging Docks">
-          <option value="Charging Bay 1">⚡ Charging Bay 1</option>
-          <option value="Charging Bay 2">⚡ Charging Bay 2</option>
-          <option value="Charging Bay 3">⚡ Charging Bay 3</option>
-          <option value="Fast DC Charger">⚡ Fast DC Charger</option>
+          <option value="Charging Bay 1">Charging Bay 1</option>
+          <option value="Charging Bay 2">Charging Bay 2</option>
+          <option value="Charging Bay 3">Charging Bay 3</option>
+          <option value="Fast DC Charger">Fast DC Charger</option>
         </optgroup>
         <optgroup label="Service & Maintenance">
           <option value="Inspection Bay">Inspection Bay</option>
@@ -452,7 +445,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     const updated: FleetVehicle = { ...vehicle, bay_number: newBay };
     setVehicles((prev) => prev.map((v) => (v.id === vehicle.id ? updated : v)));
     await persistVehicleUpdate(updated);
-    toast.success(`🅿️ ${vehicle.plate_number} relocated to ${newBay}!`);
+    toast.success(`${vehicle.plate_number} relocated to ${newBay}!`);
   }
 
   // Register a new vehicle
@@ -510,7 +503,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     }
 
     toast.success(
-      `🎉 ${cleanPlate} (${newVehicle.model}) registered to fleet in ${newVehicle.bay_number}!`,
+      `${cleanPlate} (${newVehicle.model}) registered to fleet in ${newVehicle.bay_number}!`,
     );
     setNewPlate("");
     setIsRegistering(false);
@@ -552,7 +545,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
       await persistVehicleUpdate(olderParked);
       updatedList = updatedList.map((v) => (v.id === olderVehicle.id ? olderParked : v));
       toast.info(
-        `🅿️ Older vehicle ${olderVehicle.plate_number} has been parked back in ${olderParked.bay_number}.`,
+        `Older vehicle ${olderVehicle.plate_number} has been parked back in ${olderParked.bay_number}.`,
       );
     }
 
@@ -581,7 +574,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     }
 
     toast.success(
-      `🚗 ${newlyAssigned.plate_number} successfully assigned to ${driver.full_name}! Customer rides updated.`,
+      `${newlyAssigned.plate_number} successfully assigned to ${driver.full_name}! Customer rides updated.`,
     );
     setAssigningVehicleId(null);
     setSelectedDriverId("");
@@ -616,7 +609,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
     }
 
     toast.success(
-      `🅿️ ${vehicle.plate_number} parked in ${bayToUse}. ${previousDriver ? `${previousDriver.full_name}'s daily car unassigned.` : ""}`,
+      `${vehicle.plate_number} parked in ${bayToUse}. ${previousDriver ? `${previousDriver.full_name}'s daily car unassigned.` : ""}`,
     );
     setReturningVehicleId(null);
     onRefresh();
@@ -1359,7 +1352,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                     onClick={() => updateBattery(v, 100)}
                                     className="rounded bg-emerald-600/10 text-emerald-600 px-1.5 py-0.5 font-semibold hover:bg-emerald-600/20"
                                   >
-                                    ⚡ 100%
+                                    100%
                                   </button>
                                 </div>
                               </div>

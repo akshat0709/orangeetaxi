@@ -1,5 +1,5 @@
 /// <reference types="google.maps" />
-import { MapPin, Car, Clock, Route } from "lucide-react";
+import { Clock, Route } from "lucide-react";
 import {
   APIProvider,
   APIProviderContext,

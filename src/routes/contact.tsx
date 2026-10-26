@@ -4,7 +4,6 @@ import {
   Building2,
   MapPin,
   Phone,
-  Mail,
   Clock,
   Shield,
   Briefcase,

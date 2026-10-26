@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Clock } from "lucide-react";
 import { usePricingSettings } from "@/lib/pricing";
 
 interface WaitingFeeTimerProps {

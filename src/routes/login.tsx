@@ -1205,7 +1205,7 @@ function LoginPage() {
 
                 {signUpForm.watch("role") === "driver" && (
                   <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground leading-relaxed">
-                    🚕 <strong>Chauffeur Registration:</strong> Create your account first, then you
+                    <strong>Chauffeur Registration:</strong> Create your account first, then you
                     will be redirected to complete your driver application with your driving
                     licence.
                   </div>

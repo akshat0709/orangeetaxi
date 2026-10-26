@@ -15,12 +15,10 @@ import {
   ShieldAlert,
   FileText,
   Calendar,
-  X,
   Home,
   Briefcase,
   Map as MapIcon,
   Trash2,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,7 +211,7 @@ function ProfilePage() {
       setHomeCoords(coords);
       localStorage.setItem("@orange_user_home_address", cleaned);
       localStorage.setItem("@orange_user_home_coords", JSON.stringify(coords));
-      toast.success("Home address saved on map! 🏠", {
+      toast.success("Home address saved on map!", {
         description: cleaned,
       });
     } else {
@@ -221,7 +219,7 @@ function ProfilePage() {
       setWorkCoords(coords);
       localStorage.setItem("@orange_user_work_address", cleaned);
       localStorage.setItem("@orange_user_work_coords", JSON.stringify(coords));
-      toast.success("Work address saved on map! 💼", {
+      toast.success("Work address saved on map!", {
         description: cleaned,
       });
     }
@@ -412,11 +410,6 @@ function ProfilePage() {
   if (!user) return null;
 
   const completedRides = bookings.filter((b) => b.status === "completed");
-  const totalSpent = completedRides.reduce(
-    (sum, b) => sum + (b.final_fare ?? b.estimated_fare ?? 0),
-    0,
-  );
-  const avgFare = completedRides.length > 0 ? totalSpent / completedRides.length : 0;
   const memberSince = user.created_at ? formatDate(user.created_at) : "—";
 
   const filteredBookings =

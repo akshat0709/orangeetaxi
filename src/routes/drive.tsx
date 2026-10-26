@@ -14,13 +14,11 @@ import {
   Info,
   Loader2,
   ShieldCheck,
-  Snowflake,
   Sparkles,
   TrendingUp,
   Trophy,
   Upload,
   User,
-  X,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -509,7 +507,6 @@ type AppInput = z.input<typeof appSchema>;
 
 function DriverApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
-  const [honeypot, setHoneypot] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -554,8 +551,6 @@ function DriverApplicationForm() {
   }, [form]);
 
   const ownsVehicle = form.watch("owns_vehicle");
-  const driverType = form.watch("driver_type");
-
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

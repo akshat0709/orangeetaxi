@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Heart, Loader2, Sparkles, Star, ThumbsUp, X } from "lucide-react";
+import { Check, Loader2, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,20 +28,20 @@ interface RatingModalProps {
 }
 
 const COMPLIMENT_OPTIONS = [
-  { id: "smooth", label: "🌟 Smooth & Safe Driving" },
-  { id: "ac", label: "❄️ Chilled Pre-Cooled AC" },
-  { id: "clean", label: "✨ Spotless EV Cabin" },
-  { id: "polite", label: "🤝 Courteous Driver" },
-  { id: "route", label: "⚡ Fast & Direct Route" },
-  { id: "water", label: "💧 Chilled Water Bottle" },
+  { id: "smooth", label: "Smooth & Safe Driving" },
+  { id: "ac", label: "Chilled Pre-Cooled AC" },
+  { id: "clean", label: "Spotless EV Cabin" },
+  { id: "polite", label: "Courteous Driver" },
+  { id: "route", label: "Fast & Direct Route" },
+  { id: "water", label: "Chilled Water Bottle" },
 ];
 
 const STAR_LABELS: Record<number, string> = {
-  1: "Disappointing 😞",
-  2: "Needs Improvement 😐",
-  3: "Good Ride 🙂",
-  4: "Very Good! 😊",
-  5: "Exceptional Experience! 🌟",
+  1: "Disappointing",
+  2: "Needs Improvement",
+  3: "Good Ride",
+  4: "Very Good!",
+  5: "Exceptional Experience!",
 };
 
 const TIP_OPTIONS = [0, 20, 50, 100];

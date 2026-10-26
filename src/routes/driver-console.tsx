@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Award,
   Banknote,
-  BatteryCharging,
   Bell,
   BellOff,
   Calendar,
@@ -29,16 +28,11 @@ import {
   User,
   Volume2,
   VolumeX,
-  Wallet,
   X,
   Map,
-  Building2,
-  Handshake,
   Percent,
-  ShieldCheck,
   Smartphone,
   QrCode,
-  AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -342,9 +336,9 @@ function DriverConsolePage() {
             if (soundEnabled) {
               playRideRequestChime();
             }
-            toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+            toast.info("New ride request available nearby!", { duration: 4000 });
             sendRideNotification({
-              title: "New Ride Request Nearby! ⚡",
+              title: "New Ride Request Nearby!",
               body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
               tag: `driver-req-${payload.new?.["id"] || Date.now()}`,
@@ -353,9 +347,9 @@ function DriverConsolePage() {
             if (soundEnabled) {
               playRideRequestChime();
             }
-            toast.info("📅 New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
+            toast.info("New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
             sendRideNotification({
-              title: "New Scheduled Booking Available! 📅",
+              title: "New Scheduled Booking Available!",
               body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
               tag: `driver-sched-${payload.new?.["id"] || Date.now()}`,
@@ -372,9 +366,9 @@ function DriverConsolePage() {
             if (soundEnabled) {
               playRideRequestChime();
             }
-            toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+            toast.info("New ride request available nearby!", { duration: 4000 });
             sendRideNotification({
-              title: "New Ride Request Nearby! ⚡",
+              title: "New Ride Request Nearby!",
               body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
               tag: `driver-req-${payload.new?.["id"] || Date.now()}`,
@@ -386,7 +380,7 @@ function DriverConsolePage() {
             if (soundEnabled) {
               playRideRequestChime();
             }
-            toast.info("📅 Advance Scheduled Booking Available in Fleet Pool!", { duration: 4000 });
+            toast.info("Advance Scheduled Booking Available in Fleet Pool!", { duration: 4000 });
           }
           loadData();
         },
@@ -536,15 +530,6 @@ function DriverConsolePage() {
         appData?.vehicle_model ||
         parsedNotes?.vehicle_model ||
         (isPartner ? "Tata Nexon EV" : "Mahindra BE.6");
-      const photo = appData?.photo_url || parsedNotes?.photo_url || "";
-
-      const metaObj = {
-        photo,
-        plate,
-        model,
-        type: isPartner ? "partner" : "company",
-      };
-
       const { data: newDriver } = await supabase
         .from("drivers")
         .insert({
@@ -656,12 +641,6 @@ function DriverConsolePage() {
       const needsModelSync = !driverData.vehicle_model;
 
       if (needsPlateSync || needsCodeSync || needsModelSync) {
-        const metaObj = {
-          photo: resolvedPhoto || driverData.photo_url || "",
-          plate: resolvedPlate,
-          model: resolvedModel,
-          type: isPartner ? "partner" : "company",
-        };
         const dbUpdates: any = {
           vehicle_number: resolvedPlate,
           vehicle_model: resolvedModel,
@@ -813,7 +792,7 @@ function DriverConsolePage() {
     if (reqList.length > prevRequestsCountRef.current && prevRequestsCountRef.current !== -1) {
       if (soundEnabled && driverData?.is_online) {
         playRideRequestChime();
-        toast.info("🔔 New ride request available nearby!", { duration: 4000 });
+        toast.info("New ride request available nearby!", { duration: 4000 });
       }
     }
     prevRequestsCountRef.current = reqList.length;
@@ -1042,7 +1021,7 @@ function DriverConsolePage() {
       schedBooking?.reference,
     );
 
-    toast.success("Scheduled Pre-Booking Confirmed! 🎯", {
+    toast.success("Scheduled Pre-Booking Confirmed!", {
       description:
         "You are the assigned chauffeur. Please be online and arrive at least 10 minutes before pickup.",
     });
@@ -1150,7 +1129,7 @@ function DriverConsolePage() {
         );
         return;
       }
-      toast.success("OTP verified! Ride in progress 🍊");
+      toast.success("OTP verified! Ride in progress");
       loadData();
       return;
     }
@@ -1449,8 +1428,8 @@ function DriverConsolePage() {
                   }`}
                 >
                   {isPartnerDriver
-                    ? `⚡ Partner Owner-Operator (${commissionPct}% Comm.)`
-                    : "🏢 Company Fleet (Fixed Salary)"}
+                    ? `Partner Owner-Operator (${commissionPct}% Comm.)`
+                    : "Company Fleet (Fixed Salary)"}
                 </span>
               </div>
               <h1 className="display-serif mt-1 text-3xl sm:text-4xl">
@@ -1522,7 +1501,7 @@ function DriverConsolePage() {
                 >
                   <Phone className="size-3.5" />
                   <span>
-                    Phone: <strong className="font-mono">{driver.phone || "Add Phone ✏️"}</strong>
+                    Phone: <strong className="font-mono">{driver.phone || "Add Phone"}</strong>
                   </span>
                 </button>
               </div>
@@ -1539,9 +1518,9 @@ function DriverConsolePage() {
                 localStorage.setItem("orange_driver_sound_enabled", String(next));
                 if (next) {
                   playRideRequestChime();
-                  toast.success("Alert chime enabled 🔔");
+                  toast.success("Alert chime enabled");
                 } else {
-                  toast.info("Alert chime muted 🔕");
+                  toast.info("Alert chime muted");
                 }
               }}
               className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
@@ -1564,7 +1543,7 @@ function DriverConsolePage() {
               type="button"
               onClick={() => {
                 playRideRequestChime();
-                toast.success("Playing test request chime 🎵");
+                toast.success("Playing test request chime");
               }}
               className="flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               title="Test chime sound"
@@ -1662,8 +1641,8 @@ function DriverConsolePage() {
                     const next = !soundEnabled;
                     setSoundEnabled(next);
                     localStorage.setItem("orange_driver_sound_enabled", String(next));
-                    if (!next) toast.info("Alert chime muted 🔕");
-                    else toast.success("Alert chime enabled 🔔");
+                    if (!next) toast.info("Alert chime muted");
+                    else toast.success("Alert chime enabled");
                   }}
                   className="text-xs h-9 border-border bg-background"
                 >
@@ -1710,8 +1689,8 @@ function DriverConsolePage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="flex size-3 rounded-full bg-orange-500 animate-ping" />
                     <span className="text-xs font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
-                      <Calendar className="size-4 text-orange-500" />⚡ Urgent Advance Booking •
-                      Pickup in {diffMin} Mins!
+                      <Calendar className="size-4 text-orange-500" />
+                      Urgent Advance Booking • Pickup in {diffMin} Mins!
                     </span>
                     <span className="font-mono font-bold text-lg text-primary">
                       ₹{Math.round(target.estimated_fare)}
@@ -1766,7 +1745,7 @@ function DriverConsolePage() {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-bold text-orange-700 dark:text-orange-300">
-                        📅 {unclaimed.length} Advance Scheduled{" "}
+                        {unclaimed.length} Advance Scheduled{" "}
                         {unclaimed.length === 1 ? "Trip" : "Trips"} in Fleet Pool
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -1871,7 +1850,7 @@ function DriverConsolePage() {
                                 </span>
                                 {schedule.isUrgent && (
                                   <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold px-2 py-0.5 animate-pulse">
-                                    ⚡ Dispatch Window Active (&lt; 30m)
+                                    Dispatch Window Active (&lt; 30m)
                                   </span>
                                 )}
                                 <span className="ml-auto flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-100 dark:bg-orange-950 px-2.5 py-0.5 rounded-md">
@@ -1962,7 +1941,6 @@ function DriverConsolePage() {
             ) : (
               <div className="space-y-4">
                 {activeRides.map((ride) => {
-                  const flow = STATUS_FLOW[ride.status];
                   return (
                     <div
                       key={ride.id}
@@ -2315,7 +2293,7 @@ function DriverConsolePage() {
                             <div className="flex-1 space-y-2">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 text-[11px] font-bold px-2 py-0.5 border border-orange-300">
-                                  📅 Scheduled Departure
+                                  Scheduled Departure
                                 </span>
                                 <span className="text-xs font-bold text-foreground">
                                   {schedule.fullText}
@@ -2550,7 +2528,7 @@ function DriverConsolePage() {
 
                             {schedule.isUrgent && (
                               <span className="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[11px] font-bold px-2.5 py-0.5 animate-pulse">
-                                ⚡ Dispatch Window Active (&lt; 30m)
+                                Dispatch Window Active (&lt; 30m)
                               </span>
                             )}
 
@@ -2733,7 +2711,7 @@ function DriverConsolePage() {
                         className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1.5 shadow-md active:scale-95"
                       >
                         <Smartphone className="size-4" />
-                        <span>Pay Commission via UPI ⚡</span>
+                        <span>Pay Commission via UPI</span>
                       </Button>
                     )}
                   </div>
@@ -2862,7 +2840,7 @@ function DriverConsolePage() {
                     <div className="text-xs font-medium text-primary">
                       {monthlyCompletedRides >= 250 ? (
                         <span className="text-emerald-600 font-bold">
-                          🎉 Maximum milestone reached (+₹4,500 total bonus)
+                          Maximum milestone reached (+₹4,500 total bonus)
                         </span>
                       ) : (
                         <span>
@@ -3040,7 +3018,7 @@ function DriverConsolePage() {
                           className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-md active:scale-95"
                         >
                           <Smartphone className="size-4" />
-                          <span>Deposit via UPI ⚡</span>
+                          <span>Deposit via UPI</span>
                         </Button>
                       )}
                     </div>
@@ -3087,7 +3065,7 @@ function DriverConsolePage() {
                               <Check className="size-3.5 text-emerald-600" />
                               {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
                                 <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[10px] font-bold border border-orange-500/20">
-                                  ⚡ UPI Remittance ({s.notes})
+                                  UPI Remittance ({s.notes})
                                 </span>
                               ) : (
                                 <span className="text-muted-foreground text-[11px]">
@@ -3526,7 +3504,7 @@ function DriverConsolePage() {
         onClose={() => setRideQr(null)}
         onPaid={() => {
           const ride = rideQr?.ride;
-          toast.success("UPI payment received 🎉");
+          toast.success("UPI payment received");
           if (ride) advanceStatus(ride, "upi_qr");
         }}
       />
@@ -3536,7 +3514,7 @@ function DriverConsolePage() {
         title={selfQr?.title ?? ""}
         onClose={() => setSelfQr(null)}
         onPaid={() => {
-          toast.success("UPI payment received. Thank you! 🎉");
+          toast.success("UPI payment received. Thank you!");
           setDepositAmount("");
           setCommissionPayAmount("");
           loadData();

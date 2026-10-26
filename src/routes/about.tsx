@@ -1,13 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BatteryCharging,
-  CheckCircle2,
-  HeartHandshake,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, BatteryCharging, HeartHandshake, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/about")({

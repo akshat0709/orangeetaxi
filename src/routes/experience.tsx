@@ -9,11 +9,9 @@ import {
   ArrowRight,
   Check,
   X,
-  BatteryCharging,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import interiorImage from "@/assets/orange-taxi-interior.jpg";
-import passengerImage from "@/assets/orange-taxi-passenger.jpg";
 import driverImage from "@/assets/orange-taxi-driver.jpg";
 
 export const Route = createFileRoute("/experience")({

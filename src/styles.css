@@ -69,15 +69,15 @@
   --font-display: "DM Serif Display", serif;
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
-  --shadow-brand: 0 8px 20px -2px color-mix(in oklab, var(--primary) 18%, transparent);
-  --shadow-brand-lg: 0 14px 28px -4px color-mix(in oklab, var(--primary) 22%, transparent);
-  --shadow-soft: 0 12px 32px -4px color-mix(in oklab, var(--foreground) 6%, transparent);
+  --shadow-md: 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 6px 16px -4px rgb(0 0 0 / 0.08);
+  --shadow-brand: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --shadow-brand-lg: 0 2px 6px -1px rgb(0 0 0 / 0.08);
+  --shadow-soft: 0 1px 3px 0 color-mix(in oklab, var(--foreground) 6%, transparent);
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --background: oklch(0.985 0.008 75);
   --foreground: oklch(0.18 0.012 55);
   --card: oklch(0.998 0.002 75);

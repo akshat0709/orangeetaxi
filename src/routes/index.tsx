@@ -10,7 +10,6 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next";
 import {
   Accordion,
   AccordionContent,
@@ -122,8 +121,6 @@ const FAQS = [
 ];
 
 function HomePage() {
-  const { t } = useTranslation();
-
   return (
     <>
       {/* Hero */}

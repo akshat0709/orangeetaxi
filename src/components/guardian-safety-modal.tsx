@@ -1,21 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Shield,
   ShieldAlert,
   ShieldCheck,
-  Phone,
   PhoneCall,
   MessageSquare,
-  Share2,
   AlertTriangle,
-  UserCheck,
   Pencil,
   Copy,
   Check,
-  X,
-  ExternalLink,
   LifeBuoy,
-  Radio,
 } from "lucide-react";
 import {
   Dialog,
@@ -90,7 +83,7 @@ export function GuardianSafetyModal({
 
   function startSosCountdown() {
     setSosCountdown(3);
-    toast.warning("🚨 EMERGENCY SOS INITIATED — Calling 112 in 3 seconds!", {
+    toast.warning("EMERGENCY SOS INITIATED — Calling 112 in 3 seconds!", {
       duration: 3500,
     });
   }
@@ -122,7 +115,7 @@ export function GuardianSafetyModal({
 
     // 2. Dispatch emergency WhatsApp / SMS to Guardian if available
     const sosMessage =
-      `🚨 *URGENT EMERGENCY SOS ALERT*\n\n` +
+      `*URGENT EMERGENCY SOS ALERT*\n\n` +
       `I have raised an emergency SOS in my Orange Electric Taxi.\n\n` +
       `• *Booking Ref:* ${refStr}\n` +
       `• *Vehicle:* ${carPlate}\n` +
@@ -137,7 +130,7 @@ export function GuardianSafetyModal({
       window.open(waUrl, "_blank");
     }
 
-    toast.error("🚨 EMERGENCY SOS ACTIVE! Connecting to 112 Emergency Desk...", { duration: 6000 });
+    toast.error("EMERGENCY SOS ACTIVE! Connecting to 112 Emergency Desk...", { duration: 6000 });
 
     // 3. Dial National Emergency Helpline (112)
     setTimeout(() => {
@@ -220,7 +213,7 @@ export function GuardianSafetyModal({
     const trackUrl = `${origin}/track?ref=${bookingData?.reference || ""}`;
 
     const message =
-      `🚨 *Orange Taxi Safety & Live Ride Alert*\n\n` +
+      `*Orange Taxi Safety & Live Ride Alert*\n\n` +
       `Hi, I am currently traveling in an Orange Electric Taxi.\n\n` +
       `• *Booking Ref:* ${refStr}\n` +
       `• *Vehicle:* ${carModel} (${carPlate})\n` +

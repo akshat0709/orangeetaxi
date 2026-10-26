@@ -5,23 +5,14 @@ import {
   Car,
   MapPin,
   Navigation,
-  Phone,
   PhoneCall,
-  Shield,
   ShieldAlert,
-  ShieldCheck,
   Share2,
-  Sparkles,
-  ArrowRight,
-  Clock,
-  CheckCircle2,
   Search,
-  ExternalLink,
   LifeBuoy,
   Snowflake,
   VolumeX,
   Calendar,
-  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

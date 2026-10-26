@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LiveTariffList } from "@/components/live-tariff";
-import { Shield, ArrowLeft, Building2, Phone, Mail, FileText, CheckCircle2 } from "lucide-react";
+import { Shield, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({

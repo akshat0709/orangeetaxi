@@ -10,18 +10,9 @@ import {
   X,
   Check,
   RotateCcw,
-  AlertTriangle,
-  Copy,
   Users,
-  Calendar,
-  DollarSign,
-  Building2,
   Handshake,
-  ShieldCheck,
-  Car,
   Phone,
-  ArrowUpRight,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -46,8 +37,6 @@ export interface CommissionSettlement {
   created_at: string;
   direction?: "driver_to_company" | "company_to_driver";
 }
-
-const DEFAULT_SAMPLE_COMMISSION_SETTLEMENTS: CommissionSettlement[] = [];
 
 // Clean up any stale dummy data from localStorage so old sample values never contaminate live state
 function cleanupDummyData() {
@@ -124,8 +113,6 @@ export function CommissionLedgerManager({
   const [submitting, setSubmitting] = useState(false);
 
   // Load partner vehicles to link any driver-owned cars
-  const [partnerVehicles, setPartnerVehicles] = useState<any[]>([]);
-
   // Load commission settlements
   async function loadSettlements() {
     setLoading(true);

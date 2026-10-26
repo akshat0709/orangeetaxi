@@ -1,16 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Zap,
-  BatteryCharging,
-  ShieldCheck,
-  Gauge,
-  ArrowRight,
-  Wind,
-  CheckCircle2,
-  Trees,
-} from "lucide-react";
+import { Zap, BatteryCharging, ShieldCheck, Gauge, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import heroImage from "@/assets/orange-taxi-hero.jpg";
 import eveningImage from "@/assets/orange-taxi-evening.jpg";
 
 export const Route = createFileRoute("/electric")({

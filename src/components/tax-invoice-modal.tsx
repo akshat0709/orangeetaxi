@@ -1,27 +1,11 @@
 import { useState } from "react";
-import {
-  Check,
-  Copy,
-  Download,
-  Mail,
-  Printer,
-  ShieldCheck,
-  Sparkles,
-  X,
-  FileText,
-  Building2,
-} from "lucide-react";
+import { Copy, Download, Mail, Printer, ShieldCheck, FileText, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import {
-  calculateRideGST,
-  formatInvoiceNumber,
-  getStoredCompanyProfile,
-  CompanyGSTProfile,
-} from "@/lib/gst-utils";
+import { calculateRideGST, formatInvoiceNumber, getStoredCompanyProfile } from "@/lib/gst-utils";
 import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 import { generateInvoiceHtml, type SendInvoicePayload } from "@/lib/send-invoice-email";
 import { supabase } from "@/integrations/supabase/client";
@@ -246,7 +230,7 @@ export function TaxInvoiceModal({
       }
 
       toast.success(
-        `Tax invoice #${invoiceNumber} successfully sent to ${targetEmail} from billing@orange-taxi.com! ✉️`,
+        `Tax invoice #${invoiceNumber} successfully sent to ${targetEmail} from billing@orange-taxi.com!`,
       );
     } catch (err: any) {
       console.error("Invoice email failed:", err);

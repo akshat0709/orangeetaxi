@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  APIProvider,
-  Map,
-  AdvancedMarker,
-  useMap,
-  useMapsLibrary,
-} from "@vis.gl/react-google-maps";
+import { Map, useMap } from "@vis.gl/react-google-maps";
 import {
   MapPin,
-  Navigation,
   Search,
   Loader2,
   Crosshair,
@@ -37,257 +30,14 @@ interface MapPickerProps {
   fallbackCenter?: MapLocation | null;
 }
 
-// Comprehensive quick-select and search-priority presets across major Indian Metros
+// Quick-select and search-priority places in Delhi NCR (the only city Orange Taxi serves).
 export const PAN_INDIA_PRESETS = [
-  // Bengaluru
-  {
-    name: "Kempegowda Int'l Airport (BLR) - Terminal 1 & 2",
-    city: "Bengaluru",
-    lat: 13.1986,
-    lng: 77.7066,
-    tag: "✈️ BLR Airport",
-    is_airport: true,
-    keywords: [
-      "airport",
-      "blr",
-      "kempegowda",
-      "bangalore airport",
-      "bengaluru airport",
-      "kial",
-      "kia",
-      "t1",
-      "t2",
-      "terminal 1",
-      "terminal 2",
-      "devanahalli",
-      "flight",
-      "departure",
-      "arrival",
-    ],
-  },
-  {
-    name: "Kempegowda Airport T2 (Garden Terminal)",
-    city: "Bengaluru",
-    lat: 13.2045,
-    lng: 77.7125,
-    tag: "✈️ BLR T2",
-    is_airport: true,
-    keywords: ["airport", "t2", "terminal 2", "blr t2", "kempegowda t2", "garden terminal"],
-  },
-  {
-    name: "HAL Old Airport Road, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.956,
-    lng: 77.665,
-    tag: "📍 HAL Airport",
-    keywords: ["hal", "old airport", "airport road", "marathahalli", "vibhootipura"],
-  },
-  {
-    name: "Indiranagar 100ft Road, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9784,
-    lng: 77.6408,
-    tag: "📍 Indiranagar",
-    keywords: [
-      "indiranagar",
-      "100ft road",
-      "12th main",
-      "cmh road",
-      "metro station",
-      "defence colony",
-    ],
-  },
-  {
-    name: "Koramangala 4th Block, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9345,
-    lng: 77.6266,
-    tag: "🏢 Koramangala",
-    keywords: [
-      "koramangala",
-      "sony world",
-      "kora",
-      "4th block",
-      "5th block",
-      "forum mall",
-      "oasis mall",
-    ],
-  },
-  {
-    name: "Whitefield ITPL, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9863,
-    lng: 77.7308,
-    tag: "💼 Whitefield",
-    keywords: ["whitefield", "itpl", "hope farm", "kadugodi", "tech park", "pattandur agrahara"],
-  },
-  {
-    name: "Electronic City Phase 1, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.8452,
-    lng: 77.6602,
-    tag: "⚡ Electronic City",
-    keywords: [
-      "electronic city",
-      "ecity",
-      "phase 1",
-      "phase 2",
-      "infosys",
-      "wipro ecity",
-      "velankani",
-    ],
-  },
-  {
-    name: "HSR Layout Sector 1 to 7, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9116,
-    lng: 77.6474,
-    tag: "📍 HSR Layout",
-    keywords: ["hsr layout", "hsr", "27th main", "sector 1", "sector 2", "sector 3", "silk board"],
-  },
-  {
-    name: "Bellandur / EcoWorld Tech Park, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.926,
-    lng: 77.6762,
-    tag: "🏢 EcoWorld",
-    keywords: [
-      "bellandur",
-      "ecoworld",
-      "ecospace",
-      "outer ring road",
-      "orr",
-      "marathahalli orr",
-      "devarabisanahalli",
-    ],
-  },
-  {
-    name: "Manyata Tech Park, Bengaluru",
-    city: "Bengaluru",
-    lat: 13.0475,
-    lng: 77.6214,
-    tag: "💼 Manyata",
-    keywords: [
-      "manyata",
-      "manyata tech park",
-      "nagavara",
-      "hebbal",
-      "karle town",
-      "outer ring road north",
-    ],
-  },
-  {
-    name: "MG Road Metro Station, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9756,
-    lng: 77.6066,
-    tag: "🛍️ MG Road",
-    keywords: [
-      "mg road",
-      "brigade road",
-      "church street",
-      "metro",
-      "commercial street",
-      "residency road",
-    ],
-  },
-  {
-    name: "KSR Bengaluru City Railway Station (Majestic)",
-    city: "Bengaluru",
-    lat: 12.9781,
-    lng: 77.5696,
-    tag: "🚆 Majestic Station",
-    is_railway: true,
-    keywords: [
-      "railway station",
-      "railway",
-      "majestic",
-      "ksr",
-      "train",
-      "bangalore railway station",
-      "central railway",
-    ],
-  },
-  {
-    name: "Yeshwanthpur Junction Railway Station (YPR)",
-    city: "Bengaluru",
-    lat: 13.0238,
-    lng: 77.5503,
-    tag: "🚆 Yeshwanthpur",
-    is_railway: true,
-    keywords: [
-      "railway station",
-      "railway",
-      "yeshwanthpur",
-      "yeshwantpur",
-      "ypr",
-      "train",
-      "gorguntepalya",
-    ],
-  },
-  {
-    name: "SMVT Bengaluru Railway Terminal",
-    city: "Bengaluru",
-    lat: 13.0039,
-    lng: 77.6534,
-    tag: "🚆 SMVT Terminal",
-    is_railway: true,
-    keywords: ["smvt", "baiyappanahalli", "railway terminal", "train", "sir m visvesvaraya"],
-  },
-  {
-    name: "Phoenix Marketcity / VR Mall, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9961,
-    lng: 77.6963,
-    tag: "🏬 Phoenix Mall",
-    keywords: [
-      "phoenix",
-      "phoenix marketcity",
-      "vr mall",
-      "mall",
-      "whitefield road",
-      "mahadevapura",
-    ],
-  },
-  {
-    name: "Orion Mall Rajajinagar, Bengaluru",
-    city: "Bengaluru",
-    lat: 13.0112,
-    lng: 77.555,
-    tag: "🏬 Orion Mall",
-    keywords: [
-      "orion",
-      "orion mall",
-      "brigade gateway",
-      "rajajinagar",
-      "mall",
-      "world trade center",
-    ],
-  },
-  {
-    name: "UB City, Bengaluru",
-    city: "Bengaluru",
-    lat: 12.9719,
-    lng: 77.5958,
-    tag: "🏢 UB City",
-    keywords: ["ub city", "vittal mallya", "lavelle road", "kasturba road", "cubbon park"],
-  },
-  {
-    name: "Majestic Kempegowda Bus Station",
-    city: "Bengaluru",
-    lat: 12.9767,
-    lng: 77.5713,
-    tag: "🚌 Majestic Bus Stand",
-    keywords: ["bus stand", "busstand", "majestic bus", "bmtc", "ksrtc", "central bus stand"],
-  },
-
-  // Delhi NCR
   {
     name: "IGI Airport Terminal 3, Delhi",
     city: "Delhi NCR",
     lat: 28.5562,
     lng: 77.0856,
-    tag: "✈️ Delhi T3",
+    tag: "Delhi T3",
     is_airport: true,
     keywords: [
       "airport",
@@ -304,7 +54,7 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.5684,
     lng: 77.1121,
-    tag: "✈️ Delhi T1",
+    tag: "Delhi T1",
     is_airport: true,
     keywords: ["airport", "delhi airport", "igi", "t1", "terminal 1", "domestic terminal"],
   },
@@ -313,7 +63,7 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.4986,
     lng: 77.0878,
-    tag: "🏢 Cyber City",
+    tag: "Cyber City",
     keywords: ["cyber city", "dlf cyber hub", "gurgaon", "gurugram", "cyber park"],
   },
   {
@@ -321,7 +71,7 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.6315,
     lng: 77.2167,
-    tag: "📍 Connaught Place",
+    tag: "Connaught Place",
     keywords: ["connaught place", "cp", "inner circle", "outer circle", "rajiv chowk"],
   },
   {
@@ -329,7 +79,7 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.5501,
     lng: 77.1199,
-    tag: "🏨 Aerocity",
+    tag: "Aerocity",
     keywords: ["aerocity", "worldmark", "delhi aerocity", "hospitality district"],
   },
   {
@@ -337,7 +87,7 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.6415,
     lng: 77.2195,
-    tag: "🚆 New Delhi Stn",
+    tag: "New Delhi Stn",
     is_railway: true,
     keywords: ["railway station", "railway", "ndls", "new delhi station", "train", "paharganj"],
   },
@@ -346,163 +96,8 @@ export const PAN_INDIA_PRESETS = [
     city: "Delhi NCR",
     lat: 28.5708,
     lng: 77.3271,
-    tag: "🏬 Noida Sec 18",
+    tag: "Noida Sec 18",
     keywords: ["noida", "sector 18", "mall of india", "dlf mall", "atta market"],
-  },
-
-  // Mumbai & MMR
-  {
-    name: "CSMIA Airport Terminal 2, Mumbai",
-    city: "Mumbai",
-    lat: 19.0896,
-    lng: 72.8656,
-    tag: "✈️ Mumbai T2",
-    is_airport: true,
-    keywords: [
-      "airport",
-      "mumbai airport",
-      "csia",
-      "t2",
-      "terminal 2",
-      "sahar",
-      "chhatrapati shivaji",
-    ],
-  },
-  {
-    name: "CSMIA Airport Terminal 1, Mumbai",
-    city: "Mumbai",
-    lat: 19.0968,
-    lng: 72.8524,
-    tag: "✈️ Mumbai T1",
-    is_airport: true,
-    keywords: ["airport", "mumbai airport", "t1", "terminal 1", "santacruz domestic"],
-  },
-  {
-    name: "Bandra Kurla Complex (BKC), Mumbai",
-    city: "Mumbai",
-    lat: 19.0664,
-    lng: 72.8687,
-    tag: "🏢 Mumbai BKC",
-    keywords: ["bkc", "bandra kurla complex", "jiocabs", "mca", "us consulate"],
-  },
-  {
-    name: "Nariman Point / Marine Drive, Mumbai",
-    city: "Mumbai",
-    lat: 18.9256,
-    lng: 72.8242,
-    tag: "🌊 Marine Drive",
-    keywords: ["nariman point", "marine drive", "ncpa", "colaba", "churchgate"],
-  },
-  {
-    name: "Andheri West / Lokhandwala, Mumbai",
-    city: "Mumbai",
-    lat: 19.1363,
-    lng: 72.8277,
-    tag: "📍 Andheri West",
-    keywords: ["andheri", "lokhandwala", "andheri west", "infinity mall", "link road"],
-  },
-
-  // Hyderabad
-  {
-    name: "RGIA Airport Shamshabad, Hyderabad",
-    city: "Hyderabad",
-    lat: 17.2403,
-    lng: 78.4294,
-    tag: "✈️ HYD Airport",
-    is_airport: true,
-    keywords: ["airport", "hyderabad airport", "rgia", "shamshabad", "rajiv gandhi airport"],
-  },
-  {
-    name: "HITEC City / Cyber Towers, Hyderabad",
-    city: "Hyderabad",
-    lat: 17.4474,
-    lng: 78.3762,
-    tag: "🏢 HITEC City",
-    keywords: ["hitec city", "cyber towers", "madhapur", "gachibowli", "raheja mindspace"],
-  },
-  {
-    name: "Jubilee Hills Road No. 36, Hyderabad",
-    city: "Hyderabad",
-    lat: 17.4325,
-    lng: 78.4071,
-    tag: "📍 Jubilee Hills",
-    keywords: ["jubilee hills", "banjara hills", "road 36", "road 10"],
-  },
-
-  // Chennai
-  {
-    name: "Chennai Int'l Airport (MAA)",
-    city: "Chennai",
-    lat: 12.9941,
-    lng: 80.1709,
-    tag: "✈️ MAA Airport",
-    is_airport: true,
-    keywords: ["airport", "chennai airport", "maa", "meenambakkam", "terminal"],
-  },
-  {
-    name: "T. Nagar / Pondy Bazaar, Chennai",
-    city: "Chennai",
-    lat: 13.0418,
-    lng: 80.2341,
-    tag: "🛍️ T. Nagar",
-    keywords: ["t nagar", "pondy bazaar", "panagal park", "shopping"],
-  },
-
-  // Pune
-  {
-    name: "Pune Airport (PNQ) / Viman Nagar",
-    city: "Pune",
-    lat: 18.5822,
-    lng: 73.9197,
-    tag: "✈️ Pune Airport",
-    is_airport: true,
-    keywords: ["airport", "pune airport", "pnq", "lohegaon", "viman nagar"],
-  },
-  {
-    name: "Koregaon Park / Kalyani Nagar, Pune",
-    city: "Pune",
-    lat: 18.5362,
-    lng: 73.894,
-    tag: "📍 Koregaon Park",
-    keywords: ["koregaon park", "kp", "kalyani nagar", "german bakery"],
-  },
-
-  // Kolkata
-  {
-    name: "Netaji Subhash Airport (CCU), Kolkata",
-    city: "Kolkata",
-    lat: 22.6547,
-    lng: 88.4467,
-    tag: "✈️ CCU Airport",
-    is_airport: true,
-    keywords: ["airport", "kolkata airport", "ccu", "dum dum airport", "subhash chandra bose"],
-  },
-  {
-    name: "Park Street / Chowringhee, Kolkata",
-    city: "Kolkata",
-    lat: 22.5513,
-    lng: 88.3524,
-    tag: "📍 Park Street",
-    keywords: ["park street", "chowringhee", "victoria memorial", "esplanade"],
-  },
-
-  // Jaipur
-  {
-    name: "Jaipur Int'l Airport (JAI)",
-    city: "Jaipur",
-    lat: 26.8289,
-    lng: 75.8056,
-    tag: "✈️ Jaipur Airport",
-    is_airport: true,
-    keywords: ["airport", "jaipur airport", "jai", "sanganer airport"],
-  },
-  {
-    name: "C-Scheme / MI Road, Jaipur",
-    city: "Jaipur",
-    lat: 26.9124,
-    lng: 75.8032,
-    tag: "📍 C-Scheme",
-    keywords: ["c scheme", "mi road", "civil lines", "raja park"],
   },
 ];
 
@@ -584,11 +179,8 @@ export function MapPicker({
   >([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingGPS, setLoadingGPS] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const [panTarget, setPanTarget] = useState<MapLocation | null>(null);
-  const [loadError, setLoadError] = useState(false);
-  const [activeCityTab, setActiveCityTab] = useState<string>("All");
 
   // Dynamically load Google Maps JS SDK with Places library if apiKey provided
   useEffect(() => {
@@ -930,41 +522,6 @@ export function MapPicker({
   }
 
   // Robust coordinate resolution fallback via Google Geocoding API
-  async function fallbackResolvePlace(loc: { name: string; lat: number; lng: number }) {
-    if (apiKey) {
-      try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc.name)}&components=country:IN&key=${apiKey}`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.results && data.results.length > 0) {
-            const lat = data.results[0].geometry.location.lat;
-            const lng = data.results[0].geometry.location.lng;
-            const resolved = { name: loc.name, lat, lng };
-            setSelectedLocation(resolved);
-            setSearchValue(loc.name);
-            setSearchResults([]);
-            setIsResolvingAddress(false);
-            if (mode === "map") {
-              setPanTarget(resolved);
-            }
-            if (onConfirm) onConfirm(resolved);
-            return;
-          }
-        }
-      } catch {
-        // best-effort: failure here is non-fatal and intentionally ignored
-      }
-    }
-
-    setIsResolvingAddress(false);
-    setSelectedLocation(loc);
-    setSearchValue(loc.name);
-    setSearchResults([]);
-    if (onConfirm) onConfirm(loc);
-  }
-
   // GPS Locate current position
   function detectCurrentLocation() {
     if (!navigator.geolocation) return;
@@ -1164,43 +721,17 @@ export function MapPicker({
           {/* Map Status Hint */}
           <div className="absolute bottom-2.5 left-3 z-10">
             <span className="rounded-full bg-black/80 border border-input px-2.5 py-0.5 text-[10px] font-medium text-foreground/80 backdrop-blur-xs shadow-xs">
-              {isResolvingAddress
-                ? "📍 Resolving address..."
-                : "Pan or drag pin anywhere across India"}
+              {isResolvingAddress ? "Resolving address..." : "Drag the pin to the exact spot"}
             </span>
           </div>
         </div>
       )}
 
-      {/* QUICK LIST VIEW (Categorized by City) */}
+      {/* QUICK LIST VIEW */}
       {mode === "list" && (
         <div className="rounded-2xl border border-input bg-card p-4 space-y-3 shadow-xs">
-          {/* City Category Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border">
-            {["All", "Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad", "Other Metros"].map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setActiveCityTab(c)}
-                className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
-                  activeCityTab === c
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-
           <div className="grid gap-2 max-h-64 overflow-y-auto pr-1">
-            {PAN_INDIA_PRESETS.filter((item) => {
-              if (activeCityTab === "All") return true;
-              if (activeCityTab === "Other Metros") {
-                return !["Bengaluru", "Delhi NCR", "Mumbai", "Hyderabad"].includes(item.city);
-              }
-              return item.city === activeCityTab;
-            }).map((item: any, i) => {
+            {PAN_INDIA_PRESETS.map((item: any, i) => {
               const isSelected = selectedLocation?.name === item.name;
               return (
                 <button

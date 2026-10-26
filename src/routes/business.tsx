@@ -8,16 +8,13 @@ import {
   Zap,
   Receipt,
   Plane,
-  Users,
   Check,
   CheckCircle2,
-  Clock,
   ArrowRight,
   Loader2,
   Mail,
   Phone,
   BarChart3,
-  FileSpreadsheet,
   Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

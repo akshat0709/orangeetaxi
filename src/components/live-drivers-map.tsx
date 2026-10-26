@@ -1,6 +1,6 @@
 /// <reference types="google.maps" />
 import { StorageImage } from "@/components/storage-image";
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { APIProvider, Map as GoogleMap, Marker, useMap } from "@vis.gl/react-google-maps";
 import {
   Car,
@@ -12,13 +12,8 @@ import {
   BatteryCharging,
   Navigation,
   RefreshCw,
-  Clock,
   ShieldCheck,
-  ChevronRight,
-  ExternalLink,
   Radio,
-  CheckCircle2,
-  AlertCircle,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -352,7 +347,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             onClick={() => setFilterStatus("available")}
             className="text-xs h-8 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
           >
-            🟢 Available ({counts.available})
+            Available ({counts.available})
           </Button>
           <Button
             size="sm"
@@ -360,7 +355,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             onClick={() => setFilterStatus("on_trip")}
             className="text-xs h-8 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
           >
-            🟠 On Active Trip ({counts.onTrip})
+            On Active Trip ({counts.onTrip})
           </Button>
           <Button
             size="sm"
@@ -368,7 +363,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             onClick={() => setFilterStatus("offline")}
             className="text-xs h-8 text-muted-foreground hover:bg-muted/50"
           >
-            ⚪ Offline ({counts.offline})
+            Offline ({counts.offline})
           </Button>
 
           <Button
@@ -608,17 +603,17 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
               </span>
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
                 <span className="size-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30" />
-                <span>🟢 Available / Idle</span>
+                <span>Available / Idle</span>
                 <span className="ml-auto font-mono text-[10px]">({counts.available})</span>
               </div>
               <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-semibold">
                 <span className="size-2.5 rounded-full bg-orange-500 ring-2 ring-orange-500/30" />
-                <span>🟠 On Active Trip</span>
+                <span>On Active Trip</span>
                 <span className="ml-auto font-mono text-[10px]">({counts.onTrip})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground font-semibold">
                 <span className="size-2.5 rounded-full bg-slate-500 ring-2 ring-slate-500/30" />
-                <span>⚪ Offline</span>
+                <span>Offline</span>
                 <span className="ml-auto font-mono text-[10px]">({counts.offline})</span>
               </div>
             </div>
@@ -655,10 +650,10 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                           }
                         >
                           {selectedDriver.derivedStatus === "available"
-                            ? "🟢 Available (Idle)"
+                            ? "Available (Idle)"
                             : selectedDriver.derivedStatus === "on_trip"
-                              ? "🟠 On Active Trip"
-                              : "⚪ Offline"}
+                              ? "On Active Trip"
+                              : "Offline"}
                         </Badge>
                       </div>
 

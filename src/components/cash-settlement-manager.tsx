@@ -2,23 +2,14 @@ import { useState, useEffect } from "react";
 import {
   Banknote,
   Wallet,
-  ArrowDownLeft,
-  ArrowUpRight,
   Receipt,
   CheckCircle2,
-  Clock,
   Search,
-  Plus,
   X,
   Check,
   RotateCcw,
   AlertTriangle,
-  Copy,
-  Users,
-  Calendar,
-  DollarSign,
   Building2,
-  Handshake,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -267,7 +258,7 @@ export function CashSettlementManager({
       window.dispatchEvent(new CustomEvent("cash_settlements_updated"));
     }
 
-    toast.success(`💵 ₹${amt} collected from ${driver.full_name}! Driver cash holding reduced.`);
+    toast.success(`₹${amt} collected from ${driver.full_name}! Driver cash holding reduced.`);
     setIsCollecting(false);
     setSelectedDriverId("");
     setCollectionAmount("");
@@ -896,7 +887,7 @@ export function CashSettlementManager({
                         {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[10px] font-bold border border-orange-500/20">
-                              ⚡ UPI Online Deposit
+                              UPI Online Deposit
                             </span>
                             <span className="font-mono font-semibold text-foreground text-[11px]">
                               {s.notes}

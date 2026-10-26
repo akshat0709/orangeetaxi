@@ -9,7 +9,6 @@ import {
   MessageCircle,
   Phone,
   Send,
-  Sparkles,
   X,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -163,7 +162,7 @@ function getLocalConciergeReply(
           `• ${v.name}: ₹${v.base_fare} base + ₹${v.per_km}/km (min ₹${v.minimum_fare}, ${v.seats} seats)`,
       )
       .join("\n");
-    return `🏷️ Orange Taxi pricing:\n\n${lines || "• See the booking page for current fares."}\n\n${feeNotes(pricing)}\n\nYou always see the exact fare before you book.`;
+    return `Orange Taxi pricing:\n\n${lines || "• See the booking page for current fares."}\n\n${feeNotes(pricing)}\n\nYou always see the exact fare before you book.`;
   }
 
   if (
@@ -172,7 +171,7 @@ function getLocalConciergeReply(
     query.includes("flight") ||
     query.includes("terminal")
   ) {
-    return "✈️ Orange Airport Concierge:\n\n• Dedicated pickup bays at Delhi IGI (T1, T2, T3) and BLR Kempegowda Airport.\n• Chauffeurs track live flight numbers to adjust for delays.\n• 45 minutes complimentary post-landing waiting time.\n• Chauffeur assists with luggage directly at the arrivals pillar.";
+    return "Orange Airport Concierge:\n\n• Dedicated pickup bays at Delhi IGI (T1, T2, T3) and BLR Kempegowda Airport.\n• Chauffeurs track live flight numbers to adjust for delays.\n• 45 minutes complimentary post-landing waiting time.\n• Chauffeur assists with luggage directly at the arrivals pillar.";
   }
 
   if (
@@ -183,11 +182,11 @@ function getLocalConciergeReply(
     query.includes("amenities") ||
     query.includes("screen")
   ) {
-    return "⚡ 100% Mahindra BE.6 Electric Fleet:\n\nEvery Orange ride features:\n• Rear passenger HD touchscreen for movies, music & live map.\n• Acoustically tuned studio sound system with Bluetooth pairing.\n• Pre-cooled dual-zone AC at 22°C before pickup.\n• Complimentary sealed mineral water & daily newspapers.\n• Fast Type-C & Lightning chargers in rear armrest.\n• Whisper-quiet acoustic cabin with Quiet Ride mode.";
+    return "100% Mahindra BE.6 Electric Fleet:\n\nEvery Orange ride features:\n• Rear passenger HD touchscreen for movies, music & live map.\n• Acoustically tuned studio sound system with Bluetooth pairing.\n• Pre-cooled dual-zone AC at 22°C before pickup.\n• Complimentary sealed mineral water & daily newspapers.\n• Fast Type-C & Lightning chargers in rear armrest.\n• Whisper-quiet acoustic cabin with Quiet Ride mode.";
   }
 
   if (query.includes("cancel") || query.includes("denial") || query.includes("refuse")) {
-    return "🛡️ Zero Driver Cancellations:\n\nOrange Taxi enforces a strict 0% driver cancellation policy. Chauffeurs cannot cancel accepted rides. In rare cases of vehicle maintenance, our Central Control Tower instantly reassigns an equal or superior vehicle.";
+    return "Zero Driver Cancellations:\n\nOrange Taxi enforces a strict 0% driver cancellation policy. Chauffeurs cannot cancel accepted rides. In rare cases of vehicle maintenance, our Central Control Tower instantly reassigns an equal or superior vehicle.";
   }
 
   if (
@@ -196,7 +195,7 @@ function getLocalConciergeReply(
     query.includes("invoice") ||
     query.includes("company")
   ) {
-    return "💼 Corporate & Enterprise Travel:\n\n• Centralized monthly billing with consolidated GST tax invoices.\n• Employee ride rosters, geo-fenced travel rules & cost centers.\n• Priority chauffeur allocation for executive airport & client transfers.\n\nUse our corporate enquiry form on this page or email business@orange-taxi.com!";
+    return "Corporate & Enterprise Travel:\n\n• Centralized monthly billing with consolidated GST tax invoices.\n• Employee ride rosters, geo-fenced travel rules & cost centers.\n• Priority chauffeur allocation for executive airport & client transfers.\n\nUse our corporate enquiry form on this page or email business@orange-taxi.com!";
   }
 
   if (
@@ -205,10 +204,10 @@ function getLocalConciergeReply(
     query.includes("cab") ||
     query.includes("taxi")
   ) {
-    return 'BOOKING_COMMAND: {"pickup": "Delhi NCR", "drop": "IGI Airport Terminal 3", "vehicle": "orange_sedan", "time": "Now"}\n\nRedirecting you to our Booking Engine to finalize your ride now... 🚕';
+    return 'BOOKING_COMMAND: {"pickup": "Delhi NCR", "drop": "IGI Airport Terminal 3", "vehicle": "orange_sedan", "time": "Now"}\n\nRedirecting you to our Booking Engine to finalize your ride now...';
   }
 
-  return "Hi! I'm Orangee, your Orange Taxi concierge. 🍊\n\nI can assist you with:\n• 🏷️ Fares across Orange Signature\n• ✈️ Airport pickup procedures & terminal pillars\n• ⚡ Mahindra BE.6 in-cab entertainment & luxury amenities\n• 🛡️ Zero driver cancellation guarantee\n• 💼 Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 72940 73222!";
+  return "Hi! I'm Orangee, your Orange Taxi concierge. \n\nI can assist you with:\n• Fares across Orange Signature\n• Airport pickup procedures & terminal pillars\n• Mahindra BE.6 in-cab entertainment & luxury amenities\n• Zero driver cancellation guarantee\n• Corporate monthly invoicing & business travel\n\nFeel free to ask any question or call our 24x7 desk at +91 72940 73222!";
 }
 
 function TalkToOrangePage() {
@@ -221,7 +220,7 @@ function TalkToOrangePage() {
     {
       role: "assistant",
       content:
-        "Hi! I'm your Orange Taxi assistant. Ask me about fares, booking, or anything about our service! 🚕",
+        "Hi! I'm your Orange Taxi assistant. Ask me about fares, booking, or anything about our service!",
     },
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -306,7 +305,7 @@ function TalkToOrangePage() {
         sessionStorage.setItem("ai_booking", bookingMatch[1]);
         reply = reply.replace(
           /BOOKING_COMMAND:\s*({.*})/,
-          "\n\nAwesome! I have your details. Redirecting you to confirm and book your ride now... 🚕",
+          "\n\nAwesome! I have your details. Redirecting you to confirm and book your ride now...",
         );
         setTimeout(() => navigate({ to: "/book" }), 2200);
       }
@@ -398,9 +397,9 @@ function TalkToOrangePage() {
             </p>
             <div className="mt-10 space-y-5 border-t border-border pt-8">
               {[
-                ["📧", "business@orange-taxi.com", "Email"],
-                ["🚕", "Delhi NCR", "Operating area"],
-                ["⚡", "100% electric fleet", "Fleet type"],
+                ["", "business@orange-taxi.com", "Email"],
+                ["", "Delhi NCR", "Operating area"],
+                ["", "100% electric fleet", "Fleet type"],
               ].map(([icon, val, label]) => (
                 <div key={label} className="flex items-center gap-4">
                   <span className="text-2xl">{icon}</span>
@@ -713,22 +712,17 @@ function TalkToOrangePage() {
 
             {/* Quick suggestion chips */}
             <div className="flex gap-1.5 overflow-x-auto border-t border-border px-3 py-2 text-xs bg-muted/30">
-              {[
-                "🏷️ Fares",
-                "✈️ Airport",
-                "⚡ BE.6 Fleet",
-                "🛡️ Zero Cancel",
-                "💼 Corporate",
-                "📍 Book Cab",
-              ].map((chip) => (
-                <button
-                  key={chip}
-                  onClick={() => sendChat(chip)}
-                  className="whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
-                >
-                  {chip}
-                </button>
-              ))}
+              {["Fares", "Airport", "BE.6 Fleet", "Zero Cancel", "Corporate", "Book Cab"].map(
+                (chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => sendChat(chip)}
+                    className="whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                  >
+                    {chip}
+                  </button>
+                ),
+              )}
             </div>
 
             {/* Input */}

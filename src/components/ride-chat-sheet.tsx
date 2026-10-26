@@ -3,7 +3,6 @@ import {
   MessageSquare,
   Send,
   Phone,
-  X,
   Car,
   User,
   CheckCheck,
@@ -37,19 +36,19 @@ interface RideChatSheetProps {
 }
 
 const DRIVER_QUICK_CHIPS = [
-  "📍 I have arrived at your pickup location",
+  "I have arrived at your pickup location",
   "⏳ Stuck in traffic, arriving in ~5 mins",
-  "🚗 Where should I stop to pick you up?",
-  "🚪 Please come towards the main exit gate",
-  "❄️ AC is switched on and ready for you",
+  "Where should I stop to pick you up?",
+  "Please come towards the main exit gate",
+  "AC is switched on and ready for you",
 ];
 
 const CUSTOMER_QUICK_CHIPS = [
-  "🚶 On my way down right now",
-  "🚪 Waiting at the security / reception gate",
-  "❄️ Please turn on the AC",
+  "On my way down right now",
+  "Waiting at the security / reception gate",
+  "Please turn on the AC",
   "⏱️ Please give me 2 minutes, arriving!",
-  "👔 Wearing a blue shirt near the entrance",
+  "Wearing a blue shirt near the entrance",
 ];
 
 function playChatChime() {
@@ -143,7 +142,7 @@ export function RideChatSheet({
           });
           const latest = fromOther[fromOther.length - 1];
           if (latest) {
-            toast.info(`💬 ${latest.senderName}: "${latest.text}"`, {
+            toast.info(`${latest.senderName}: "${latest.text}"`, {
               action: {
                 label: "Reply",
                 onClick: () => onOpenChangeRef.current?.(true),
@@ -169,7 +168,7 @@ export function RideChatSheet({
         const lat = pos.coords.latitude.toFixed(5);
         const lng = pos.coords.longitude.toFixed(5);
         const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
-        const msg = `📍 Standing here right now: ${mapUrl}`;
+        const msg = `Standing here right now: ${mapUrl}`;
         sendMessage(msg);
         setSharingLocation(false);
         toast.success(`Exact GPS coordinates shared!`);
@@ -484,7 +483,7 @@ export function RideChatSheet({
                 </p>
               </div>
               <div className="text-xs text-muted-foreground/80 bg-muted/40 rounded-lg p-2.5 border border-border/50 max-w-xs">
-                💡 Tip: Tap any quick response chip below to reply instantly with 1 tap.
+                Tip: Tap any quick response chip below to reply instantly with 1 tap.
               </div>
             </div>
           ) : (
@@ -558,7 +557,7 @@ export function RideChatSheet({
               title="Share exact physical GPS location pin"
             >
               <MapPin className="size-3 text-emerald-500" />
-              <span>{sharingLocation ? "Locating..." : "📍 Share GPS Pin"}</span>
+              <span>{sharingLocation ? "Locating..." : "Share GPS Pin"}</span>
             </button>
             <span className="text-[11px] font-semibold text-muted-foreground shrink-0 pl-1">
               Quick:
