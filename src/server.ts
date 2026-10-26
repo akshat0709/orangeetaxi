@@ -54,6 +54,13 @@ import {
   type SettlementConfig,
   supabaseKeyHeaders,
 } from "./lib/razorpay-settlement";
+import {
+  createDepositQr,
+  createRideLink,
+  createRideQr,
+  qrStatus,
+  settleQrFromWebhook,
+} from "./lib/razorpay-qr";
 
 const invoiceRateLimits = new Map<string, { count: number; resetAt: number }>();
 
@@ -336,6 +343,39 @@ async function handleSettleRazorpayPayment(request: Request, env: unknown): Prom
     settlementDeps,
   );
   return jsonResponse(result.status, result.body);
+}
+
+async function handleQr(
+  request: Request,
+  env: unknown,
+  which: "ride" | "deposit" | "status" | "ride_link",
+) {
+  const cfg = settlementConfig(env);
+  const accessToken = bearer(request);
+  if (which === "status") {
+    const qrId = new URL(request.url).searchParams.get("id") || undefined;
+    const r = await qrStatus({ accessToken, qrId }, cfg, settlementDeps);
+    return jsonResponse(r.status, r.body);
+  }
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse(400, { ok: false, error: "Invalid JSON body" });
+  const r =
+    which === "ride"
+      ? await createRideQr({ accessToken, bookingId: body["bookingId"] }, cfg, settlementDeps)
+      : which === "ride_link"
+        ? await createRideLink({ accessToken, bookingId: body["bookingId"] }, cfg, settlementDeps)
+        : await createDepositQr(
+            {
+              accessToken,
+              driverId: body["driverId"],
+              amount: body["amount"],
+              kind: body["kind"],
+              link: body["link"],
+            },
+            cfg,
+            settlementDeps,
+          );
+  return jsonResponse(r.status, r.body);
 }
 
 async function handleWalletTopupOrder(request: Request, env: unknown): Promise<Response> {
@@ -631,6 +671,14 @@ async function handleRazorpayWebhook(request: Request, env: unknown): Promise<Re
     }
 
     const eventType = eventData?.event;
+    if (eventType === "qr_code.credited" || eventType === "payment_link.paid") {
+      const qr = await settleQrFromWebhook(eventData, settlementConfig(env), settlementDeps);
+      if (qr.status >= 500) {
+        if (eventId) processedWebhookEvents.delete(eventId);
+        return jsonResponse(qr.status, { error: qr.error });
+      }
+      return jsonResponse(200, { success: true, event: eventType, settled: qr.settled });
+    }
     const outcome = await processRazorpayWebhookEvent(
       eventData,
       settlementConfig(env),
@@ -911,6 +959,19 @@ export default {
 
       if (url.pathname === "/api/wallet-topup/settle" && request.method === "POST") {
         return applySecurityHeaders(await handleWalletTopupSettle(request, env));
+      }
+
+      if (url.pathname === "/api/qr/ride" && request.method === "POST") {
+        return applySecurityHeaders(await handleQr(request, env, "ride"));
+      }
+      if (url.pathname === "/api/qr/deposit" && request.method === "POST") {
+        return applySecurityHeaders(await handleQr(request, env, "deposit"));
+      }
+      if (url.pathname === "/api/pay/ride-link" && request.method === "POST") {
+        return applySecurityHeaders(await handleQr(request, env, "ride_link"));
+      }
+      if (url.pathname === "/api/qr/status" && request.method === "GET") {
+        return applySecurityHeaders(await handleQr(request, env, "status"));
       }
 
       if (url.pathname === "/api/razorpay-webhook" && request.method === "POST") {

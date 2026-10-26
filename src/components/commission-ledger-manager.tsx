@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isCommissionDriver, partnerLedger } from "@/lib/driver-type";
 import { usePricingSettings } from "@/lib/pricing";
 import { toast } from "sonner";
+import { UpiQrDialog, type UpiQrRequest } from "@/components/upi-qr-dialog";
 
 export interface CommissionSettlement {
   id: string;
@@ -107,10 +108,18 @@ export function CommissionLedgerManager({
   const [isRecording, setIsRecording] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [settleAmount, setSettleAmount] = useState<number | "">("");
-  const [paymentMode, setPaymentMode] = useState<"upi" | "bank_transfer" | "cash">("upi");
+  const [paymentMode, setPaymentMode] = useState<"upi_qr" | "upi" | "bank_transfer" | "cash">(
+    "upi_qr",
+  );
+  const [commissionQr, setCommissionQr] = useState<{ req: UpiQrRequest; name: string } | null>(
+    null,
+  );
   const [direction, setDirection] = useState<"driver_to_company" | "company_to_driver">(
     "driver_to_company",
   );
+  useEffect(() => {
+    if (direction === "company_to_driver" && paymentMode === "upi_qr") setPaymentMode("upi");
+  }, [direction, paymentMode]);
   const [referenceNo, setReferenceNo] = useState("");
   const [collectorName, setCollectorName] = useState("Admin");
   const [settleNotes, setSettleNotes] = useState("");
@@ -224,6 +233,18 @@ export function CommissionLedgerManager({
       return;
     }
 
+    if (paymentMode === "upi_qr") {
+      if (!toCompany) {
+        toast.error("A UPI QR collects money from the driver. Pick another mode for payouts.");
+        return;
+      }
+      setCommissionQr({
+        req: { kind: "commission", driverId: targetDriver.id, amount: amt },
+        name: targetDriver.full_name,
+      });
+      return;
+    }
+
     setSubmitting(true);
     const { error } = await supabase.from("driver_commission_settlements").insert({
       driver_id: targetDriver.id,
@@ -259,6 +280,20 @@ export function CommissionLedgerManager({
 
   return (
     <div className="space-y-6">
+      <UpiQrDialog
+        request={commissionQr?.req ?? null}
+        title={`Commission – ${commissionQr?.name ?? ""}`}
+        onClose={() => setCommissionQr(null)}
+        onPaid={() => {
+          toast.success(`Commission received from ${commissionQr?.name ?? "driver"} by UPI.`);
+          setIsRecording(false);
+          setSelectedDriverId("");
+          setSettleAmount("");
+          setReferenceNo("");
+          setSettleNotes("");
+          loadSettlements();
+        }}
+      />
       {/* Header & Operating Model Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -571,6 +606,9 @@ export function CommissionLedgerManager({
                     onChange={(e) => setPaymentMode(e.target.value as any)}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
                   >
+                    {direction === "driver_to_company" && (
+                      <option value="upi_qr">UPI – show QR (auto-recorded)</option>
+                    )}
                     <option value="upi">UPI Transfer</option>
                     <option value="bank_transfer">Bank Transfer (NEFT/IMPS)</option>
                     <option value="cash">Cash Deposit at Depot</option>
@@ -651,7 +689,9 @@ export function CommissionLedgerManager({
                   className="text-xs font-semibold gap-1.5 disabled:opacity-50"
                 >
                   {submitting ? "Saving..." : <Check className="size-3.5" />}
-                  Save Commission Settlement
+                  {paymentMode === "upi_qr" && direction === "driver_to_company"
+                    ? "Show UPI QR"
+                    : "Save Commission Settlement"}
                 </Button>
               </div>
             </form>

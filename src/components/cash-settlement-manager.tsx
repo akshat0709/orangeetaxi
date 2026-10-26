@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { isCommissionDriver } from "@/lib/driver-type";
 import { toast } from "sonner";
+import { UpiQrDialog, type UpiQrRequest } from "@/components/upi-qr-dialog";
 
 export interface CashSettlement {
   id: string;
@@ -61,6 +62,9 @@ export function CashSettlementManager({
   const [collectionNotes, setCollectionNotes] = useState("");
   const [collectorName, setCollectorName] = useState("Admin");
   const [submitting, setSubmitting] = useState(false);
+  // Cash in hand, or the driver pays by scanning a Razorpay UPI QR (money lands in Orange Taxi's account).
+  const [collectMode, setCollectMode] = useState<"cash" | "upi">("cash");
+  const [depositQr, setDepositQr] = useState<{ req: UpiQrRequest; name: string } | null>(null);
 
   // Load settlements from Supabase or fallback
   async function loadSettlements() {
@@ -217,6 +221,14 @@ export function CashSettlementManager({
       return;
     }
 
+    if (collectMode === "upi") {
+      setDepositQr({
+        req: { kind: "cash_deposit", driverId: driver.id, amount: amt },
+        name: driver.full_name,
+      });
+      return;
+    }
+
     setSubmitting(true);
     const newRecord: CashSettlement = {
       id: "settle-" + Date.now(),
@@ -281,6 +293,22 @@ export function CashSettlementManager({
 
   return (
     <div className="space-y-6">
+      <UpiQrDialog
+        request={depositQr?.req ?? null}
+        title={`Cash hand-in – ${depositQr?.name ?? ""}`}
+        onClose={() => setDepositQr(null)}
+        onPaid={() => {
+          toast.success(
+            `UPI payment received from ${depositQr?.name ?? "driver"}. Holding reduced.`,
+          );
+          setIsCollecting(false);
+          setSelectedDriverId("");
+          setCollectionAmount("");
+          setCollectionNotes("");
+          loadSettlements();
+          onRefresh();
+        }}
+      />
       {/* Fallback Banner */}
       {isUsingFallback && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
@@ -442,6 +470,26 @@ export function CashSettlementManager({
                 </button>
               </div>
 
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Driver pays by
+                </span>
+                {(["cash", "upi"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setCollectMode(m)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      collectMode === m
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {m === "cash" ? "Cash" : "UPI (show QR)"}
+                  </button>
+                ))}
+              </div>
+
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
                 {/* Driver Selector */}
                 <div className="sm:col-span-4">
@@ -582,7 +630,8 @@ export function CashSettlementManager({
                       "Saving..."
                     ) : (
                       <>
-                        <Check className="size-3.5 mr-1" /> Record Cash
+                        <Check className="size-3.5 mr-1" />{" "}
+                        {collectMode === "upi" ? "Show UPI QR" : "Record Cash"}
                       </>
                     )}
                   </Button>

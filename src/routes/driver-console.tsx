@@ -78,6 +78,7 @@ import { NotificationBanner } from "@/components/notification-banner";
 import { sendRideNotification } from "@/lib/notifications";
 import { partnerLedger } from "@/lib/driver-type";
 import { usePricingSettings } from "@/lib/pricing";
+import { UpiQrDialog, type UpiQrRequest } from "@/components/upi-qr-dialog";
 
 export const Route = createFileRoute("/driver-console")({
   head: () => ({ meta: [{ title: "Driver Console — Orange Taxi" }] }),
@@ -276,6 +277,10 @@ function DriverConsolePage() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
+  // "Pay the chauffeur" rides: at completion the driver picks Cash or a Razorpay UPI QR.
+  const [payChoiceRide, setPayChoiceRide] = useState<Booking | null>(null);
+  const [rideQr, setRideQr] = useState<{ ride: Booking; req: UpiQrRequest } | null>(null);
+  const [selfQr, setSelfQr] = useState<{ req: UpiQrRequest; title: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       const s = localStorage.getItem("orange_driver_sound_enabled");
@@ -288,14 +293,12 @@ function DriverConsolePage() {
   // Fixed Salary Driver UPI Remittance Modal State
   const [upiDepositModalOpen, setUpiDepositModalOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState<number | "">("");
-  const [depositUtr, setDepositUtr] = useState("");
-  const [submittingDeposit, setSubmittingDeposit] = useState(false);
+  const submittingDeposit = false;
 
   // Commission Partner Driver UPI Payment Modal State
   const [upiCommissionModalOpen, setUpiCommissionModalOpen] = useState(false);
   const [commissionPayAmount, setCommissionPayAmount] = useState<number | "">("");
-  const [commissionUtr, setCommissionUtr] = useState("");
-  const [submittingCommission, setSubmittingCommission] = useState(false);
+  const submittingCommission = false;
 
   // Continuous looping alert: sound + vibration repeat every 2.5s while unaccepted requests exist
   useEffect(() => {
@@ -1104,9 +1107,21 @@ function DriverConsolePage() {
     loadData();
   }
 
-  async function advanceStatus(booking: Booking) {
+  function needsCollection(booking: Booking) {
+    return (
+      (booking.payment_method === "cash" || booking.payment_method === "driver_upi") &&
+      booking.payment_status !== "paid"
+    );
+  }
+
+  async function advanceStatus(booking: Booking, collectedBy?: "cash" | "upi_qr") {
     const flow = STATUS_FLOW[booking.status];
     if (!flow) return;
+
+    if (flow.next === "completed" && !collectedBy && needsCollection(booking)) {
+      setPayChoiceRide(booking);
+      return;
+    }
 
     // Server-side OTP verification when advancing to in_progress
     if (flow.next === "in_progress") {
@@ -1141,7 +1156,14 @@ function DriverConsolePage() {
     if (flow.next === "completed") {
       updates.completed_at = new Date().toISOString();
       updates.final_fare = Math.round(Number(booking.estimated_fare || 0));
-      updates.payment_status = "paid";
+      // A UPI QR payment was already recorded by the server (payment_method 'upi_qr').
+      if (collectedBy !== "upi_qr") {
+        updates.payment_status = "paid";
+        if (needsCollection(booking)) {
+          updates.payment_method = "cash";
+          updates.payment_made = "yes";
+        }
+      }
       if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
         updates.vehicle_name = formatVehicleNameWithPlate(
           booking.vehicle_name,
@@ -1258,7 +1280,7 @@ function DriverConsolePage() {
     0,
   );
   const todayUPI = todayRides
-    .filter((r) => r.payment_method === "upi")
+    .filter((r) => r.payment_method === "upi" || r.payment_method === "upi_qr")
     .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const todayCash = todayRides
     .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
@@ -1270,7 +1292,7 @@ function DriverConsolePage() {
     0,
   );
   const weekUPI = weeklyRides
-    .filter((r) => r.payment_method === "upi")
+    .filter((r) => r.payment_method === "upi" || r.payment_method === "upi_qr")
     .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const weekCash = weeklyRides
     .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
@@ -1280,7 +1302,7 @@ function DriverConsolePage() {
     0,
   );
   const monthUPI = recentRides
-    .filter((r) => r.payment_method === "upi")
+    .filter((r) => r.payment_method === "upi" || r.payment_method === "upi_qr")
     .reduce((s, r) => s + Math.round(Number(r.final_fare ?? r.estimated_fare ?? 0)), 0);
   const monthCash = recentRides
     .filter((r) => r.payment_method === "cash" || r.payment_method === "driver_upi")
@@ -1350,140 +1372,43 @@ function DriverConsolePage() {
   const ridesToNextMilestone = Math.max(0, nextMilestoneRides - monthlyCompletedRides);
   const monthlyMilestonePercent = Math.min(100, Math.max(0, (monthlyCompletedRides / 250) * 100));
 
-  async function handleSubmitUpiDeposit() {
-    const amt = Number(depositAmount);
+  // Paying the company by UPI shows a one-time Razorpay QR. The server records the hand-in /
+  // commission payment once Razorpay confirms it (previously the driver typed a UTR that nobody
+  // could verify, and the insert was blocked by RLS so it only lived in this browser).
+  function handleSubmitUpiDeposit() {
+    const amt = Math.round(Number(depositAmount));
     if (!amt || amt <= 0) {
       toast.error("Please enter a valid deposit amount.");
       return;
     }
-    if (amt > currentCashHolding) {
-      toast.error(`Deposit amount cannot exceed holding cash of ₹${currentCashHolding}.`);
+    if (amt > Math.round(currentCashHolding)) {
+      toast.error(
+        `Deposit amount cannot exceed your cash in hand (₹${Math.round(currentCashHolding)}).`,
+      );
       return;
     }
-    if (!depositUtr || depositUtr.trim().length < 4) {
-      toast.error("Please enter a valid 12-digit UPI Transaction / UTR reference number.");
-      return;
-    }
-
-    setSubmittingDeposit(true);
-    const cleanUtr = depositUtr.trim().toUpperCase();
-    const newRecord = {
-      id: "settle-upi-" + Date.now(),
-      driver_id: driver.id,
-      amount: Math.round(amt),
-      collected_by: "UPI Auto-Remit",
-      notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
-      created_at: new Date().toISOString(),
-    };
-
-    try {
-      const { data, error } = await supabase
-        .from("driver_cash_settlements")
-        .insert({
-          driver_id: driver.id,
-          amount: Math.round(amt),
-          collected_by: "UPI Auto-Remit",
-          notes: `UPI Deposit (UTR: ${cleanUtr}) to orangeetaxi@upi`,
-        })
-        .select()
-        .single();
-
-      if (data) {
-        newRecord.id = data.id;
-      }
-      if (error) {
-        console.warn("Could not insert to driver_cash_settlements in DB, saving locally:", error);
-      }
-    } catch (e) {
-      console.warn("driver_cash_settlements insert error:", e);
-    }
-
-    // Update local state and localStorage
-    const updated = [newRecord, ...settlements];
-    setSettlements(updated);
-    try {
-      const stored = localStorage.getItem("orange_cash_settlements");
-      const all = stored ? JSON.parse(stored) : [];
-      localStorage.setItem("orange_cash_settlements", JSON.stringify([newRecord, ...all]));
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new CustomEvent("cash_settlements_updated"));
-    }
-
-    toast.success(`₹${amt} UPI deposit submitted! Handover receipt recorded.`);
     setUpiDepositModalOpen(false);
-    setDepositAmount("");
-    setDepositUtr("");
-    setSubmittingDeposit(false);
-    await loadData();
+    setSelfQr({
+      req: { kind: "cash_deposit", driverId: driver.id, amount: amt },
+      title: "Hand in cash by UPI",
+    });
   }
 
-  async function handleSubmitUpiCommission() {
-    const amt = Number(commissionPayAmount);
+  function handleSubmitUpiCommission() {
+    const amt = Math.round(Number(commissionPayAmount));
     if (!amt || amt <= 0) {
       toast.error("Please enter a valid payment amount.");
       return;
     }
-    if (!commissionUtr || commissionUtr.trim().length < 4) {
-      toast.error("Please enter a valid 12-digit UPI Transaction / UTR reference number.");
+    if (amt > Math.round(partnerCommissionDue)) {
+      toast.error(`You owe ₹${Math.round(partnerCommissionDue)} right now.`);
       return;
     }
-
-    setSubmittingCommission(true);
-    const cleanUtr = commissionUtr.trim().toUpperCase();
-    const newRecord = {
-      id: "comm-" + Date.now(),
-      driver_id: driver.id,
-      driver_name: driver.full_name || "Partner Driver",
-      amount: Math.round(amt),
-      payment_mode: "upi" as const,
-      reference_no: `UTR: ${cleanUtr}`,
-      collected_by: "UPI Auto-Remit",
-      notes: `Platform commission UPI remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
-      created_at: new Date().toISOString(),
-    };
-
-    try {
-      await supabase.from("driver_commission_settlements").insert({
-        driver_id: driver.id,
-        driver_name: driver.full_name || "Partner Driver",
-        amount: Math.round(amt),
-        payment_mode: "upi",
-        reference_no: `UTR: ${cleanUtr}`,
-        collected_by: "UPI Auto-Remit",
-        notes: `Platform commission UPI remittance (UTR: ${cleanUtr}) to orangeetaxi@upi`,
-      });
-    } catch (e) {
-      console.warn("Could not insert to driver_commission_settlements in DB:", e);
-    }
-
-    // Update local state and localStorage
-    const stored = localStorage.getItem("orange_commission_settlements");
-    let current = stored ? JSON.parse(stored) : [];
-    current = [newRecord, ...current];
-    try {
-      localStorage.setItem("orange_commission_settlements", JSON.stringify(current));
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-
-    setCommissionSettlements((prev) => [newRecord, ...prev]);
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new Event("commission_settlements_updated"));
-    }
-
-    toast.success(`₹${amt} platform commission payment recorded!`);
     setUpiCommissionModalOpen(false);
-    setCommissionPayAmount("");
-    setCommissionUtr("");
-    setSubmittingCommission(false);
-    await loadData();
+    setSelfQr({
+      req: { kind: "commission", driverId: driver.id, amount: amt },
+      title: "Pay commission by UPI",
+    });
   }
 
   return (
@@ -3203,7 +3128,12 @@ function DriverConsolePage() {
                     ₹{Number(todayUPI).toFixed(2)}
                   </p>
                   <p className="mt-1 text-xs text-blue-500">
-                    {todayRides.filter((r) => r.payment_method === "upi").length} rides
+                    {
+                      todayRides.filter(
+                        (r) => r.payment_method === "upi" || r.payment_method === "upi_qr",
+                      ).length
+                    }{" "}
+                    rides
                   </p>
                 </div>
                 <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-5">
@@ -3320,11 +3250,13 @@ function DriverConsolePage() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ride.payment_method === "upi" || ride.payment_method === "upi_qr" ? "bg-blue-100 text-blue-700" : ride.payment_method === "driver_upi" ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}`}
                           >
                             {ride.payment_method === "driver_upi"
                               ? "DRIVER UPI"
-                              : ride.payment_method?.toUpperCase()}
+                              : ride.payment_method === "upi_qr"
+                                ? "UPI QR"
+                                : ride.payment_method?.toUpperCase()}
                           </span>
                           <span className="font-bold text-primary">
                             ₹{Math.round(ride.final_fare ?? ride.estimated_fare)}
@@ -3545,6 +3477,65 @@ function DriverConsolePage() {
         );
       })}
 
+      {/* How did the passenger pay? (pay-the-chauffeur rides) */}
+      <Dialog open={!!payChoiceRide} onOpenChange={(o) => !o && setPayChoiceRide(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>How is the passenger paying?</DialogTitle>
+            <DialogDescription>
+              Collect ₹
+              {Math.round(Number(payChoiceRide?.estimated_fare || 0)).toLocaleString("en-IN")}. UPI
+              shows a QR that pays Orange Taxi directly, so it is not cash you hold.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                const ride = payChoiceRide;
+                setPayChoiceRide(null);
+                if (ride) advanceStatus(ride, "cash");
+              }}
+            >
+              Cash received
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const ride = payChoiceRide;
+                setPayChoiceRide(null);
+                if (ride) setRideQr({ ride, req: { kind: "ride", bookingId: ride.id } });
+              }}
+            >
+              <QrCode className="mr-2 size-4" /> UPI – show QR
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <UpiQrDialog
+        request={rideQr?.req ?? null}
+        title="Collect fare by UPI"
+        onClose={() => setRideQr(null)}
+        onPaid={() => {
+          const ride = rideQr?.ride;
+          toast.success("UPI payment received 🎉");
+          if (ride) advanceStatus(ride, "upi_qr");
+        }}
+      />
+
+      <UpiQrDialog
+        request={selfQr?.req ?? null}
+        title={selfQr?.title ?? ""}
+        onClose={() => setSelfQr(null)}
+        onPaid={() => {
+          toast.success("UPI payment received. Thank you! 🎉");
+          setDepositAmount("");
+          setCommissionPayAmount("");
+          loadData();
+        }}
+      />
+
       {/* Fixed Salary Driver UPI Holding Cash Remittance Dialog */}
       <Dialog open={upiDepositModalOpen} onOpenChange={setUpiDepositModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -3571,30 +3562,6 @@ function DriverConsolePage() {
                 </p>
               </div>
               <Badge className="bg-amber-600 text-white font-semibold text-xs">Physical Cash</Badge>
-            </div>
-
-            {/* Official Orange Taxi UPI ID */}
-            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Orange Taxi Official VPA:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText("orangeetaxi@upi");
-                    toast.success("UPI ID copied: orangeetaxi@upi");
-                  }}
-                  className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
-                >
-                  <Copy className="size-3" />
-                  <span>Copy</span>
-                </button>
-              </div>
-              <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
-                orangeetaxi@upi
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong>
-              </p>
             </div>
 
             {/* Remittance Amount */}
@@ -3644,53 +3611,11 @@ function DriverConsolePage() {
               </div>
             </div>
 
-            {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
-            {Number(depositAmount) > 0 && (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
-                <p className="text-xs font-bold text-foreground">
-                  Scan with any UPI App to Pay ₹{depositAmount}
-                </p>
-                <div className="flex justify-center">
-                  <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${depositAmount}&cu=INR&tn=${encodeURIComponent(`Cash Deposit Driver ${driver?.full_name || ""}`)}`)}`}
-                      alt="UPI QR Code"
-                      className="size-36 object-contain"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-                  <a
-                    href={`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${depositAmount}&cu=INR&tn=${encodeURIComponent(`Cash Deposit Driver ${driver?.full_name || ""}`)}`}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md hover:bg-primary/90 active:scale-95"
-                  >
-                    <Smartphone className="size-4" />
-                    <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* 12-Digit UTR Input */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold flex items-center justify-between">
-                <span>12-Digit UPI Reference / UTR No. *</span>
-                <span className="text-[10px] text-muted-foreground font-normal">
-                  Found in UPI app receipt
-                </span>
-              </Label>
-              <Input
-                type="text"
-                maxLength={24}
-                value={depositUtr}
-                onChange={(e) => setDepositUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-                placeholder="e.g. 429182390124"
-                className="font-mono uppercase font-semibold text-sm"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Enter the transaction ID / UTR shown after successful payment in your UPI app.
-              </p>
-            </div>
+            <p className="rounded-xl border border-border bg-muted/40 p-3 text-[11px] text-muted-foreground">
+              Tap below to show a one-time UPI QR. Scan it with any UPI app (GPay, PhonePe, Paytm,
+              BHIM). The payment goes straight to Orange Taxi and is recorded automatically. No
+              reference number needed.
+            </p>
 
             <div className="pt-2 flex gap-2">
               <Button
@@ -3704,13 +3629,7 @@ function DriverConsolePage() {
               <Button
                 type="button"
                 onClick={handleSubmitUpiDeposit}
-                disabled={
-                  submittingDeposit ||
-                  !depositAmount ||
-                  Number(depositAmount) <= 0 ||
-                  !depositUtr ||
-                  depositUtr.trim().length < 4
-                }
+                disabled={submittingDeposit || !depositAmount || Number(depositAmount) <= 0}
                 className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5"
               >
                 {submittingDeposit ? (
@@ -3718,7 +3637,7 @@ function DriverConsolePage() {
                 ) : (
                   <Check className="size-4" />
                 )}
-                <span>Confirm Deposit</span>
+                <span>Show UPI QR</span>
               </Button>
             </div>
           </div>
@@ -3731,7 +3650,7 @@ function DriverConsolePage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Smartphone className="size-5 text-primary" />
-              Pay 15% Platform Commission via UPI
+              Pay Platform Commission via UPI
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               Settle your platform commission balance directly to Orange Taxi using any UPI app
@@ -3751,32 +3670,8 @@ function DriverConsolePage() {
                 </p>
               </div>
               <Badge className="bg-primary text-primary-foreground font-semibold text-xs">
-                15% Platform Fee
+                {commissionPct}% Platform Fee
               </Badge>
-            </div>
-
-            {/* Official Orange Taxi UPI ID */}
-            <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Orange Taxi Official VPA:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText("orangeetaxi@upi");
-                    toast.success("UPI ID copied: orangeetaxi@upi");
-                  }}
-                  className="inline-flex items-center gap-1 text-primary font-bold hover:underline"
-                >
-                  <Copy className="size-3" />
-                  <span>Copy</span>
-                </button>
-              </div>
-              <p className="font-mono font-extrabold text-sm text-foreground bg-background px-3 py-1.5 rounded-lg border border-border">
-                orangeetaxi@upi
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                Beneficiary Name: <strong className="text-foreground">Orange Taxi Limited</strong>
-              </p>
             </div>
 
             {/* Commission Payment Amount */}
@@ -3827,53 +3722,11 @@ function DriverConsolePage() {
               </div>
             </div>
 
-            {/* Dynamic QR Code & 1-Tap UPI Intent Link */}
-            {Number(commissionPayAmount) > 0 && (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center space-y-3">
-                <p className="text-xs font-bold text-foreground">
-                  Scan with any UPI App to Pay ₹{commissionPayAmount}
-                </p>
-                <div className="flex justify-center">
-                  <div className="p-2 bg-white rounded-xl shadow-sm border border-border/80">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${commissionPayAmount}&cu=INR&tn=${encodeURIComponent(`Platform Commission ${driver?.full_name || ""}`)}`)}`}
-                      alt="UPI QR Code"
-                      className="size-36 object-contain"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-                  <a
-                    href={`upi://pay?pa=orangeetaxi@upi&pn=Orange%20Taxi%20Limited&am=${commissionPayAmount}&cu=INR&tn=${encodeURIComponent(`Platform Commission ${driver?.full_name || ""}`)}`}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-md hover:bg-primary/90 active:scale-95"
-                  >
-                    <Smartphone className="size-4" />
-                    <span>Open in UPI App (GPay / PhonePe / Paytm)</span>
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* 12-Digit UTR Input */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold flex items-center justify-between">
-                <span>12-Digit UPI Reference / UTR No. *</span>
-                <span className="text-[10px] text-muted-foreground font-normal">
-                  Found in UPI app receipt
-                </span>
-              </Label>
-              <Input
-                type="text"
-                maxLength={24}
-                value={commissionUtr}
-                onChange={(e) => setCommissionUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-                placeholder="e.g. 429182390124"
-                className="font-mono uppercase font-semibold text-sm"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Enter the transaction ID / UTR shown after successful payment in your UPI app.
-              </p>
-            </div>
+            <p className="rounded-xl border border-border bg-muted/40 p-3 text-[11px] text-muted-foreground">
+              Tap below to show a one-time UPI QR. Scan it with any UPI app (GPay, PhonePe, Paytm,
+              BHIM). The payment goes straight to Orange Taxi and is recorded automatically. No
+              reference number needed.
+            </p>
 
             <div className="pt-2 flex gap-2">
               <Button
@@ -3888,11 +3741,7 @@ function DriverConsolePage() {
                 type="button"
                 onClick={handleSubmitUpiCommission}
                 disabled={
-                  submittingCommission ||
-                  !commissionPayAmount ||
-                  Number(commissionPayAmount) <= 0 ||
-                  !commissionUtr ||
-                  commissionUtr.trim().length < 4
+                  submittingCommission || !commissionPayAmount || Number(commissionPayAmount) <= 0
                 }
                 className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
               >
@@ -3901,7 +3750,7 @@ function DriverConsolePage() {
                 ) : (
                   <Check className="size-4" />
                 )}
-                <span>Record Payment</span>
+                <span>Show UPI QR</span>
               </Button>
             </div>
           </div>

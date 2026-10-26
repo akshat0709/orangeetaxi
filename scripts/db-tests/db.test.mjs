@@ -1244,3 +1244,107 @@ test("commission drivers: driver_type is admin-only, settlements record a direct
   assert.equal(Number(pct), 15);
   await force(`UPDATE public.drivers SET driver_type = 'company' WHERE id = $1`, [DRIVER_ROW]);
 });
+
+// ---- Razorpay UPI QR payments (20261025190000) -------------------------------------------------
+test("UPI QR: only the payment server marks a ride paid by QR; QR table is server-only", async () => {
+  const svc = (sql, params) =>
+    db.transaction(async (tx) => {
+      await tx.query(
+        `SELECT set_config('request.jwt.claim.role','service_role',true), set_config('request.jwt.claim.sub','',true)`,
+      );
+      await tx.exec("SET LOCAL ROLE service_role");
+      return (await tx.query(sql, params)).rows;
+    });
+  const b = await book(RIDER, { method: "cash" });
+  await acceptAs(DRV, b.id);
+  await force(`UPDATE public.bookings SET status = 'in_progress' WHERE id = $1`, [b.id]);
+
+  // The driver cannot claim an online (QR) payment themselves.
+  const self = await authed(
+    DRV,
+    `UPDATE public.bookings SET payment_method = 'upi_qr', payment_status = 'paid', payment_intent_id = 'pay_FAKE' WHERE id = $1`,
+    [b.id],
+  );
+  assert.ok(!self.ok, "driver must not mark a QR payment paid");
+  assert.ok(!(await authed(DRV, `SELECT * FROM public.payment_qr_codes`)).rows?.length);
+  const ins = await authed(
+    DRV,
+    `INSERT INTO public.payment_qr_codes (id, kind, booking_id, amount, image_url) VALUES ('qr_X1', 'ride', $1, 10, 'x')`,
+    [b.id],
+  );
+  assert.ok(!ins.ok, "authenticated users cannot create QR rows");
+
+  // What the server does after Razorpay confirms the QR payment.
+  await svc(
+    `INSERT INTO public.payment_qr_codes (id, kind, booking_id, driver_id, amount, image_url) VALUES ('qr_TEST1', 'ride', $1, $2, $3, 'https://rzp.io/i/x')`,
+    [b.id, DRIVER_ROW, b.estimated_fare],
+  );
+  const [paid] = await svc(
+    `UPDATE public.bookings SET payment_method = 'upi_qr', payment_status = 'paid', payment_made = 'yes', payment_intent_id = 'pay_QR1'
+      WHERE id = $1 AND payment_status <> 'paid' RETURNING payment_status`,
+    [b.id],
+  );
+  assert.equal(paid.payment_status, "paid");
+
+  // The driver then completes the ride without touching payment fields.
+  const done = await authed(
+    DRV,
+    `UPDATE public.bookings SET status = 'completed', completed_at = now(), final_fare = estimated_fare WHERE id = $1 RETURNING payment_method, payment_status`,
+    [b.id],
+  );
+  assert.ok(done.ok, done.error);
+  assert.deepEqual([done.rows[0].payment_method, done.rows[0].payment_status], ["upi_qr", "paid"]);
+
+  const adminSees = await authed(
+    ADMIN,
+    `SELECT id FROM public.payment_qr_codes WHERE id = 'qr_TEST1'`,
+  );
+  assert.equal(adminSees.rows.length, 1);
+
+  // A Razorpay payment can only be recorded once as a deposit / commission payment.
+  await svc(
+    `INSERT INTO public.driver_cash_settlements (driver_id, amount, payment_mode, razorpay_payment_id) VALUES ($1, 100, 'upi_qr', 'pay_DEP1')`,
+    [DRIVER_ROW],
+  );
+  await assert.rejects(
+    svc(
+      `INSERT INTO public.driver_cash_settlements (driver_id, amount, payment_mode, razorpay_payment_id) VALUES ($1, 100, 'upi_qr', 'pay_DEP1')`,
+      [DRIVER_ROW],
+    ),
+  );
+  await svc(
+    `INSERT INTO public.driver_commission_settlements (driver_id, amount, razorpay_payment_id) VALUES ($1, 50, 'pay_COM1')`,
+    [DRIVER_ROW],
+  );
+  await assert.rejects(
+    svc(
+      `INSERT INTO public.driver_commission_settlements (driver_id, amount, razorpay_payment_id) VALUES ($1, 50, 'pay_COM1')`,
+      [DRIVER_ROW],
+    ),
+  );
+  await force(`DELETE FROM public.driver_cash_settlements WHERE razorpay_payment_id = 'pay_DEP1'`);
+  await force(
+    `DELETE FROM public.driver_commission_settlements WHERE razorpay_payment_id = 'pay_COM1'`,
+  );
+});
+
+test("rating: a passenger (also an admin account) can rate a completed ride", async () => {
+  for (const who of [RIDER, ADMIN]) {
+    const b = await book(who, { method: "cash" });
+    await acceptAs(DRV, b.id);
+    await force(`UPDATE public.bookings SET status = 'in_progress' WHERE id = $1`, [b.id]);
+    const done = await authed(
+      DRV,
+      `UPDATE public.bookings SET status='completed', completed_at=now(), final_fare=estimated_fare, payment_status='paid', payment_made='yes' WHERE id=$1`,
+      [b.id],
+    );
+    assert.ok(done.ok, done.error);
+    const rate = await authed(
+      who,
+      `UPDATE public.bookings SET rating = 5, review = 'Smooth & Safe Driving · great' WHERE id = $1 RETURNING rating`,
+      [b.id],
+    );
+    assert.ok(rate.ok, `${who === ADMIN ? "admin" : "rider"}: ${rate.error}`);
+    assert.equal(rate.rows.length, 1, "rating row updated");
+  }
+});

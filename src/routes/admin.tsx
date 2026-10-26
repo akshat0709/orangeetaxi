@@ -3445,7 +3445,7 @@ function DriverAnalyticsPanel({
       0,
     );
     const upi = rides
-      .filter((b) => b.payment_method === "upi")
+      .filter((b) => b.payment_method === "upi" || b.payment_method === "upi_qr")
       .reduce((s, b) => s + Math.round(Number(b.final_fare ?? b.estimated_fare ?? 0)), 0);
     const cash = rides
       .filter((b) => b.payment_method === "cash")
@@ -4068,9 +4068,11 @@ function DriverAnalyticsPanel({
                           </div>
                         )}
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${b.payment_method === "upi" || b.payment_method === "upi_qr" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}
                         >
-                          {b.payment_method?.toUpperCase()}
+                          {b.payment_method === "upi_qr"
+                            ? "UPI QR"
+                            : b.payment_method?.toUpperCase()}
                         </span>
                         <span className="font-bold text-primary">₹{fare}</span>
                       </div>

@@ -59,7 +59,7 @@ const RZP_ID_RE = /^[A-Za-z0-9_]{6,64}$/;
 export const TOPUP_MIN_RUPEES = 100;
 export const TOPUP_MAX_RUPEES = 25000;
 
-function fail(status: number, error: string): SettlementResult {
+export function fail(status: number, error: string): SettlementResult {
   return { status, body: { settled: false, error } };
 }
 
@@ -73,7 +73,7 @@ export function safeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function configured(config: SettlementConfig): config is SettlementConfig & {
+export function configured(config: SettlementConfig): config is SettlementConfig & {
   serviceRoleKey: string;
   razorpayKeyId: string;
   razorpayKeySecret: string;
@@ -87,15 +87,15 @@ export function supabaseKeyHeaders(key: string): Record<string, string> {
   return key.startsWith("sb_") ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
 }
 
-function adminHeaders(config: { serviceRoleKey: string }) {
+export function adminHeaders(config: { serviceRoleKey: string }) {
   return { ...supabaseKeyHeaders(config.serviceRoleKey), "Content-Type": "application/json" };
 }
 
-function rzpAuth(config: { razorpayKeyId: string; razorpayKeySecret: string }) {
+export function rzpAuth(config: { razorpayKeyId: string; razorpayKeySecret: string }) {
   return `Basic ${btoa(`${config.razorpayKeyId}:${config.razorpayKeySecret}`)}`;
 }
 
-async function getUserId(
+export async function getUserId(
   accessToken: string | undefined,
   config: SettlementConfig,
   deps: SettlementDeps,
@@ -376,7 +376,9 @@ export async function processRazorpayWebhookEvent(
 ): Promise<SettlementResult> {
   if (event?.event !== "payment.captured") return { status: 200, body: { settled: false } };
   const payment = event.payload?.payment?.entity;
-  if (!payment?.id || !payment.order_id) return fail(400, "Malformed payment event.");
+  if (!payment?.id) return fail(400, "Malformed payment event.");
+  // UPI QR payments have no order; they are settled by the qr_code.credited event instead.
+  if (!payment.order_id) return { status: 200, body: { settled: false } };
   if (!configured(config)) return fail(503, "Payment settlement is not configured on the server.");
   const order = await loadOrder(payment.order_id, config, deps);
   if (!order) return fail(502, "Could not load the payment order.");

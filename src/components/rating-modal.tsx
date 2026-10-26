@@ -89,7 +89,9 @@ export function RatingModal({
       if (bookingErr) {
         // Previously only logged, and the UI still said "Thank you for your rating!".
         console.warn("Could not save rating in bookings table:", bookingErr);
-        toast.error("Could not save your rating. Please try again.");
+        toast.error("Could not save your rating. Please try again.", {
+          description: bookingErr.message,
+        });
         setSubmitting(false);
         return;
       }
