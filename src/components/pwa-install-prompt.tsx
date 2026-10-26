@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from "react";
 import { Download, Share, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

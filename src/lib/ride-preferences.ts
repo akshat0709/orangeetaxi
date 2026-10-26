@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 export type CabinClimate = "chilled" | "pleasant" | "eco";
 
 export interface RidePreferences {
@@ -19,7 +17,7 @@ export function encodePickupAddressWithPrefs(
 ): string {
   let coordStr = "";
   if (typeof coords === "string") {
-    coordStr = coords.split("|PREF:")[0].trim();
+    coordStr = (coords.split("|PREF:")[0] ?? "").trim();
   } else if (coords && typeof coords.lat === "number" && typeof coords.lng === "number") {
     coordStr = `${coords.lat},${coords.lng}`;
   }
@@ -46,11 +44,11 @@ export function parseCleanCoords(
 ): { lat: number; lng: number } | null {
   if (!coordsOrAddress || typeof coordsOrAddress !== "string") return null;
 
-  const cleanPart = coordsOrAddress.split("|PREF:")[0].trim();
+  const cleanPart = (coordsOrAddress.split("|PREF:")[0] ?? "").trim();
   const match = cleanPart.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
   if (match) {
-    const lat = parseFloat(match[1]);
-    const lng = parseFloat(match[2]);
+    const lat = parseFloat(match[1] ?? "");
+    const lng = parseFloat(match[2] ?? "");
     if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       return { lat, lng };
     }
@@ -59,8 +57,8 @@ export function parseCleanCoords(
   // Check parenthesized coordinates: e.g. "Indiranagar (12.9784, 77.6408)"
   const parenMatch = cleanPart.match(/\((-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)/);
   if (parenMatch) {
-    const lat = parseFloat(parenMatch[1]);
-    const lng = parseFloat(parenMatch[2]);
+    const lat = parseFloat(parenMatch[1] ?? "");
+    const lng = parseFloat(parenMatch[2] ?? "");
     if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       return { lat, lng };
     }
@@ -82,7 +80,7 @@ export function parseRidePreferences(
   // 1. Try reading from pickupAddress embedded |PREF: metadata
   if (pickupAddress && typeof pickupAddress === "string" && pickupAddress.includes("|PREF:")) {
     try {
-      const rawPayload = pickupAddress.split("|PREF:")[1].trim();
+      const rawPayload = (pickupAddress.split("|PREF:")[1] ?? "").trim();
       let decodedStr = rawPayload;
       try {
         decodedStr = decodeURIComponent(rawPayload);

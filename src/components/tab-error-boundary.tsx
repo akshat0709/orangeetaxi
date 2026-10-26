@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { Component, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error(
       `[TabErrorBoundary:${this.props.tabName || "unknown"}] caught error:`,
       error,
@@ -37,7 +36,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, TabErrorB
     this.props.onRetry?.();
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center space-y-4 my-4">

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -517,7 +516,8 @@ const appSchema = z.object({
       "You must consent to the Privacy Policy and background verification to submit your application",
   }),
 });
-type AppValues = z.infer<typeof appSchema>;
+type AppValues = z.output<typeof appSchema>;
+type AppInput = z.input<typeof appSchema>;
 
 function DriverApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -533,7 +533,7 @@ function DriverApplicationForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dlInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<AppValues>({
+  const form = useForm<AppInput, unknown, AppValues>({
     resolver: zodResolver(appSchema),
     defaultValues: {
       driver_type: "company",
@@ -553,11 +553,11 @@ function DriverApplicationForm() {
         if (user.email && !form.getValues("email")) {
           form.setValue("email", user.email);
         }
-        const metaName = user.user_metadata?.full_name;
+        const metaName = user.user_metadata?.["full_name"];
         if (metaName && !form.getValues("full_name")) {
           form.setValue("full_name", metaName);
         }
-        const metaPhone = user.user_metadata?.phone;
+        const metaPhone = user.user_metadata?.["phone"];
         if (metaPhone && !form.getValues("phone")) {
           form.setValue("phone", metaPhone);
         }
@@ -673,7 +673,7 @@ function DriverApplicationForm() {
         : "Mahindra BE.6",
       vehicle_number: values.owns_vehicle ? (values.vehicle_number || "").trim().toUpperCase() : "",
       chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
-      vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
+      vehicle_year: values.owns_vehicle ? (values.vehicle_year ?? null) : "2025",
     };
     const metaJson = JSON.stringify(metaData);
 
@@ -723,9 +723,9 @@ function DriverApplicationForm() {
       vehicle_model: values.owns_vehicle
         ? values.vehicle_model || "Mahindra BE.6"
         : "Mahindra BE.6",
-      vehicle_number: values.owns_vehicle ? values.vehicle_number.trim().toUpperCase() : "",
+      vehicle_number: values.owns_vehicle ? (values.vehicle_number || "").trim().toUpperCase() : "",
       chassis_number: values.owns_vehicle ? (values.chassis_number || "").trim().toUpperCase() : "",
-      vehicle_year: values.owns_vehicle ? values.vehicle_year : "2025",
+      vehicle_year: values.owns_vehicle ? (values.vehicle_year ?? null) : "2025",
     };
 
     // Store in local backup for resilient admin sync
@@ -1107,7 +1107,7 @@ function DriverApplicationForm() {
               <div className="flex items-start gap-3">
                 <Checkbox
                   id="da-vehicle"
-                  checked={ownsVehicle}
+                  checked={!!ownsVehicle}
                   onCheckedChange={(checked) => {
                     const isOwn = !!checked;
                     form.setValue("owns_vehicle", isOwn);

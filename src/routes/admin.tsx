@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -84,7 +82,7 @@ import {
   resolveDriverDetails,
 } from "@/lib/ride-vehicle";
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_KEY = import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] || "";
 
 // Haversine distance formula (returns km)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -112,7 +110,7 @@ function formatVehicleDisplay(name?: string): string {
 
 export const Route = createFileRoute("/admin")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: typeof search.tab === "string" ? search.tab : "hub",
+    tab: typeof search["tab"] === "string" ? search["tab"] : "hub",
   }),
   head: () => ({ meta: [{ title: "Admin — Orange Taxi" }] }),
   component: AdminPage,
@@ -132,6 +130,8 @@ interface Booking {
   customer_id: string;
   ride_otp: string;
   scheduled_at?: string | null;
+  final_fare?: number | null;
+  pickup_address?: string | null;
 }
 interface Application {
   id: string;
@@ -184,13 +184,15 @@ interface Driver {
   photo_url?: string;
   chassis_number?: string;
   user_id?: string;
+  current_lat?: number | null;
+  current_lng?: number | null;
 }
 
 function formatCompactArea(addr?: string | null): string {
   if (!addr) return "—";
   const parts = addr.split(",");
   if (parts.length <= 2) return addr.trim();
-  return `${parts[0].trim()}, ${parts[1].trim()}`;
+  return `${(parts[0] ?? "").trim()}, ${(parts[1] ?? "").trim()}`;
 }
 
 function sanitizeDocumentUrl(url?: string | null): string | null {
@@ -332,7 +334,7 @@ function AdminPage() {
     isOpen: boolean;
     title: string;
     url: string;
-    app?: Application;
+    app?: Application | undefined;
     zoom: number;
     rotation: number;
   }>({
@@ -590,7 +592,7 @@ function AdminPage() {
   }
 
   async function fetchBookings(force = false) {
-    if (loadedTabs.bookings && !force) return;
+    if (loadedTabs["bookings"] && !force) return;
     setTabLoading(true);
     try {
       const { data: b } = await supabase
@@ -625,7 +627,7 @@ function AdminPage() {
   }
 
   async function fetchApplications(force = false) {
-    if (loadedTabs.applications && !force) return;
+    if (loadedTabs["applications"] && !force) return;
     setTabLoading(true);
     try {
       const { data: a } = await supabase
@@ -643,7 +645,7 @@ function AdminPage() {
   }
 
   async function fetchDrivers(force = false) {
-    if (loadedTabs.drivers && !force) return;
+    if (loadedTabs["drivers"] && !force) return;
     setTabLoading(true);
     try {
       const { data: d } = await supabase
@@ -661,7 +663,7 @@ function AdminPage() {
   }
 
   async function fetchEnquiries(force = false) {
-    if (loadedTabs.enquiries && !force) return;
+    if (loadedTabs["enquiries"] && !force) return;
     setTabLoading(true);
     try {
       const { data: e } = await supabase
@@ -679,7 +681,7 @@ function AdminPage() {
   }
 
   async function fetchFinanceData(force = false) {
-    if (loadedTabs.bookings && loadedTabs.drivers && !force) return;
+    if (loadedTabs["bookings"] && loadedTabs["drivers"] && !force) return;
     setTabLoading(true);
     try {
       const [{ data: b }, { data: d }] = await Promise.all([
@@ -806,11 +808,11 @@ function AdminPage() {
 
   function isTabReady(tab: string): boolean {
     if (tab === "hub") return true;
-    if (tab === "bookings") return Boolean(loadedTabs.bookings);
-    if (tab === "applications") return Boolean(loadedTabs.applications);
-    if (tab === "drivers" || tab === "fleet") return Boolean(loadedTabs.drivers);
-    if (tab === "enquiries") return Boolean(loadedTabs.enquiries);
-    return Boolean(loadedTabs.bookings && loadedTabs.drivers);
+    if (tab === "bookings") return Boolean(loadedTabs["bookings"]);
+    if (tab === "applications") return Boolean(loadedTabs["applications"]);
+    if (tab === "drivers" || tab === "fleet") return Boolean(loadedTabs["drivers"]);
+    if (tab === "enquiries") return Boolean(loadedTabs["enquiries"]);
+    return Boolean(loadedTabs["bookings"] && loadedTabs["drivers"]);
   }
   // Stats with on-demand fallback
   const stats = {
@@ -1239,7 +1241,7 @@ function AdminPage() {
     const q = hubSearch.toLowerCase();
     return (
       m.title.toLowerCase().includes(q) ||
-      m.tagline.toLowerCase().includes(q) ||
+      m.badgeText.toLowerCase().includes(q) ||
       m.description.toLowerCase().includes(q)
     );
   });
@@ -2102,8 +2104,8 @@ function AdminPage() {
                                         let pickupLng = 0;
                                         if (b.pickup_address && b.pickup_address.includes(",")) {
                                           const parts = b.pickup_address.split(",");
-                                          pickupLat = parseFloat(parts[0]);
-                                          pickupLng = parseFloat(parts[1]);
+                                          pickupLat = parseFloat(parts[0] ?? "");
+                                          pickupLng = parseFloat(parts[1] ?? "");
                                         }
 
                                         const sortedDrivers = [...drivers].sort((d1, d2) => {

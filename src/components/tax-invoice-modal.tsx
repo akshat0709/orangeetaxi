@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import {
   Check,
@@ -62,8 +61,9 @@ function numberToWords(num: number): string {
 
   function inWords(n: number): string {
     if (n === 0) return "Zero";
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
+    if (n < 20) return a[n] ?? "";
+    if (n < 100)
+      return (b[Math.floor(n / 10)] ?? "") + (n % 10 !== 0 ? " " + (a[n % 10] ?? "") : "");
     if (n < 1000)
       return (
         a[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + inWords(n % 100) : "")
@@ -166,8 +166,7 @@ export function TaxInvoiceModal({
           jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
         };
 
-        // @ts-ignore
-        window
+        (window as unknown as { html2pdf: () => any })
           .html2pdf()
           .set(opt)
           .from(tempDiv)

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import {
   Car,
@@ -90,7 +89,7 @@ export async function registerApprovedPartnerCar(carData: {
       color: "Signature Orange",
       owner_name: carData.owner_name,
       owner_phone: carData.owner_phone,
-      owner_email: carData.owner_email,
+      ...(carData.owner_email ? { owner_email: carData.owner_email } : {}),
       status: "active",
       certified_standard: true,
       onboarded_at: new Date().toISOString(),
@@ -102,7 +101,7 @@ export async function registerApprovedPartnerCar(carData: {
         plate_number: newCar.plate_number,
         chassis_number: newCar.chassis_number,
         model: newCar.model,
-        year: newCar.year,
+        year: newCar.year ?? null,
         owner_name: newCar.owner_name,
         owner_phone: newCar.owner_phone,
         status: newCar.status,

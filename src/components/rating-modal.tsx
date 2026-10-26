@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Check, Heart, Loader2, Sparkles, Star, ThumbsUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -82,7 +81,7 @@ export function RatingModal({
         .from("bookings")
         .update({
           rating: rating,
-          review: fullReview || null,
+          review: fullReview,
         })
         .eq("id", booking.id);
 

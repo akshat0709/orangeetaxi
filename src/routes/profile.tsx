@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
@@ -37,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth";
 import { TaxInvoiceModal } from "@/components/tax-invoice-modal";
 import { MapPicker, MapLocation } from "@/components/map-picker";
@@ -51,7 +50,7 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-const STATUS_STYLES = {
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   scheduled: {
     label: "Scheduled",
     className:
@@ -83,17 +82,36 @@ const STATUS_STYLES = {
   },
 };
 
-function getInitials(name) {
+type ServiceAreaRow = Database["public"]["Tables"]["service_areas"]["Row"];
+interface ProfileBooking {
+  id: string;
+  reference: string;
+  status: string;
+  pickup_area: string;
+  drop_area: string;
+  estimated_fare: number;
+  final_fare: number | null;
+  created_at: string;
+  completed_at: string | null;
+  scheduled_at: string | null;
+  vehicle_name: string | null;
+  payment_method: string;
+  rating: number | null;
+  driver_id: string | null;
+  drivers: { full_name: string; phone: string | null; vehicle_number: string | null } | null;
+}
+
+function getInitials(name: string | null | undefined) {
   if (!name?.trim()) return "?";
   return name
     .trim()
     .split(/\s+/)
-    .map((w) => w[0]?.toUpperCase() ?? "")
+    .map((w: string) => w[0]?.toUpperCase() ?? "")
     .slice(0, 2)
     .join("");
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-IN", {
     day: "numeric",
@@ -124,7 +142,7 @@ function ProfilePage() {
   const [workAddress, setWorkAddress] = useState("");
   const [workCoords, setWorkCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapPickerTarget, setMapPickerTarget] = useState<"home" | "work" | null>(null);
-  const [areas, setAreas] = useState([]);
+  const [areas, setAreas] = useState<ServiceAreaRow[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -226,7 +244,7 @@ function ProfilePage() {
     }
   }
 
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState<ProfileBooking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
@@ -243,7 +261,7 @@ function ProfilePage() {
       const { data } = await supabase
         .from("profiles")
         .select("full_name, phone, updated_at")
-        .eq("id", user.id)
+        .eq("id", user!.id)
         .single();
       if (data) {
         setFullName(data.full_name ?? "");
@@ -293,7 +311,7 @@ function ProfilePage() {
         // best-effort: failure here is non-fatal and intentionally ignored
       }
 
-      setBookings(list);
+      setBookings(list as unknown as ProfileBooking[]);
     } catch (e) {
       console.warn("Error fetching bookings:", e);
     } finally {
@@ -1061,7 +1079,7 @@ function ProfilePage() {
                   : "Search office, building, IT park, or drag map..."
               }
               areas={areas}
-              apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ""}
+              apiKey={import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] || ""}
               initialLocation={
                 mapPickerTarget === "home" && homeCoords
                   ? { name: homeAddress || "Home", lat: homeCoords.lat, lng: homeCoords.lng }
@@ -1155,7 +1173,15 @@ function ProfilePage() {
   );
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-sm">
       <div className="grid size-9 place-items-center rounded-full bg-primary/10">{icon}</div>
@@ -1167,7 +1193,7 @@ function StatCard({ icon, label, value }) {
   );
 }
 
-function SummaryRow({ label, value }) {
+function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>

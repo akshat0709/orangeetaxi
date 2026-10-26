@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState } from "react";
 import { Bell, BellRing, Check, Volume2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

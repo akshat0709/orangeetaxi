@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { StorageImage } from "@/components/storage-image";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
@@ -144,7 +142,7 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_KEY = import.meta.env["VITE_GOOGLE_MAPS_API_KEY"] || "";
 
 export const Route = createFileRoute("/book")({
   head: () => ({
@@ -190,6 +188,7 @@ interface DriverInfo {
   photo_url?: string;
   current_lat?: number;
   current_lng?: number;
+  total_rides?: number;
 }
 
 const comforts = [
@@ -398,7 +397,7 @@ function PassengerPage() {
   // Booking state
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory | null>(
-    () => DEFAULT_VEHICLES[0],
+    () => DEFAULT_VEHICLES[0] ?? null,
   );
   const [pickupId, setPickupId] = useState("");
   const [dropId, setDropId] = useState("");
@@ -581,7 +580,7 @@ function PassengerPage() {
       if (vData.length > 0) {
         setVehicles(vData);
         // Keep the rider's choice if it is still offered; otherwise fall back to the first one.
-        setSelectedVehicle((prev) => vData.find((x) => x.code === prev?.code) || vData[0]);
+        setSelectedVehicle((prev) => vData.find((x) => x.code === prev?.code) || vData[0] || null);
         try {
           localStorage.setItem("orange_cached_vehicles_v2", JSON.stringify(vData));
         } catch {
@@ -770,12 +769,12 @@ function PassengerPage() {
     const executeBookingInsert = async (transactionId?: string, rzp?: RazorpayHandlerResponse) => {
       try {
         const custName = (
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
+          user.user_metadata?.["full_name"] ||
+          user.user_metadata?.["name"] ||
           user.email?.split("@")[0] ||
           ""
         ).trim();
-        const custPhone = (user.user_metadata?.phone || user.phone || "").trim();
+        const custPhone = (user.user_metadata?.["phone"] || user.phone || "").trim();
         if (custName || custPhone) {
           await supabase.from("profiles").upsert(
             {
@@ -795,7 +794,7 @@ function PassengerPage() {
 
       const encodedPickupAddress = encodePickupAddressWithPrefs(
         { lat: pickup.lat, lng: pickup.lng },
-        { cabinClimate, quietRide, pickupPillar: pickupPillar || undefined },
+        { cabinClimate, quietRide, ...(pickupPillar ? { pickupPillar } : {}) },
       );
 
       const scheduledIso =
@@ -1016,7 +1015,7 @@ function PassengerPage() {
           await executeBookingInsert(response.razorpay_payment_id, response);
         },
         prefill: {
-          name: user.user_metadata?.full_name || "",
+          name: user.user_metadata?.["full_name"] || "",
           email: user.email || "",
           contact: user.phone || "",
         },
@@ -1203,10 +1202,10 @@ function PassengerPage() {
               ) : (
                 <Step4Confirmed
                   bookingData={bookingData!}
-                  pickup={pickup!}
-                  drop={drop!}
+                  pickup={pickup as ServiceArea}
+                  drop={drop as ServiceArea}
                   vehicle={selectedVehicle!}
-                  fare={fareBreakdown?.total || selectedVehicle?.minimum_fare || 500}
+                  fare={fareBreakdown?.total || selectedVehicle?.minimum_fare || 0}
                   distKm={distKm}
                   onDriverUpdate={setLiveDriverInfo}
                   onStatusUpdate={setLiveRideStatus}
@@ -1328,8 +1327,11 @@ function Step2Journey({
     if (!pickupGPS && !locatingGPS) {
       if (areas && areas.length > 0) {
         const centralArea =
-          areas.find((a) => !a.is_airport && !a.name.toLowerCase().includes("airport")) || areas[0];
-        onPickupGPS({ name: centralArea.name, lat: centralArea.lat, lng: centralArea.lng });
+          areas.find(
+            (a: ServiceArea) => !a.is_airport && !a.name.toLowerCase().includes("airport"),
+          ) || areas[0];
+        if (centralArea)
+          onPickupGPS({ name: centralArea.name, lat: centralArea.lat, lng: centralArea.lng });
       } else {
         onPickupGPS({
           name: "Indiranagar, Bengaluru",
@@ -1989,10 +1991,10 @@ function Step4Confirmed({
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "bookings", filter: `id=eq.${bookingData.id}` },
         async (payload) => {
-          const newStatus = payload.new.status;
+          const newStatus = payload.new["status"];
           setCurrentBooking((prev: any) => ({ ...prev, ...payload.new }));
-          if (payload.new.arrived_at) {
-            setArrivedAt(payload.new.arrived_at);
+          if (payload.new["arrived_at"]) {
+            setArrivedAt(payload.new["arrived_at"]);
           }
           handleStatusChange(newStatus);
 
@@ -2003,8 +2005,8 @@ function Step4Confirmed({
           }
 
           // If driver assigned, fetch driver details
-          if (payload.new.driver_id) {
-            const d = await fetchDriverWithPhone(payload.new.driver_id);
+          if (payload.new["driver_id"]) {
+            const d = await fetchDriverWithPhone(payload.new["driver_id"]);
             if (d) {
               handleDriverChange(d);
               subscribeToDriver(d.id);
@@ -2324,7 +2326,7 @@ function Step4Confirmed({
                         </span>
                         <span>·</span>
                         <span className="text-muted-foreground">
-                          {driverInfo?.total_rides || 1} rides completed
+                          {driverInfo?.total_rides ?? 0} rides completed
                         </span>
                       </div>
                     </div>
@@ -2541,7 +2543,7 @@ function Step4Confirmed({
         open={guardianModalOpen}
         onOpenChange={setGuardianModalOpen}
         bookingData={bookingData}
-        driverInfo={driverInfo}
+        {...(driverInfo ? { driverInfo } : {})}
         pickup={pickup}
         drop={drop}
         vehicle={vehicle}
@@ -2553,7 +2555,7 @@ function Step4Confirmed({
         bookingReference={bookingData.reference}
         currentUserType="customer"
         currentUserName={
-          user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Passenger"
+          user?.user_metadata?.["full_name"] || user?.email?.split("@")[0] || "Passenger"
         }
         otherPartyName={driverInfo?.full_name || "Driver"}
         otherPartyPhone={activeDriverPhone}
@@ -2586,7 +2588,7 @@ function Step4Confirmed({
           pickup_area: pickup.name,
           drop_area: drop.name,
           estimated_fare: fare,
-          driver_id: driverInfo?.id,
+          ...(driverInfo?.id ? { driver_id: driverInfo.id } : {}),
         }}
         driver={driverInfo}
         onSubmitted={() => {
@@ -2734,7 +2736,7 @@ function Step4Confirmed({
                           return;
                         }
 
-                        setCurrentBooking((prev) => ({
+                        setCurrentBooking((prev: Record<string, unknown> | null) => ({
                           ...prev,
                           payment_method: "upi",
                           payment_status: "paid",

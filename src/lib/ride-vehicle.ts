@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Ride Vehicle Plate Registry & Snapshot Resolver
  * Ensures every completed ride permanently preserves the vehicle plate number
@@ -40,7 +39,7 @@ export function extractPlateFromVehicleName(vehicleName?: string): string | null
   if (!vehicleName) return null;
   if (vehicleName.includes("·")) {
     const parts = vehicleName.split("·");
-    const candidate = parts[parts.length - 1].trim();
+    const candidate = (parts[parts.length - 1] ?? "").trim();
     if (candidate.length >= 4 && candidate.toUpperCase() !== "UNASSIGNED") {
       return candidate.toUpperCase();
     }
@@ -92,8 +91,8 @@ export function getBookingVehiclePlate(booking: any, driver?: any): string {
 
   // 3. Persistent client snapshot registry
   const registry = getStoredRidePlateRegistry();
-  if (booking?.id && registry[booking.id]) return registry[booking.id];
-  if (booking?.reference && registry[booking.reference]) return registry[booking.reference];
+  if (booking?.id && registry[booking.id]) return registry[booking.id] ?? "";
+  if (booking?.reference && registry[booking.reference]) return registry[booking.reference] ?? "";
 
   // 4. Driver's vehicle_number from driver profile
   if (

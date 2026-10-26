@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
 
 export interface CompanyGSTProfile {
@@ -283,8 +282,8 @@ export function resolveStateFromLocation(locationName: string): { state: string;
   // 1. Check coordinates if available (e.g. "Indiranagar (12.978, 77.641)")
   const coordsMatch = loc.match(/\((-?\d+\.?\d*),\s*(-?\d+\.?\d*)\)/);
   if (coordsMatch) {
-    const lat = parseFloat(coordsMatch[1]);
-    const lng = parseFloat(coordsMatch[2]);
+    const lat = parseFloat(coordsMatch[1] ?? "");
+    const lng = parseFloat(coordsMatch[2] ?? "");
     if (lat >= 11.5 && lat <= 18.5 && lng >= 74.0 && lng <= 78.6) {
       return { state: "Karnataka", code: "29" };
     }

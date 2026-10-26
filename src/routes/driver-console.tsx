@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { StorageImage } from "@/components/storage-image";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -58,6 +56,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth";
 import {
   getBookingVehiclePlate,
@@ -339,27 +338,27 @@ function DriverConsolePage() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "bookings" },
         (payload) => {
-          if (payload.new?.status === "searching" && !payload.new?.driver_id) {
+          if (payload.new?.["status"] === "searching" && !payload.new?.["driver_id"]) {
             if (soundEnabled) {
               playRideRequestChime();
             }
             toast.info("🔔 New ride request available nearby!", { duration: 4000 });
             sendRideNotification({
               title: "New Ride Request Nearby! ⚡",
-              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
-              tag: `driver-req-${payload.new?.id || Date.now()}`,
+              tag: `driver-req-${payload.new?.["id"] || Date.now()}`,
             });
-          } else if (payload.new?.status === "scheduled" && !payload.new?.driver_id) {
+          } else if (payload.new?.["status"] === "scheduled" && !payload.new?.["driver_id"]) {
             if (soundEnabled) {
               playRideRequestChime();
             }
             toast.info("📅 New Advance Scheduled Booking in Fleet Pool!", { duration: 5000 });
             sendRideNotification({
               title: "New Scheduled Booking Available! 📅",
-              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
-              tag: `driver-sched-${payload.new?.id || Date.now()}`,
+              tag: `driver-sched-${payload.new?.["id"] || Date.now()}`,
             });
           }
           loadData();
@@ -369,18 +368,21 @@ function DriverConsolePage() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "bookings" },
         (payload) => {
-          if (payload.new?.status === "searching" && payload.old?.status !== "searching") {
+          if (payload.new?.["status"] === "searching" && payload.old?.["status"] !== "searching") {
             if (soundEnabled) {
               playRideRequestChime();
             }
             toast.info("🔔 New ride request available nearby!", { duration: 4000 });
             sendRideNotification({
               title: "New Ride Request Nearby! ⚡",
-              body: `Pickup: ${payload.new?.pickup_area || "Nearby"} • Fare: ₹${payload.new?.estimated_fare || "—"}`,
+              body: `Pickup: ${payload.new?.["pickup_area"] || "Nearby"} • Fare: ₹${payload.new?.["estimated_fare"] || "—"}`,
               url: "/driver-console",
-              tag: `driver-req-${payload.new?.id || Date.now()}`,
+              tag: `driver-req-${payload.new?.["id"] || Date.now()}`,
             });
-          } else if (payload.new?.status === "scheduled" && payload.old?.status !== "scheduled") {
+          } else if (
+            payload.new?.["status"] === "scheduled" &&
+            payload.old?.["status"] !== "scheduled"
+          ) {
             if (soundEnabled) {
               playRideRequestChime();
             }
@@ -439,7 +441,7 @@ function DriverConsolePage() {
       .maybeSingle();
 
     // Resolve login phone from auth user_metadata, user.phone, profiles, or driver_applications
-    let loginPhone = (user.user_metadata?.phone || user.phone || "").trim();
+    let loginPhone = (user.user_metadata?.["phone"] || user.phone || "").trim();
     if (!loginPhone) {
       try {
         const { data: prof } = await supabase
@@ -457,7 +459,7 @@ function DriverConsolePage() {
         const { data: appData } = await supabase
           .from("driver_applications")
           .select("phone")
-          .eq("email", user.email)
+          .eq("email", user.email ?? "")
           .maybeSingle();
         if (appData?.phone && appData.phone.trim()) loginPhone = appData.phone.trim();
       } catch {
@@ -505,7 +507,11 @@ function DriverConsolePage() {
 
     // Auto-create driver profile if role is granted but profile is missing
     if (!driverData && (role === "driver" || role === "admin")) {
-      const appData = await fetchAppForUser(user.email, loginPhone, user.user_metadata?.full_name);
+      const appData = await fetchAppForUser(
+        user.email,
+        loginPhone,
+        user.user_metadata?.["full_name"],
+      );
 
       let parsedNotes: any = {};
       try {
@@ -545,7 +551,7 @@ function DriverConsolePage() {
           user_id: user.id,
           full_name:
             appData?.full_name ||
-            user.user_metadata?.full_name ||
+            user.user_metadata?.["full_name"] ||
             user.email?.split("@")[0] ||
             "New Driver",
           city: appData?.city || "Bengaluru",
@@ -571,7 +577,11 @@ function DriverConsolePage() {
 
     // Resolve driver photo, operating model, and partner vehicle details from application
     try {
-      const appData = await fetchAppForUser(user.email, loginPhone, user.user_metadata?.full_name);
+      const appData = await fetchAppForUser(
+        user.email,
+        loginPhone,
+        user.user_metadata?.["full_name"],
+      );
 
       let parsedNotes: any = {};
       try {
@@ -693,6 +703,10 @@ function DriverConsolePage() {
 
     // Run universal resolver to guarantee all fields are populated
     driverData = resolveDriverDetails(driverData);
+    if (!driverData) {
+      setLoading(false);
+      return;
+    }
     setDriver(driverData as DriverProfile);
 
     // Parallelize all main dashboard queries!
@@ -1107,7 +1121,7 @@ function DriverConsolePage() {
 
   async function advanceStatus(booking: Booking, collectedBy?: "cash" | "upi_qr") {
     const flow = STATUS_FLOW[booking.status];
-    if (!flow) return;
+    if (!flow || !driver) return;
 
     if (flow.next === "completed" && !collectedBy && needsCollection(booking)) {
       setPayChoiceRide(booking);
@@ -1142,28 +1156,31 @@ function DriverConsolePage() {
     }
 
     const updates: Record<string, string | number | null> = { status: flow.next };
-    if (flow.next === "arrived") updates.arrived_at = new Date().toISOString();
-    if (flow.next === "in_progress") updates.started_at = new Date().toISOString();
+    if (flow.next === "arrived") updates["arrived_at"] = new Date().toISOString();
+    if (flow.next === "in_progress") updates["started_at"] = new Date().toISOString();
     if (flow.next === "completed") {
-      updates.completed_at = new Date().toISOString();
-      updates.final_fare = Math.round(Number(booking.estimated_fare || 0));
+      updates["completed_at"] = new Date().toISOString();
+      updates["final_fare"] = Math.round(Number(booking.estimated_fare || 0));
       // A UPI QR payment was already recorded by the server (payment_method 'upi_qr').
       if (collectedBy !== "upi_qr") {
-        updates.payment_status = "paid";
+        updates["payment_status"] = "paid";
         if (needsCollection(booking)) {
-          updates.payment_method = "cash";
-          updates.payment_made = "yes";
+          updates["payment_method"] = "cash";
+          updates["payment_made"] = "yes";
         }
       }
       if (driver.vehicle_number && driver.vehicle_number !== "Unassigned") {
-        updates.vehicle_name = formatVehicleNameWithPlate(
+        updates["vehicle_name"] = formatVehicleNameWithPlate(
           booking.vehicle_name,
           driver.vehicle_number,
         );
         saveRideVehiclePlate(booking.id, driver.vehicle_number, booking.reference);
       }
     }
-    const { error } = await supabase.from("bookings").update(updates).eq("id", booking.id);
+    const { error } = await supabase
+      .from("bookings")
+      .update(updates as TablesUpdate<"bookings">)
+      .eq("id", booking.id);
     if (error) {
       toast.error("Update failed");
       return;
@@ -1199,8 +1216,8 @@ function DriverConsolePage() {
     if (areaName) {
       const parenMatch = areaName.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
       if (parenMatch) {
-        const lat = parseFloat(parenMatch[1]);
-        const lng = parseFloat(parenMatch[2]);
+        const lat = parseFloat(parenMatch[1] ?? "");
+        const lng = parseFloat(parenMatch[2] ?? "");
         if (!isNaN(lat) && !isNaN(lng)) {
           return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
         }
@@ -1380,7 +1397,7 @@ function DriverConsolePage() {
     }
     setUpiDepositModalOpen(false);
     setSelfQr({
-      req: { kind: "cash_deposit", driverId: driver.id, amount: amt },
+      req: { kind: "cash_deposit", driverId: driver!.id, amount: amt },
       title: "Hand in cash by UPI",
     });
   }
@@ -1397,7 +1414,7 @@ function DriverConsolePage() {
     }
     setUpiCommissionModalOpen(false);
     setSelfQr({
-      req: { kind: "commission", driverId: driver.id, amount: amt },
+      req: { kind: "commission", driverId: driver!.id, amount: amt },
       title: "Pay commission by UPI",
     });
   }
@@ -1493,7 +1510,8 @@ function DriverConsolePage() {
                     if (newPhone !== null && newPhone.trim()) {
                       const p = newPhone.trim();
                       await supabase.from("drivers").update({ phone: p }).eq("id", driver.id);
-                      await supabase.from("profiles").update({ phone: p }).eq("id", user.id);
+                      if (user)
+                        await supabase.from("profiles").update({ phone: p }).eq("id", user.id);
                       await supabase.auth.updateUser({ data: { phone: p } });
                       setDriver({ ...driver, phone: p });
                       toast.success("Phone number updated successfully!");
@@ -1583,24 +1601,24 @@ function DriverConsolePage() {
                     Available!
                   </span>
                   <span className="font-mono font-bold text-lg text-primary">
-                    ₹{Math.round(newRequests[0].estimated_fare)}
+                    ₹{Math.round(newRequests[0]!.estimated_fare)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    ({Math.round(newRequests[0].distance_km)} km • {newRequests[0].vehicle_name})
+                    ({Math.round(newRequests[0]!.distance_km)} km • {newRequests[0]!.vehicle_name})
                   </span>
                 </div>
 
                 <p className="text-sm font-bold text-foreground flex items-center gap-2 flex-wrap">
-                  <span>{newRequests[0].pickup_area}</span>
+                  <span>{newRequests[0]!.pickup_area}</span>
                   <span className="text-primary font-bold">→</span>
-                  <span>{newRequests[0].drop_area}</span>
+                  <span>{newRequests[0]!.drop_area}</span>
                 </p>
 
                 {/* Comfort preference preview on top banner */}
                 {(() => {
                   const reqPref = parseRidePreferences(
-                    newRequests[0].pickup_address,
-                    newRequests[0].id || newRequests[0].reference,
+                    newRequests[0]!.pickup_address,
+                    newRequests[0]!.id || newRequests[0]!.reference,
                   );
                   if (!reqPref.cabinClimate && !reqPref.quietRide && !reqPref.pickupPillar)
                     return null;
@@ -1660,7 +1678,7 @@ function DriverConsolePage() {
                 <Button
                   size="sm"
                   type="button"
-                  onClick={() => acceptRide(newRequests[0].id)}
+                  onClick={() => acceptRide(newRequests[0]!.id)}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 px-4 shadow-md active:scale-95"
                 >
                   <Check className="mr-1.5 size-4" />
@@ -1680,7 +1698,7 @@ function DriverConsolePage() {
             return diffMs > -15 * 60 * 1000 && diffMs <= 30 * 60 * 1000;
           });
           if (!driver?.is_online || urgentSched.length === 0) return null;
-          const target = urgentSched[0];
+          const target = urgentSched[0]!;
           const diffMin = Math.max(
             1,
             Math.round((new Date(target.scheduled_at!).getTime() - Date.now()) / 60000),
@@ -1736,7 +1754,7 @@ function DriverConsolePage() {
             return diffMs > -15 * 60 * 1000 && diffMs <= 30 * 60 * 1000;
           });
           if (!driver?.is_online || urgentSched.length > 0 || unclaimed.length === 0) return null;
-          const target = unclaimed[0];
+          const target = unclaimed[0]!;
           const schedule = formatScheduledDeparture(target.scheduled_at);
           return (
             <div className="mt-4 rounded-xl border border-orange-400/60 bg-gradient-to-r from-orange-500/10 via-background to-orange-500/5 p-4 shadow-sm">
@@ -2145,7 +2163,7 @@ function DriverConsolePage() {
                                 >
                                   <MessageSquare className="size-3.5 text-primary" />
                                   <span>In-Ride Chat</span>
-                                  {unreadChats[ride.id] > 0 && (
+                                  {(unreadChats[ride.id] ?? 0) > 0 && (
                                     <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
                                       {unreadChats[ride.id]}
                                     </span>
@@ -2178,7 +2196,7 @@ function DriverConsolePage() {
                         <div className="mt-6 border-t border-border pt-4 text-center">
                           {/* Live Waiting Fee Timer */}
                           <div className="mb-4">
-                            <WaitingFeeTimer arrivedAt={ride.arrived_at} isDriver={true} />
+                            <WaitingFeeTimer arrivedAt={ride.arrived_at ?? null} isDriver={true} />
                           </div>
 
                           <div className="mb-3 flex justify-center">

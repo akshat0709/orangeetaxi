@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { CompanyGSTProfile, DEFAULT_COMPANY_PROFILE } from "./gst-utils";
 
 export interface SendInvoicePayload {

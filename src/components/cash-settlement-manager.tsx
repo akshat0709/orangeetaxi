@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { useState, useEffect } from "react";
 import {
   Banknote,
@@ -246,7 +244,7 @@ export function CashSettlementManager({
           driver_id: newRecord.driver_id,
           amount: newRecord.amount,
           collected_by: newRecord.collected_by,
-          notes: newRecord.notes,
+          notes: newRecord.notes ?? null,
         })
         .select()
         .single();

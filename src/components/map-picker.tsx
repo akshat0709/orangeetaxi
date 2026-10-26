@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useRef, useState } from "react";
 import {
   APIProvider,
@@ -670,7 +669,7 @@ export function MapPicker({
 
       // 3. Pan-India Intelligent Proximity Fallback
       const nearestPreset = findNearestPreset(lat, lng);
-      if (nearestPreset && nearestPreset.distKm < 4) {
+      if (nearestPreset?.preset && nearestPreset.distKm < 4) {
         const fallbackName = nearestPreset.preset.name;
         setSelectedLocation({ name: fallbackName, lat, lng });
         setSearchValue(fallbackName);
@@ -679,7 +678,7 @@ export function MapPicker({
       }
 
       const nearestCity = findNearestIndianCity(lat, lng);
-      if (nearestCity && nearestCity.distKm < 60) {
+      if (nearestCity?.city && nearestCity.distKm < 60) {
         const fallbackName = `${nearestCity.city.name}, ${nearestCity.city.state} (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
         setSelectedLocation({ name: fallbackName, lat, lng });
         setSearchValue(fallbackName);
@@ -750,8 +749,9 @@ export function MapPicker({
       }> = [];
 
       // 1. Instant match against curated Pan-India presets & service areas
-      [...PAN_INDIA_PRESETS, ...areas].forEach((item) => {
-        const keywords = (item as any).keywords || [];
+      [...PAN_INDIA_PRESETS, ...areas].forEach((entry) => {
+        const item = entry as typeof entry & { city?: string; tag?: string; keywords?: string[] };
+        const keywords = item.keywords || [];
         const fullTokens =
           `${item.name} ${item.city || ""} ${item.tag || ""} ${keywords.join(" ")}`.toLowerCase();
 
@@ -786,7 +786,14 @@ export function MapPicker({
         lng: number;
         sub?: string;
         placeId?: string;
-      }> = [...matchedPresets.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng, sub: p.sub }))];
+      }> = [
+        ...matchedPresets.map((p) => ({
+          name: p.name,
+          lat: p.lat,
+          lng: p.lng,
+          ...(p.sub ? { sub: p.sub } : {}),
+        })),
+      ];
 
       // 2. Query Google Places Autocomplete API natively via Maps JS SDK
       if (typeof window !== "undefined" && window.google?.maps?.places) {
@@ -859,7 +866,7 @@ export function MapPicker({
             document.createElement("div"),
           );
           placesService.getDetails(
-            { placeId: finalLoc.placeId, fields: ["geometry", "name"] },
+            { placeId: finalLoc.placeId as string, fields: ["geometry", "name"] },
             (place, status) => {
               if (
                 status === window.google.maps.places.PlacesServiceStatus.OK &&
@@ -867,9 +874,13 @@ export function MapPicker({
               ) {
                 const location = place.geometry.location;
                 finalLoc.lat =
-                  typeof location.lat === "function" ? location.lat() : (location.lat as number);
+                  typeof location.lat === "function"
+                    ? location.lat()
+                    : (location.lat as unknown as number);
                 finalLoc.lng =
-                  typeof location.lng === "function" ? location.lng() : (location.lng as number);
+                  typeof location.lng === "function"
+                    ? location.lng()
+                    : (location.lng as unknown as number);
                 if (place.name) {
                   finalLoc.name = place.name;
                   setSearchValue(finalLoc.name);
@@ -1113,8 +1124,8 @@ export function MapPicker({
             defaultZoom={initialLocation ? 15 : 13}
             disableDefaultUI={true}
             onDragend={(e) => {
-              if (e.map.getCenter()) {
-                const center = e.map.getCenter();
+              const center = e.map.getCenter();
+              if (center) {
                 handleMapMoveEnd(center.lat(), center.lng());
               }
             }}

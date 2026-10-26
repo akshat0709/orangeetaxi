@@ -96,11 +96,7 @@ function RefundsPage() {
           <ol className="space-y-4">
             <Step n={1} title="Raise a refund request within 7 days of the ride">
               Use the{" "}
-              <Link
-                to="/support"
-                search={{ type: "refund", ref: undefined }}
-                className="text-primary underline"
-              >
+              <Link to="/support" search={{ type: "refund" }} className="text-primary underline">
                 Support page
               </Link>{" "}
               (choose &quot;Refund Request&quot; and enter your ride reference, e.g. OT1A2B3C), the

@@ -39,9 +39,9 @@ export const Route = createFileRoute("/support")({
     ],
   }),
   // /support?type=refund&ref=OT123ABC opens the form ready for a refund request.
-  validateSearch: (search: Record<string, unknown>) => ({
-    type: typeof search["type"] === "string" ? (search["type"] as string) : undefined,
-    ref: typeof search["ref"] === "string" ? (search["ref"] as string) : undefined,
+  validateSearch: (search: Record<string, unknown>): { type?: string; ref?: string } => ({
+    ...(typeof search["type"] === "string" ? { type: search["type"] } : {}),
+    ...(typeof search["ref"] === "string" ? { ref: search["ref"] } : {}),
   }),
   component: SupportPage,
 });
@@ -73,7 +73,6 @@ function SupportPage() {
       const userId = userRes.data?.user?.id || null;
       const genDocket = `OG-TKT-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // @ts-expect-error Supabase generated types do not yet include support_tickets
       const { error } = await supabase.from("support_tickets").insert({
         docket_number: genDocket,
         user_id: userId,

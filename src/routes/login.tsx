@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -79,7 +77,8 @@ const resetSchema = z
   });
 
 type SignInValues = z.infer<typeof signInSchema>;
-type SignUpValues = z.infer<typeof signUpSchema>;
+type SignUpValues = z.output<typeof signUpSchema>;
+type SignUpInput = z.input<typeof signUpSchema>;
 type ForgotValues = z.infer<typeof forgotSchema>;
 type ResetValues = z.infer<typeof resetSchema>;
 
@@ -105,7 +104,7 @@ function LoginPage() {
   const navigate = useNavigate();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
-  const signUpForm = useForm<SignUpValues>({
+  const signUpForm = useForm<SignUpInput, unknown, SignUpValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       role: "customer",
@@ -247,7 +246,7 @@ function LoginPage() {
           mode === "verify_otp"
         ) {
           toast.success("Email verified successfully! Welcome to Orange Taxi.");
-          let role = session.user.user_metadata?.role;
+          let role = session.user.user_metadata?.["role"];
           if (!role) {
             try {
               role = localStorage.getItem("@orange_signup_role") || "customer";
@@ -271,7 +270,7 @@ function LoginPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
             toast.success("Email verified successfully! Welcome to Orange Taxi.");
-            let role = session.user.user_metadata?.role;
+            let role = session.user.user_metadata?.["role"];
             if (!role) {
               try {
                 role = localStorage.getItem("@orange_signup_role") || "customer";
@@ -420,7 +419,7 @@ function LoginPage() {
 
     // Sync phone into drivers table if logging in as driver
     try {
-      let userPhone = (data.user.user_metadata?.phone || data.user.phone || "").trim();
+      let userPhone = (data.user.user_metadata?.["phone"] || data.user.phone || "").trim();
       if (!userPhone) {
         const { data: prof } = await supabase
           .from("profiles")
@@ -506,7 +505,7 @@ function LoginPage() {
           await supabase.from("drivers").insert({
             user_id: data.user.id,
             full_name:
-              data.user.user_metadata?.full_name ||
+              data.user.user_metadata?.["full_name"] ||
               appData?.full_name ||
               data.user.email?.split("@")[0] ||
               "Driver",
@@ -569,7 +568,6 @@ function LoginPage() {
           id: data.user.id,
           full_name: values.fullName,
           phone: cleanPhone,
-          role: "customer",
           updated_at: consentTimestamp,
         });
       } catch {
@@ -843,7 +841,7 @@ function LoginPage() {
                           const val = e.target.value.replace(/[^0-9]/g, "");
                           const newOtp = otpDigits.split("");
                           if (val) {
-                            newOtp[index] = val[val.length - 1];
+                            newOtp[index] = val[val.length - 1] ?? "";
                             const combined = newOtp.join("").slice(0, 6);
                             setOtpDigits(combined);
                             if (index < 5) {
