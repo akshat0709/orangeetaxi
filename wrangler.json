@@ -20,5 +20,9 @@
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx",
     "VITE_SUPABASE_URL": "https://qcrpzrrzjddwqebaktyu.supabase.co",
     "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
   }
 }
