@@ -6,10 +6,7 @@ import {
   Music2,
   Newspaper,
   Droplets,
-  ShieldCheck,
-  UserRoundCheck,
   ArrowRight,
-  Sparkles,
   Check,
   X,
   BatteryCharging,
@@ -46,35 +43,35 @@ const EXPERIENCE_PILLARS = [
     title: "Guaranteed Pre-Cooled AC",
     subtitle: "22°C before you step in",
     description:
-      "No haggling with drivers over air conditioning. In peak summer or humid monsoons, our chauffeurs activate dual-zone climate control 10 minutes prior to arrival so you step into a cool, refreshing sanctuary.",
+      "No arguing over the AC. In summer and monsoon, your chauffeur switches on dual-zone climate control 10 minutes prior to arrival so the cabin is already cool when you get in.",
   },
   {
     icon: VolumeX,
     title: "Acoustically Silent Cabin",
-    subtitle: "Pure EV serenity",
+    subtitle: "No engine noise",
     description:
       "Zero engine vibration, zero tailpipe rumble. Choose our 'Quiet Ride' preference during booking to enjoy uninterrupted conference calls, deep focus, or peaceful rest after a long flight.",
   },
   {
     icon: MonitorPlay,
     title: "In-Seat HD Entertainment",
-    subtitle: "Your personal media hub",
+    subtitle: "Screens in the back seat",
     description:
-      "Rear passenger high-definition touchscreens featuring live trip navigation, curated documentaries, streaming entertainment, and real-time flight status updates for airport routes.",
+      "Rear passenger high-definition touchscreens featuring live trip navigation, documentaries, streaming, and real-time flight status updates for airport routes.",
   },
   {
     icon: Music2,
-    title: "Premium Studio Acoustics",
+    title: "Good sound system",
     subtitle: "Tuned for clarity",
     description:
-      "Acoustically calibrated multi-speaker sound stage. Connect your personal playlist seamlessly via Bluetooth or choose from curated ambient and relaxing playlists.",
+      "A multi-speaker system you can play your own music on over Bluetooth, or keep quiet.",
   },
   {
     icon: Newspaper,
     title: "Fresh Daily Print Media",
-    subtitle: "Stay effortlessly informed",
+    subtitle: "For the morning commute",
     description:
-      "Each morning, fresh editions of leading national business and daily newspapers are placed in the rear seat pockets for your reading pleasure.",
+      "Each morning, fresh editions of leading national business and daily newspapers are placed in the rear seat pockets.",
   },
   {
     icon: Droplets,
@@ -126,22 +123,19 @@ function ExperiencePage() {
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(245,107,0,0.18)_0%,transparent_60%)]" />
         <div className="section-shell relative z-10">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary">
-              <Sparkles className="size-3.5" /> Hospitality on Wheels
-            </div>
+            <div className="text-sm font-medium text-primary">The ride</div>
             <h1 className="display-serif mt-6 text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.05] tracking-tight">
-              Thoughtful in every detail. <br />
-              <span className="text-primary">Effortless in every mile.</span>
+              The small things, <br />
+              <span className="text-primary">done properly.</span>
             </h1>
             <p className="mt-6 text-base sm:text-lg text-white/80 leading-relaxed max-w-2xl">
-              We took everything that is frustrating about regular city cabs and redesigned it from
-              scratch. From pre-cooled cabins to trained chauffeurs, discover what riding with
-              dignity feels like.
+              A cool cabin, a quiet car, a chauffeur who knows the route and a clean seat every
+              time. Here is what is in the car and how a ride works.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild size="lg" className="font-bold shadow-md">
+              <Button asChild size="lg">
                 <Link to="/book">
-                  Book This Experience <ArrowRight className="ml-2 size-4" />
+                  Book a ride <ArrowRight className="ml-2 size-4" />
                 </Link>
               </Button>
               <Button
@@ -150,7 +144,7 @@ function ExperiencePage() {
                 variant="outline"
                 className="bg-transparent border-white/20 text-white hover:bg-white/10"
               >
-                <Link to="/electric">Discover Our EV Fleet</Link>
+                <Link to="/electric">About the car</Link>
               </Button>
             </div>
           </div>
@@ -161,16 +155,13 @@ function ExperiencePage() {
       <section className="py-20 border-b border-border">
         <div className="section-shell grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              Mahindra BE.6 Interior Sanctuary
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold leading-tight">
+            <span className="text-sm font-medium text-primary">Inside the Mahindra BE.6</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl leading-tight">
               Step into comfort, not heat or stress.
             </h2>
             <p className="mt-5 text-sm sm:text-base text-muted-foreground leading-relaxed">
-              When you book an Orange Taxi, your vehicle is not just transport — it is a sanctuary
-              between meetings, after a long flight, or en route to your home. We maintain strict
-              cabin cleanliness audits after every shift.
+              Between meetings, after a long flight or on the way home, the car should be somewhere
+              you can rest. Every cabin is cleaned and checked after each shift.
             </p>
 
             <div className="mt-8 space-y-4 text-sm">
@@ -198,7 +189,7 @@ function ExperiencePage() {
                 </div>
                 <div>
                   <strong className="text-foreground">Zero Engine Vibration:</strong> Electric
-                  skateboard architecture ensures a velvet-smooth ride without gear shift jerks.
+                  skateboard architecture means no gear changes and a smooth ride.
                 </div>
               </div>
             </div>
@@ -207,8 +198,8 @@ function ExperiencePage() {
           <div className="overflow-hidden rounded-3xl border border-border shadow-soft">
             <img
               src={interiorImage}
-              alt="Mahindra BE.6 luxury interior cabin with HD display and premium upholstery"
-              className="w-full aspect-[4/3] object-cover transition-transform duration-700 hover:scale-105"
+              alt="Rear cabin of a Mahindra BE.6 with a seat-back screen"
+              className="w-full aspect-[4/3] object-cover"
             />
           </div>
         </div>
@@ -218,33 +209,21 @@ function ExperiencePage() {
       <section className="py-20 lg:py-24 bg-card/50">
         <div className="section-shell">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              The Standard We Guarantee
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold">
-              Included with every single reservation.
-            </h2>
+            <span className="text-sm font-medium text-primary">On every ride</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl">What comes with the car.</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              No extra charges, no hidden upgrades. Every passenger enjoys our full hospitality
-              suite.
+              All of this is standard on every ride. There are no paid upgrades.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {EXPERIENCE_PILLARS.map((pillar, idx) => {
+          <div className="grid gap-x-12 gap-y-10 border-t border-border pt-10 md:grid-cols-2 lg:grid-cols-3">
+            {EXPERIENCE_PILLARS.map((pillar) => {
               const Icon = pillar.icon;
               return (
-                <div
-                  key={idx}
-                  className="rounded-2xl border border-border bg-card p-8 transition-all hover:border-primary/40 hover:shadow-sm"
-                >
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-6" />
-                  </div>
-                  <div className="mt-5 text-xs font-bold text-primary uppercase tracking-wider">
-                    {pillar.subtitle}
-                  </div>
-                  <h3 className="mt-1 text-xl font-bold text-foreground">{pillar.title}</h3>
+                <div key={pillar.title}>
+                  <Icon className="size-5 text-primary" aria-hidden="true" />
+                  <h3 className="mt-4 text-lg font-semibold text-foreground">{pillar.title}</h3>
+                  <p className="mt-1 text-sm text-foreground/70">{pillar.subtitle}</p>
                   <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
                     {pillar.description}
                   </p>
@@ -266,35 +245,32 @@ function ExperiencePage() {
             />
           </div>
           <div className="order-1 lg:order-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              The Chauffeur Standard
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold leading-tight">
-              Trained in hospitality, committed to safety.
+            <span className="text-sm font-medium text-primary">Chauffeurs</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl leading-tight">
+              Trained, checked and on time.
             </h2>
             <p className="mt-5 text-sm sm:text-base text-muted-foreground leading-relaxed">
               At Orange Taxi, drivers are salaried professionals with health insurance, fair working
-              hours, and performance bonuses. Because they are treated with dignity, they take pride
-              in delivering impeccable service to you.
+              hours, and performance bonuses. Drivers who are treated well tend to drive well.
             </p>
-            <div className="mt-6 grid sm:grid-cols-2 gap-4 text-xs font-semibold">
-              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
-                <ShieldCheck className="size-4 text-emerald-600" />
-                Verified Background & Police Check
-              </div>
-              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
-                <UserRoundCheck className="size-4 text-emerald-600" />
-                Defensive Driving Certification
-              </div>
-              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
-                <Check className="size-4 text-primary" />
-                Immaculate Uniform & Grooming
-              </div>
-              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card">
-                <Check className="size-4 text-primary" />
-                Assistance with Heavy Luggage
-              </div>
-            </div>
+            <ul className="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                Background and police verification
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                Defensive driving certified
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                In uniform
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                Help with heavy luggage
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -303,16 +279,14 @@ function ExperiencePage() {
       <section className="py-20 lg:py-24">
         <div className="section-shell max-w-4xl">
           <div className="text-center mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              Clear Differentiation
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold">
-              Orange Taxi vs Regular App Taxis
+            <span className="text-sm font-medium text-primary">Compared</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl">
+              Orange Taxi and a regular app cab
             </h2>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <div className="grid grid-cols-12 bg-muted/60 p-4 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+            <div className="grid grid-cols-12 bg-muted/60 p-4 text-sm font-medium text-muted-foreground border-b border-border">
               <div className="col-span-5 sm:col-span-6">Service Standard</div>
               <div className="col-span-4 sm:col-span-3 text-primary">Orange Taxi</div>
               <div className="col-span-3 sm:col-span-3 text-muted-foreground">Other Cabs</div>
@@ -324,7 +298,7 @@ function ExperiencePage() {
                   <div className="col-span-5 sm:col-span-6 font-semibold text-foreground">
                     {row.feature}
                   </div>
-                  <div className="col-span-4 sm:col-span-3 text-xs sm:text-sm font-bold text-primary flex items-center gap-1.5">
+                  <div className="col-span-4 sm:col-span-3 text-xs sm:text-sm font-medium text-primary flex items-center gap-1.5">
                     <Check className="size-4 text-primary shrink-0" />
                     <span>{row.orange}</span>
                   </div>
@@ -343,15 +317,15 @@ function ExperiencePage() {
       <section className="py-16 bg-night text-white text-center border-t border-border">
         <div className="section-shell max-w-2xl">
           <h2 className="display-serif text-3xl sm:text-4xl font-normal">
-            Ready to experience a better way to move?
+            Book your next ride with us.
           </h2>
           <p className="mt-4 text-sm text-white/70">
             Book your journey in Delhi NCR or schedule an airport transfer in advance.
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button asChild size="lg" className="font-bold shadow-md">
+            <Button asChild size="lg">
               <Link to="/book">
-                Book a Ride Now <ArrowRight className="ml-2 size-4" />
+                Book a ride <ArrowRight className="ml-2 size-4" />
               </Link>
             </Button>
           </div>

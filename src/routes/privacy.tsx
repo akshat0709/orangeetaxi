@@ -378,21 +378,23 @@ export function PrivacyPolicy() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-lg border border-border bg-card">
-              <h4 className="font-bold text-foreground mb-1">Right to Access Summary</h4>
+              <h4 className="font-semibold text-foreground mb-1">Right to Access Summary</h4>
               <p className="text-muted-foreground">
                 Request a summary of your personal data being processed and identities of all data
                 processors who have received it.
               </p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-card">
-              <h4 className="font-bold text-foreground mb-1">Right to Correction &amp; Update</h4>
+              <h4 className="font-semibold text-foreground mb-1">
+                Right to Correction &amp; Update
+              </h4>
               <p className="text-muted-foreground">
                 Rectify inaccurate, incomplete, or outdated personal information directly via your
                 Profile page or through support.
               </p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-card">
-              <h4 className="font-bold text-foreground mb-1">
+              <h4 className="font-semibold text-foreground mb-1">
                 Right to Erasure (&ldquo;Delete My Account&rdquo;)
               </h4>
               <p className="text-muted-foreground">
@@ -401,7 +403,7 @@ export function PrivacyPolicy() {
               </p>
             </div>
             <div className="p-3 rounded-lg border border-border bg-card">
-              <h4 className="font-bold text-foreground mb-1">Right of Grievance Redressal</h4>
+              <h4 className="font-semibold text-foreground mb-1">Right of Grievance Redressal</h4>
               <p className="text-muted-foreground">
                 Seek prompt redressal from our designated Data Protection Officer, and escalate to
                 the Data Protection Board of India if unresolved.

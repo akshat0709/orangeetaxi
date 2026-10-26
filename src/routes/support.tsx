@@ -115,7 +115,7 @@ function SupportPage() {
 
         {/* Header */}
         <div className="border-b border-border pb-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <Headphones className="size-4" /> 24x7 Customer Care & Redressal
           </div>
           <h1 className="display-serif mt-3 text-4xl md:text-5xl">Support & Grievance Desk</h1>
@@ -134,7 +134,7 @@ function SupportPage() {
         <div className="my-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-6">
             <Phone className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">24x7 Call Centre</h3>
+            <h3 className="mt-3 text-base font-semibold">24x7 Call Centre</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Bilingual phone assistance (English & Hindi) for live trips and urgent assistance.
             </p>
@@ -150,7 +150,7 @@ function SupportPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Mail className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Customer Care</h3>
+            <h3 className="mt-3 text-base font-semibold">Customer Care</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Trip queries, rider support, and bookings assistance.
             </p>
@@ -171,7 +171,7 @@ function SupportPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Receipt className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Billing & Invoices</h3>
+            <h3 className="mt-3 text-base font-semibold">Billing & Invoices</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               GST tax invoices, ride receipts, fare clarifications, and refunds.
             </p>
@@ -187,7 +187,7 @@ function SupportPage() {
 
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-6">
             <ShieldCheck className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Grievance Officer</h3>
+            <h3 className="mt-3 text-base font-semibold">Grievance Officer</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Appointed nodal officer under IT Rules 2021 & MV Aggregator norms.
             </p>
@@ -278,7 +278,7 @@ function SupportPage() {
         {/* Lodge a Grievance Form */}
         <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="rounded-2xl border border-border bg-card p-6 md:p-8">
-            <h3 className="text-xl font-bold">Lodge a Formal Grievance</h3>
+            <h3 className="text-xl font-semibold">Lodge a Formal Grievance</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Submit your dispute or issue directly to the Grievance Redressal Desk. You will
               receive an official docket tracking number.
@@ -287,7 +287,7 @@ function SupportPage() {
             {submitted ? (
               <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-6 text-center">
                 <ShieldCheck className="mx-auto size-12 text-primary" />
-                <h4 className="mt-3 text-lg font-bold text-foreground">
+                <h4 className="mt-3 text-lg font-semibold text-foreground">
                   Grievance Ticket Generated
                 </h4>
                 <p className="mt-1 text-xs text-muted-foreground">

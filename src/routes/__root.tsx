@@ -7,34 +7,15 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useState, useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import "../i18n";
-import { CoolCarSplashScreen } from "../components/cool-car-splash-screen";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { PWAInstallPrompt } from "../components/pwa-install-prompt";
 import { CookieBanner } from "../components/cookie-banner";
-
-function Analytics() {
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      (window.location.hostname.includes("vercel") || window.location.hostname.includes("orange"))
-    ) {
-      if (!document.getElementById("vercel-analytics-script")) {
-        const script = document.createElement("script");
-        script.id = "vercel-analytics-script";
-        script.src = "/_vercel/insights/script.js";
-        script.defer = true;
-        document.head.appendChild(script);
-      }
-    }
-  }, []);
-  return null;
-}
 
 function NotFoundComponent() {
   return (
@@ -220,33 +201,6 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SCHEMA_JSON_LD }} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var isRecovery = location.hash.indexOf('recovery') !== -1 || location.search.indexOf('recovery') !== -1;
-                  var hasSeen = sessionStorage.getItem('orange_splash_seen');
-                  var isSplashForced = location.search.indexOf('splash=true') !== -1;
-                  if ((hasSeen || isRecovery) && !isSplashForced) {
-                    document.documentElement.classList.add('hide-splash');
-                  }
-                } catch {
-  // best-effort: failure here is non-fatal and intentionally ignored
-}
-              })();
-            `,
-          }}
-        />
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              html.hide-splash #splash-overlay {
-                display: none !important;
-              }
-            `,
-          }}
-        />
       </head>
       <body>
         {children}
@@ -258,37 +212,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const [showSplash, setShowSplash] = useState(true);
-
-  const handleSplashFinish = () => {
-    setShowSplash(false);
-    try {
-      sessionStorage.setItem("orange_splash_seen", "true");
-      document.documentElement.classList.add("hide-splash");
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-  };
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-
-    // Check if user has already seen splash or on recovery link
-    const isRecovery =
-      window.location.hash.includes("recovery") ||
-      window.location.search.includes("recovery") ||
-      (window.location.hash.includes("access_token=") && window.location.hash.includes("recovery"));
-    let hasSeenSplash = false;
-    try {
-      hasSeenSplash = !!sessionStorage.getItem("orange_splash_seen");
-    } catch {
-      // best-effort: failure here is non-fatal and intentionally ignored
-    }
-    const forceSplash = window.location.search.includes("splash=true");
-
-    if ((hasSeenSplash || isRecovery) && !forceSplash) {
-      setShowSplash(false);
-    }
 
     // Enforce HTTPS
     if (
@@ -360,10 +286,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Analytics />
       <Toaster richColors position="top-right" />
       <PWAInstallPrompt />
-      {showSplash && <CoolCarSplashScreen onFinish={handleSplashFinish} />}
       <SiteHeader />
       <main className="min-w-0 max-w-full overflow-x-hidden">
         <Outlet />

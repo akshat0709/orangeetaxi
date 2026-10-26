@@ -1,11 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Zap,
-  Leaf,
   BatteryCharging,
   ShieldCheck,
   Gauge,
-  Sparkles,
   ArrowRight,
   Wind,
   CheckCircle2,
@@ -89,20 +87,17 @@ function ElectricPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.18),transparent)]" />
         <div className="section-shell relative z-10">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-emerald-400">
-              <Leaf className="size-3.5" /> 100% Electric Mobility
-            </div>
+            <div className="text-sm font-medium text-emerald-400">Electric fleet</div>
             <h1 className="display-serif mt-6 text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.05] tracking-tight">
-              Quiet feels premium. <br />
-              <span className="text-emerald-400">Clean air makes it right.</span>
+              Quiet, clean, <br />
+              <span className="text-emerald-400">fully electric.</span>
             </h1>
             <p className="mt-6 text-base sm:text-lg text-white/80 leading-relaxed max-w-2xl">
-              Electric power is not a marketing buzzword for Orange Taxi — it is the engineering
-              foundation of our company. Zero tailpipe pollution, zero engine vibrations, and a
-              quieter city for everyone.
+              Every Orange Taxi is a battery-electric Mahindra BE.6. Zero tailpipe pollution, zero
+              engine vibrations, and a quieter city for everyone.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button asChild size="lg" className="font-bold shadow-md">
+              <Button asChild size="lg">
                 <Link to="/book">
                   Book a Clean Electric Ride <ArrowRight className="ml-2 size-4" />
                 </Link>
@@ -124,40 +119,29 @@ function ElectricPage() {
       <section className="py-20 lg:py-24">
         <div className="section-shell">
           <div className="max-w-2xl mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              Powertrain Engineering
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold">
-              Mahindra BE.6: Built on the INGLO Electric Platform
+            <span className="text-sm font-medium text-primary">The car</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl">
+              Mahindra BE.6, built electric from the start
             </h2>
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-              Designed from the wheels up as an all-electric SUV, delivering unprecedented interior
-              room, rapid charging speeds, and benchmark Indian crash safety.
+              An SUV designed around its battery rather than converted from a petrol car, so there
+              is more room inside, fast charging and a strong crash-safety rating.
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {TECH_SPECS.map((spec, index) => {
-              const Icon = spec.icon;
-              return (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-border bg-card p-6 transition-all hover:border-emerald-500/40 hover:shadow-sm"
-                >
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="mt-5 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                    {spec.label}
-                  </div>
-                  <div className="mt-1 text-lg font-bold text-foreground">{spec.value}</div>
-                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                    {spec.detail}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+          <dl className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+            {TECH_SPECS.map((spec) => (
+              <div key={spec.label} className="bg-background p-6">
+                <dt className="text-sm text-muted-foreground">{spec.label}</dt>
+                <dd className="mt-2 text-2xl font-semibold tracking-tight text-foreground tabular-nums">
+                  {spec.value}
+                </dd>
+                <dd className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  {spec.detail}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
@@ -165,27 +149,27 @@ function ElectricPage() {
       <section className="py-20 bg-warm/40 border-y border-border">
         <div className="section-shell grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-              Delhi NCR Clean Air Initiative
+            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+              Why it matters
             </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold leading-tight">
-              Why 100% electric cabs matter for Indian cities.
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl leading-tight">
+              A taxi drives far more than a family car.
             </h2>
             <p className="mt-4 text-sm sm:text-base text-muted-foreground leading-relaxed">
               A single urban taxi drives over 60,000 kilometers each year — roughly 4 to 5 times the
-              distance of a private family car. Electrifying commercial taxi fleets yields the
-              single highest carbon abatement per vehicle in modern transportation.
+              distance of a private family car. Switching a taxi to electric removes much more
+              pollution than switching a private car.
             </p>
 
             <div className="mt-8 space-y-6">
               {EMISSION_FACTS.map((fact, idx) => (
                 <div key={idx} className="flex items-start gap-4">
-                  <div className="size-7 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
-                    0{idx + 1}
-                  </div>
+                  <span className="w-6 shrink-0 pt-px text-sm font-medium tabular-nums text-muted-foreground">
+                    {idx + 1}.
+                  </span>
                   <div>
-                    <h4 className="text-sm font-bold text-foreground">{fact.title}</h4>
-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    <h4 className="text-sm font-semibold text-foreground">{fact.title}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                       {fact.description}
                     </p>
                   </div>
@@ -198,7 +182,7 @@ function ElectricPage() {
             <img
               src={eveningImage}
               alt="Orange Taxi Mahindra BE.6 on a clean city street at twilight"
-              className="w-full aspect-[4/3] object-cover transition-transform duration-700 hover:scale-105"
+              className="w-full aspect-[4/3] object-cover"
             />
           </div>
         </div>
@@ -207,14 +191,12 @@ function ElectricPage() {
       {/* Bottom CTA */}
       <section className="py-16 text-center">
         <div className="section-shell max-w-xl">
-          <h2 className="display-serif text-3xl font-bold">Choose the cleaner ride.</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Experience the silence and comfort of the Mahindra BE.6 electric SUV today.
-          </p>
+          <h2 className="display-serif text-3xl">Choose the cleaner ride.</h2>
+          <p className="mt-3 text-sm text-muted-foreground">Your next ride, in a Mahindra BE.6.</p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button asChild size="lg" className="font-bold shadow-md">
+            <Button asChild size="lg">
               <Link to="/book">
-                Book an Electric Ride <ArrowRight className="ml-2 size-4" />
+                Book a ride <ArrowRight className="ml-2 size-4" />
               </Link>
             </Button>
           </div>

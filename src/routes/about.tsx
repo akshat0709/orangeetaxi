@@ -3,10 +3,8 @@ import {
   ArrowLeft,
   ArrowRight,
   BatteryCharging,
-  Building2,
   CheckCircle2,
   HeartHandshake,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -39,96 +37,84 @@ function AboutPage() {
 
         {/* Hero Section */}
         <div className="border-b border-border pb-12">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-            Our Point of View
-          </p>
+          <p className="text-sm font-medium text-primary">About us</p>
           <h1 className="display-serif mt-4 text-5xl md:text-7xl leading-[0.95]">
-            Premium should feel welcoming. <br />
-            <span className="text-primary">Electric by nature.</span>
+            A better cab ride, <br />
+            <span className="text-primary">fully electric.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed text-muted-foreground">
-            Orange Taxi was created around a simple conviction: thoughtful service, pristine cars,
-            and courteous drivers should not be rare luxuries. We are building India's finest 100%
-            electric mobility network, anchored in safety, dignity, and environmental
-            responsibility.
+            We started Orange Taxi because good service, clean cars and polite drivers should be
+            normal, not a luxury. We run a fully electric fleet in Delhi NCR, and we treat our
+            drivers and riders with the same respect.
           </p>
         </div>
 
         {/* 3 Pillars */}
-        <div className="my-12 grid gap-6 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <Sparkles className="size-6 text-primary" />
-            <h3 className="mt-4 text-lg font-bold">Considered Hospitality</h3>
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              Pre-cooled cabins, complimentary chilled water, spotless interiors, and trained
-              chauffeurs who take pride in hospitality.
+        <div className="my-12 grid gap-10 sm:grid-cols-3">
+          <div>
+            <Sparkles className="size-5 text-primary" aria-hidden="true" />
+            <h3 className="mt-4 text-lg font-semibold">Hospitality</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              Cool cabins, chilled water, clean interiors and chauffeurs trained to look after you.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <HeartHandshake className="size-6 text-primary" />
-            <h3 className="mt-4 text-lg font-bold">Driver Dignity</h3>
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              Predictable fixed salaries, performance bonuses, humane shifts, and professional
-              healthcare for every driver partner.
+          <div>
+            <HeartHandshake className="size-5 text-primary" aria-hidden="true" />
+            <h3 className="mt-4 text-lg font-semibold">Fair to drivers</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              Clear pay, reasonable shifts and support for every driver partner.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <BatteryCharging className="size-6 text-primary" />
-            <h3 className="mt-4 text-lg font-bold">100% Zero-Emission</h3>
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              Every kilometre in an Orange Taxi is completely zero-tailpipe-emission, actively
-              purifying the air in Delhi NCR.
+          <div>
+            <BatteryCharging className="size-5 text-primary" aria-hidden="true" />
+            <h3 className="mt-4 text-lg font-semibold">Fully electric</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              No tailpipe, so no exhaust on Delhi NCR roads from any kilometre you ride with us.
             </p>
           </div>
         </div>
 
         {/* Corporate Profile Card under Companies Act, 2013 */}
-        <div className="my-12 rounded-3xl border border-primary/30 bg-primary/5 p-8 md:p-10">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-            <Building2 className="size-4" /> Corporate Information (Companies Act, 2013)
-          </div>
-          <h2 className="display-serif mt-3 text-3xl font-bold">About Orange Taxi Limited</h2>
-          <p className="mt-2 text-xs text-muted-foreground leading-relaxed max-w-2xl">
+        <div className="my-12 border-t border-border pt-12">
+          <div className="text-sm font-medium text-primary">Company information</div>
+          <h2 className="display-serif mt-3 text-3xl">About Orange Taxi Limited</h2>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-2xl">
             Orange Taxi Limited is an Indian Public Limited Company incorporated under the Companies
             Act, 2013, registered with the Registrar of Companies (ROC Delhi), and licensed to
             operate motor vehicle aggregator services.
           </p>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-xs">
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-muted-foreground">Corporate Identification No.</p>
-              <p className="mt-1 font-mono font-bold text-foreground">U49224DL2026PLC461350</p>
+          <dl className="mt-8 grid gap-x-8 gap-y-5 border-t border-border pt-6 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <dt className="text-muted-foreground">CIN</dt>
+              <dd className="mt-1 font-mono text-foreground">U49224DL2026PLC461350</dd>
             </div>
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-muted-foreground">Date of Incorporation</p>
-              <p className="mt-1 font-semibold text-foreground">January 08, 2026</p>
+            <div>
+              <dt className="text-muted-foreground">Incorporated</dt>
+              <dd className="mt-1 text-foreground">8 January 2026</dd>
             </div>
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-muted-foreground">Registrar of Companies</p>
-              <p className="mt-1 font-semibold text-foreground">ROC Delhi · Active</p>
+            <div>
+              <dt className="text-muted-foreground">Registrar</dt>
+              <dd className="mt-1 text-foreground">ROC Delhi · Active</dd>
             </div>
-            <div className="rounded-xl border border-border bg-background p-4">
-              <p className="text-muted-foreground">Entity Type</p>
-              <p className="mt-1 font-semibold text-foreground">Public Limited Company</p>
+            <div>
+              <dt className="text-muted-foreground">Entity type</dt>
+              <dd className="mt-1 text-foreground">Public limited company</dd>
             </div>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-border bg-background p-5 text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground">Registered Office Address:</p>
-            <p className="mt-1">
-              S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi, Delhi,
-              India — 110017
-            </p>
-          </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <dt className="text-muted-foreground">Registered office</dt>
+              <dd className="mt-1 text-foreground">
+                S-210, 2nd Floor, Panchshila Park, South Malviya Nagar, New Delhi 110017
+              </dd>
+            </div>
+          </dl>
         </div>
 
         {/* CTA */}
         <div className="mt-16 flex flex-col sm:flex-row items-center justify-between gap-6 rounded-2xl border border-border bg-card p-8">
           <div>
-            <h3 className="text-xl font-bold">Experience the difference today</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Book your electric journey across Delhi NCR in seconds.
-            </p>
+            <h3 className="text-xl font-semibold">Ready to ride?</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Book a ride anywhere in Delhi NCR.</p>
           </div>
           <div className="flex items-center gap-3">
             <Button asChild size="lg">

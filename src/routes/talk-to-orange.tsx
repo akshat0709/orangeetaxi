@@ -327,9 +327,7 @@ function TalkToOrangePage() {
       <section className="relative overflow-hidden bg-night py-24 text-white md:py-32">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklab,var(--primary)_15%,transparent),transparent_60%)]" />
         <div className="section-shell relative">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-            Talk to Orange
-          </p>
+          <p className="text-sm font-medium text-primary">Talk to Orange</p>
           <h1 className="display-serif mt-5 text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.92] text-white">
             Better rides
             <br />
@@ -392,9 +390,7 @@ function TalkToOrangePage() {
       <section className="py-24 md:py-32">
         <div className="section-shell grid gap-16 lg:grid-cols-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              Corporate enquiry
-            </p>
+            <p className="text-sm font-medium text-primary">Corporate enquiry</p>
             <h2 className="display-serif mt-4 text-5xl leading-none">Get in touch.</h2>
             <p className="mt-5 max-w-md leading-7 text-muted-foreground">
               Fill in the form and we'll get back to you within one business day. All enquiries are
@@ -602,7 +598,7 @@ function TalkToOrangePage() {
       {/* Pricing Sheet */}
       <section className="bg-warm py-24 md:py-32">
         <div className="section-shell">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Pricing</p>
+          <p className="text-sm font-medium text-primary">Pricing</p>
           <h2 className="display-serif mt-4 text-5xl leading-none">Clear fares. No surprises.</h2>
           <p className="mt-5 max-w-xl leading-7 text-muted-foreground">
             Our fares are calculated on base + distance. The table below shows sample totals for
@@ -630,7 +626,7 @@ function TalkToOrangePage() {
                   {vehicles.map((v, i) => (
                     <tr key={v.code} className={i === 1 ? "bg-primary/5" : ""}>
                       <td className="px-6 py-5">
-                        <p className="font-bold">{v.name}</p>
+                        <p>{v.name}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">{v.tagline}</p>
                       </td>
                       <td className="px-6 py-5 text-muted-foreground">{v.seats}</td>
@@ -761,7 +757,7 @@ function TalkToOrangePage() {
         {/* Toggle bubble */}
         <button
           onClick={() => setChatOpen((p) => !p)}
-          className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-brand-lg transition-transform hover:scale-105 active:scale-95"
+          className="grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-brand-lg transition-colors hover:bg-primary/90"
         >
           {chatOpen ? <X className="size-6" /> : <MessageCircle className="size-6" />}
         </button>

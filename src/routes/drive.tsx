@@ -143,10 +143,8 @@ function DriverPage() {
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
         <div className="section-shell relative flex min-h-[calc(100svh-8rem)] items-end py-10 md:items-center md:py-20">
-          <div className="max-w-2xl ">
-            <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-              For drivers
-            </p>
+          <div className="max-w-2xl">
+            <p className="mb-5 text-sm font-medium text-white/70">For drivers</p>
             <h1 className="display-serif text-[clamp(2.85rem,7vw,6.2rem)] leading-[0.92] text-white">
               Drive with dignity.
               <br />
@@ -178,10 +176,8 @@ function DriverPage() {
             copy="Orange drivers are professionals with a dependable income — and great service is always rewarded on top."
           />
           <div className="mt-14 grid gap-4 lg:grid-cols-3">
-            <article className="flex min-h-72 flex-col rounded-lg border border-primary bg-primary p-7 text-primary-foreground shadow-brand-lg">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-70">
-                The foundation
-              </p>
+            <article className="flex min-h-72 flex-col rounded-2xl border border-primary bg-primary p-7 text-primary-foreground shadow-brand-lg">
+              <p className="text-sm font-medium opacity-70">The foundation</p>
               <h3 className="display-serif mt-3 text-3xl">Fixed Salary</h3>
               <p className="mt-4 text-sm leading-6 text-primary-foreground/85">
                 A predictable monthly salary of ₹25,000 to ₹32,000 based on shift schedule,
@@ -192,28 +188,24 @@ function DriverPage() {
               </p>
             </article>
             <article className="flex min-h-72 flex-col rounded-2xl border border-border bg-card p-7 shadow-xs">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                For great service
-              </p>
+              <p className="text-sm font-medium text-primary">For great service</p>
               <h3 className="display-serif mt-3 text-3xl">Performance Incentives</h3>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
                 Earn up to ₹8,000 extra per month through punctuality, 4.8+ passenger ratings, zero
                 trip refusals, and clean car audits.
               </p>
-              <p className="mt-auto pt-8 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+              <p className="mt-auto pt-8 text-xs text-muted-foreground font-medium">
                 Weekly automated incentive credit to driver ledger
               </p>
             </article>
             <article className="flex min-h-72 flex-col rounded-2xl border border-border bg-card p-7 shadow-xs">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                For consistency
-              </p>
+              <p className="text-sm font-medium text-primary">For consistency</p>
               <h3 className="display-serif mt-3 text-3xl">Milestone Rewards</h3>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">
                 Reaching 6-month, 1-year, and 3-year service milestones unlocks cash bonuses, family
                 medical coverage, and partner vehicle buyout assistance.
               </p>
-              <p className="mt-auto pt-8 text-xs text-primary font-bold">
+              <p className="mt-auto pt-8 text-xs text-muted-foreground font-medium">
                 Long-term wealth creation & EV ownership path
               </p>
             </article>
@@ -235,7 +227,7 @@ function DriverPage() {
                   <span className="grid size-10 place-items-center rounded-full bg-background text-primary">
                     <Icon className="size-4" />
                   </span>
-                  <h3 className="mt-6 text-base font-bold">{title}</h3>
+                  <h3 className="mt-6 text-base font-semibold">{title}</h3>
                   <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{text}</p>
                 </article>
               ))}
@@ -269,7 +261,7 @@ function DriverPage() {
               >
                 <span className="display-serif text-4xl text-primary">{n}</span>
                 <div>
-                  <h3 className="text-lg font-bold">{title}</h3>
+                  <h3 className="text-lg font-semibold">{title}</h3>
                   <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{text}</p>
                 </div>
               </li>
@@ -281,9 +273,7 @@ function DriverPage() {
       <section className="bg-night py-24 text-white md:py-32">
         <div className="section-shell grid gap-12 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              Chauffeur Technology
-            </p>
+            <p className="text-sm font-medium text-primary">Chauffeur Technology</p>
             <h2 className="display-serif mt-4 text-5xl leading-none text-white md:text-6xl">
               Everything you need, in one place.
             </h2>
@@ -306,7 +296,7 @@ function DriverPage() {
               ))}
             </ul>
             <div className="mt-8 flex gap-3">
-              <Button asChild size="lg" className="font-bold">
+              <Button asChild size="lg">
                 <Link to="/driver-console">Open Web Console</Link>
               </Button>
             </div>
@@ -314,10 +304,8 @@ function DriverPage() {
           <div className="rounded-2xl border border-white/15 bg-white/5 p-7 md:p-9 shadow-lg">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/90">
-                  Chauffeur Console Live
-                </p>
+                <span className="size-2.5 rounded-full bg-emerald-500" />
+                <p className="text-sm font-medium text-white/90">Chauffeur Console Live</p>
               </div>
               <span className="rounded-full bg-primary/20 border border-primary/40 px-3 py-0.5 text-xs font-bold text-primary">
                 Delhi NCR Hub
@@ -371,7 +359,7 @@ function DriverPage() {
       {/* Statutory Driver Onboarding Terms & Conditions (Clause 11.1(ix) & Clause 14.10) */}
       <section className="border-t border-border bg-card py-20 md:py-28">
         <div className="section-shell max-w-5xl">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <ShieldCheck className="size-4" /> Regulatory Disclosures (Clause 11.1 & 14.10)
           </div>
           <h2 className="display-serif mt-3 text-3xl md:text-4xl">
@@ -386,7 +374,7 @@ function DriverPage() {
           <div className="mt-10 grid gap-8 md:grid-cols-2">
             {/* English Column */}
             <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
-              <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center justify-between border-b border-border pb-2">
                 <span>English — Operating Agreement</span>
                 <span className="text-[10px] uppercase font-bold text-primary">Official Terms</span>
               </h3>
@@ -441,7 +429,7 @@ function DriverPage() {
 
             {/* Hindi Column */}
             <div className="rounded-xl border border-border bg-background p-6 text-xs space-y-4 text-muted-foreground">
-              <h3 className="text-sm font-bold text-foreground flex items-center justify-between border-b border-border pb-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center justify-between border-b border-border pb-2">
                 <span>हिंदी — चालक नियम एवं शर्तें</span>
                 <span className="text-[10px] uppercase font-bold text-primary">आधिकारिक नियम</span>
               </h3>
@@ -1145,7 +1133,7 @@ function DriverApplicationForm() {
                 <div className="mt-4 pt-3 border-t border-primary/20 space-y-3  duration-300">
                   <div className="flex items-center gap-2">
                     <Car className="size-4 text-primary" />
-                    <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                    <p className="text-sm font-medium text-primary">
                       Partner Vehicle Details (Mandatory)
                     </p>
                   </div>
@@ -1375,7 +1363,7 @@ function DriverApplicationForm() {
 function Intro({ eyebrow, title, copy }: { eyebrow: string; title: string; copy?: string }) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+      <p className="text-sm font-medium text-primary">{eyebrow}</p>
       <h2 className="display-serif mt-4 text-5xl leading-none md:text-6xl">{title}</h2>
       {copy && <p className="mt-5 max-w-xl leading-7 text-muted-foreground">{copy}</p>}
     </div>

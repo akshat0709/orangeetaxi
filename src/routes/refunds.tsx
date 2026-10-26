@@ -52,10 +52,10 @@ function RefundsPage() {
         </Link>
 
         <header className="border-b border-border pb-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <RotateCcw className="size-4" /> Cancellations & Refunds
           </div>
-          <h1 className="display-serif mt-3 text-4xl font-bold sm:text-5xl">
+          <h1 className="display-serif mt-3 text-4xl sm:text-5xl">
             Cancellation &amp; Refund Policy
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">

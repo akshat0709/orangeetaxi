@@ -338,7 +338,7 @@ function TrackPage() {
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-30">
         <div className="section-shell py-3 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <span className="display-serif text-xl font-bold tracking-tight text-primary">
+            <span className="display-serif text-xl tracking-tight text-primary">
               Orange<span className="text-foreground">Taxi</span>
             </span>
             <span className="hidden sm:inline-block rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[11px] font-bold text-primary">
@@ -511,7 +511,7 @@ function TrackPage() {
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400">
                         Scheduled Advance Departure
                       </span>
-                      <h3 className="text-base font-bold text-foreground">
+                      <h3 className="text-base font-semibold text-foreground">
                         {booking.scheduled_at
                           ? new Date(booking.scheduled_at).toLocaleDateString("en-IN", {
                               weekday: "long",
@@ -646,7 +646,7 @@ function TrackPage() {
                           ★ {driver.rating ? Number(driver.rating).toFixed(1) : "New"}
                         </span>
                       </div>
-                      <h3 className="font-bold text-base text-foreground mt-0.5">
+                      <h3 className="font-semibold text-base text-foreground mt-0.5">
                         {driver.full_name}
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
@@ -684,7 +684,7 @@ function TrackPage() {
                   <ShieldAlert className="size-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-foreground">Safety Assistance & SOS</h4>
+                  <h4 className="text-sm font-semibold text-foreground">Safety Assistance & SOS</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Ride monitored by Orange Command Center. In an emergency, dial 112 or contact
                     our helpline.

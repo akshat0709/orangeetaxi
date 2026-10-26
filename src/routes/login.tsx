@@ -809,7 +809,7 @@ function LoginPage() {
                   <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <ShieldCheck className="size-6 text-primary" />
                   </div>
-                  <h3 className="mt-3 text-xl font-bold tracking-tight">Verify Your Email</h3>
+                  <h3 className="mt-3 text-xl font-semibold tracking-tight">Verify Your Email</h3>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                     We sent a 6-digit verification code to{" "}
                     <span className="font-semibold text-foreground">
@@ -1024,7 +1024,7 @@ function LoginPage() {
                 className="mt-8 space-y-5"
               >
                 <div>
-                  <h3 className="text-lg font-bold">Reset Password</h3>
+                  <h3 className="text-lg font-semibold">Reset Password</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Enter your registered email address and we'll send you instructions to reset
                     your password.
@@ -1070,7 +1070,7 @@ function LoginPage() {
                 className="mt-8 space-y-5"
               >
                 <div>
-                  <h3 className="text-lg font-bold">Set New Password</h3>
+                  <h3 className="text-lg font-semibold">Set New Password</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Enter a new secure password for your Orange Taxi account.
                   </p>

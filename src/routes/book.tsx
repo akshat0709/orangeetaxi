@@ -1056,9 +1056,7 @@ function PassengerPage() {
           <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--night)_0%,color-mix(in_oklab,var(--night)_82%,transparent)_42%,transparent_78%)]" />
           <div className="section-shell relative flex min-h-[35vh] md:min-h-[48vh] items-end py-8 md:items-center md:py-20 min-w-0 max-w-full">
             <div className="max-w-2xl  min-w-0">
-              <p className="mb-3 md:mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-                For passengers
-              </p>
+              <p className="mb-3 md:mb-5 text-sm font-medium text-white/70">For passengers</p>
               <h1 className="display-serif text-3xl sm:text-4xl md:text-6xl leading-[0.95] text-white">
                 Every ride,
                 <br />
@@ -1085,9 +1083,7 @@ function PassengerPage() {
         <div className="section-shell min-w-0 max-w-full">
           {step !== 4 && (
             <>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-                Book your Orange
-              </p>
+              <p className="text-sm font-medium text-primary">Book your Orange</p>
               <h2 className="display-serif mt-2 md:mt-4 text-3xl sm:text-4xl md:text-6xl leading-tight text-foreground dark:text-foreground">
                 Plan your journey.
               </h2>
@@ -1433,7 +1429,7 @@ function Step2Journey({
       {fareBreakdown && distKm > 0 && (
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 min-w-0 max-w-full">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">
+            <p className="text-sm font-medium text-primary">
               Fare estimate ({selectedVehicle?.name})
               {fareBreakdown.surge > 1 && (
                 <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-300">
@@ -1580,7 +1576,7 @@ function Step3Confirm({
         {/* Pre-Ride Cabin Climate Preference */}
         <div className="rounded-xl border border-white/15 bg-card p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
               <Snowflake className="size-3.5 text-primary" />
               Cabin Climate Preference
             </span>
@@ -2075,7 +2071,7 @@ function Step4Confirmed({
           <CheckCircle className="size-6" />
         </span>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+          <p className="text-sm font-medium text-primary">
             {status === "searching"
               ? "Finding driver"
               : status === "scheduled"
@@ -2169,7 +2165,7 @@ function Step4Confirmed({
             <div>
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                <p className="text-sm font-medium text-emerald-400">
                   Ride In Progress · OTP Verified
                 </p>
               </div>
@@ -2186,7 +2182,7 @@ function Step4Confirmed({
         </div>
       ) : status !== "completed" && bookingData.otp ? (
         <div className="mt-6 rounded-xl border border-primary/30 bg-primary/10 p-5 text-center">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Ride OTP</p>
+          <p className="text-sm font-medium text-primary">Ride OTP</p>
           <p className="mt-2 text-4xl font-mono font-bold tracking-widest text-foreground">
             {bookingData.otp}
           </p>
@@ -2217,7 +2213,7 @@ function Step4Confirmed({
       ) : status === "searching" ? (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3.5 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2.5">
-            <Clock className="size-4 shrink-0 text-primary animate-pulse" />
+            <Clock className="size-4 shrink-0 text-primary" />
             <span className="font-semibold text-foreground">
               Estimated dispatch wait: <span className="text-primary font-bold">1–3 mins</span>
             </span>
@@ -2245,7 +2241,7 @@ function Step4Confirmed({
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
                   <Car className="size-4 text-primary" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {status === "in_progress"
                       ? "Your Ride Vehicle & Chauffeur"
                       : "Assigned Vehicle & Driver"}
@@ -2391,7 +2387,7 @@ function Step4Confirmed({
                     <MessageSquare className="size-3.5" />
                     <span>In-Ride Chat</span>
                     {unreadChatCount > 0 && (
-                      <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
+                      <span className="ml-1 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                         {unreadChatCount}
                       </span>
                     )}
@@ -2424,9 +2420,7 @@ function Step4Confirmed({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                Guardian Shield & SOS
-              </p>
+              <p className="text-sm font-medium text-amber-300">Guardian Shield & SOS</p>
               <span className="rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-semibold px-2 py-0.5">
                 24/7 Safety
               </span>
@@ -2445,7 +2439,7 @@ function Step4Confirmed({
             onClick={() => setGuardianModalOpen(true)}
             className="bg-amber-600 hover:bg-amber-700 text-foreground font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-md active:scale-95 transition-all"
           >
-            <PhoneCall className="size-3.5 animate-pulse" />
+            <PhoneCall className="size-3.5" />
             <span>Guardian Call</span>
           </Button>
         </div>

@@ -29,12 +29,10 @@ function TermsPage() {
 
         {/* Header */}
         <div className="border-b border-border pb-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <Shield className="size-4" /> Statutory Compliance & Passenger Rights
           </div>
-          <h1 className="display-serif mt-3 text-4xl sm:text-5xl font-bold">
-            Terms & Conditions of Service
-          </h1>
+          <h1 className="display-serif mt-3 text-4xl sm:text-5xl">Terms & Conditions of Service</h1>
           <p className="mt-3 text-sm text-muted-foreground">
             <strong>ORANGE TAXI LIMITED</strong> · Public Limited Company (CIN:
             U49224DL2026PLC461350)
@@ -220,7 +218,9 @@ function TermsPage() {
               alerts our 24x7 Central Incident Response Team with live telemetry coordinates.
             </p>
             <div className="rounded-xl border border-border bg-card p-5 mt-4">
-              <h4 className="font-bold text-foreground">Statutory Grievance Redressal Officer</h4>
+              <h4 className="font-semibold text-foreground">
+                Statutory Grievance Redressal Officer
+              </h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Designated in accordance with Section 5(1) of Information Technology (Intermediary
                 Guidelines) Rules, 2021:

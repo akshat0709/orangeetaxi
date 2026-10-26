@@ -39,7 +39,7 @@ function ContactPage() {
 
         {/* Header */}
         <div className="border-b border-border pb-8">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <Building2 className="size-4" /> Corporate Information
           </div>
           <h1 className="display-serif mt-3 text-4xl md:text-5xl">Get in Touch with Orange</h1>
@@ -79,7 +79,7 @@ function ContactPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-border bg-card p-6">
             <Phone className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">24x7 Customer Care</h3>
+            <h3 className="mt-3 text-base font-semibold">24x7 Customer Care</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               For ride bookings, passenger queries, and live trip assistance.
             </p>
@@ -110,7 +110,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Receipt className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Billing & Invoicing</h3>
+            <h3 className="mt-3 text-base font-semibold">Billing & Invoicing</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               GST tax invoices, ride receipts, fare disputes, and refunds.
             </p>
@@ -129,7 +129,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Car className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Driver Partner Desk</h3>
+            <h3 className="mt-3 text-base font-semibold">Driver Partner Desk</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Driver onboarding, document verification, and training center.
             </p>
@@ -148,7 +148,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Briefcase className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Corporate Accounts</h3>
+            <h3 className="mt-3 text-base font-semibold">Corporate Accounts</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Electric mobility packages for businesses and luxury hotel transit.
             </p>
@@ -167,7 +167,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Shield className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Grievance Redressal</h3>
+            <h3 className="mt-3 text-base font-semibold">Grievance Redressal</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Nodal officer for regulatory, consumer, and intermediary grievances.
             </p>
@@ -186,7 +186,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Building2 className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Legal & Secretariat</h3>
+            <h3 className="mt-3 text-base font-semibold">Legal & Secretariat</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Statutory corporate filings, compliance notices, and official administration.
             </p>
@@ -205,7 +205,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6">
             <Clock className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Operating Hours</h3>
+            <h3 className="mt-3 text-base font-semibold">Operating Hours</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Fleet dispatch runs 24x7. Corporate office operates Mon–Sat.
             </p>
@@ -217,7 +217,7 @@ function ContactPage() {
 
           <div className="rounded-xl border border-border bg-card p-6 sm:col-span-2">
             <MapPin className="size-5 text-primary" />
-            <h3 className="mt-3 text-base font-bold">Hub Locations</h3>
+            <h3 className="mt-3 text-base font-semibold">Hub Locations</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Delhi NCR Electric Charging & Hub Network.
             </p>

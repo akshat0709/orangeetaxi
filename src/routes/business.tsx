@@ -4,12 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Building2,
   ShieldCheck,
   Zap,
   Receipt,
   Plane,
   Users,
+  Check,
   CheckCircle2,
   Clock,
   ArrowRight,
@@ -189,89 +189,66 @@ function BusinessPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,107,0,0.22),transparent)]" />
         <div className="section-shell relative z-10">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-primary">
-              <Building2 className="size-3.5" /> Orange for Business
-            </div>
+            <div className="text-sm font-medium text-primary">Orange for Business</div>
             <h1 className="display-serif mt-6 text-4xl sm:text-5xl lg:text-6xl font-normal leading-[1.05] tracking-tight">
-              Enterprise Mobility, Elevated & <span className="text-primary">100% Electric.</span>
+              Rides for your team, <span className="text-primary">billed monthly.</span>
             </h1>
             <p className="mt-6 text-base sm:text-lg text-white/80 leading-relaxed max-w-2xl">
-              Equip your executives, traveling teams, and visiting clients with premium Mahindra
-              BE.6 electric SUVs. Streamlined monthly GST billing and certified ESG carbon offset
+              Equip your executives, traveling teams, and visiting clients with Mahindra BE.6
+              electric SUVs. Streamlined monthly GST billing and certified ESG carbon offset
               reporting.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a
                 href="#enquiry-form"
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90"
+                className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Request Corporate Demo <ArrowRight className="ml-2 size-4" />
+                Open a business account <ArrowRight className="ml-2 size-4" />
               </a>
               <Link
                 to="/book"
-                className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition-all hover:bg-white/10"
+                className="inline-flex h-11 items-center justify-center rounded-md border border-white/20 px-6 text-sm font-medium text-white transition-colors hover:bg-white/10"
               >
-                Book Individual Ride
+                Book a single ride
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Trust Stats Bar */}
-      <section className="border-b border-border bg-card/60 backdrop-blur">
-        <div className="section-shell py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div>
-            <div className="display-serif text-3xl font-bold text-primary">100%</div>
-            <div className="text-xs text-muted-foreground mt-1 font-medium">
-              Electric BE.6 Fleet
-            </div>
-          </div>
-          <div>
-            <div className="display-serif text-3xl font-bold text-foreground">0%</div>
-            <div className="text-xs text-muted-foreground mt-1 font-medium">
-              Surge on Corporate Bookings
-            </div>
-          </div>
-          <div>
-            <div className="display-serif text-3xl font-bold text-foreground">100%</div>
-            <div className="text-xs text-muted-foreground mt-1 font-medium">
-              ITC Tax Compliant (SAC 9964)
-            </div>
-          </div>
-          <div>
-            <div className="display-serif text-3xl font-bold text-primary">24x7</div>
-            <div className="text-xs text-muted-foreground mt-1 font-medium">
-              Dedicated Priority Desk
-            </div>
-          </div>
-        </div>
+      <section className="border-b border-border">
+        <ul className="section-shell grid gap-x-8 gap-y-3 py-6 text-sm text-foreground/80 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            "All-electric Mahindra BE.6 fleet",
+            "No surge on corporate bookings",
+            "GST invoices with input tax credit (SAC 9964)",
+            "One monthly invoice for the company",
+          ].map((fact) => (
+            <li key={fact} className="flex items-center gap-2">
+              <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              {fact}
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Enterprise Pillars */}
       <section className="py-20 lg:py-24">
         <div className="section-shell">
           <div className="max-w-2xl mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              Engineered for Travel Desks
-            </span>
-            <h2 className="display-serif mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
-              Designed around the realities of corporate finance and executive comfort.
+            <span className="text-sm font-medium text-primary">For travel desks</span>
+            <h2 className="display-serif mt-3 text-3xl sm:text-4xl tracking-tight">
+              Simple for finance, comfortable for your people.
             </h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {ENTERPRISE_BENEFITS.map((item, index) => {
+          <div className="grid gap-x-12 gap-y-10 border-t border-border pt-10 md:grid-cols-2 lg:grid-cols-3">
+            {ENTERPRISE_BENEFITS.map((item) => {
               const Icon = item.icon;
               return (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-border bg-card p-7 transition-all hover:border-primary/40 hover:shadow-sm"
-                >
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-6" />
-                  </div>
-                  <h3 className="mt-5 text-lg font-bold text-foreground">{item.title}</h3>
+                <div key={item.title}>
+                  <Icon className="size-5 text-primary" aria-hidden="true" />
+                  <h3 className="mt-4 text-lg font-semibold text-foreground">{item.title}</h3>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                     {item.description}
                   </p>
@@ -286,10 +263,8 @@ function BusinessPage() {
       <section id="enquiry-form" className="py-20 bg-warm/50 border-y border-border">
         <div className="section-shell grid lg:grid-cols-12 gap-12 items-start">
           <div className="lg:col-span-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <Users className="size-3.5" /> Corporate Onboarding
-            </div>
-            <h2 className="display-serif mt-4 text-3xl sm:text-4xl font-bold leading-tight">
+            <div className="text-sm font-medium text-primary">Business account</div>
+            <h2 className="display-serif mt-4 text-3xl sm:text-4xl leading-tight">
               Open a corporate account for your organization.
             </h2>
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
@@ -319,7 +294,7 @@ function BusinessPage() {
             </div>
 
             <div className="mt-10 rounded-2xl border border-border bg-card p-6">
-              <h4 className="text-sm font-bold text-foreground">Direct Business Desk</h4>
+              <h4 className="text-sm font-semibold text-foreground">Direct Business Desk</h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Prefer to speak directly with an account executive?
               </p>
@@ -344,7 +319,7 @@ function BusinessPage() {
                   <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
                     <CheckCircle2 className="size-8" />
                   </div>
-                  <h3 className="display-serif mt-5 text-2xl font-bold">Enquiry Registered!</h3>
+                  <h3 className="display-serif mt-5 text-2xl">Thanks, we have your enquiry.</h3>
                   <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
                     Thank you for your interest in Orange for Business. Our enterprise desk has
                     received your requirement and will get in touch shortly with custom rate tiers
@@ -522,10 +497,8 @@ function BusinessPage() {
       <section className="py-20">
         <div className="section-shell max-w-4xl">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">
-              Frequently Asked Questions
-            </span>
-            <h2 className="display-serif mt-3 text-3xl font-bold">
+            <span className="text-sm font-medium text-primary">Frequently Asked Questions</span>
+            <h2 className="display-serif mt-3 text-3xl">
               Everything your travel desk needs to know.
             </h2>
           </div>
@@ -533,7 +506,7 @@ function BusinessPage() {
           <div className="space-y-4">
             {CORPORATE_FAQS.map((faq, idx) => (
               <div key={idx} className="rounded-xl border border-border bg-card p-6">
-                <h4 className="text-base font-bold text-foreground">{faq.q}</h4>
+                <h4 className="text-base font-semibold text-foreground">{faq.q}</h4>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{faq.a}</p>
               </div>
             ))}

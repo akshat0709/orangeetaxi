@@ -61,7 +61,7 @@ export function NotificationBanner({ context = "rider", className = "" }: Notifi
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <BellRing className="size-4 animate-bounce" />
+            <BellRing className="size-4" />
           </div>
           <div>
             <p className="text-xs sm:text-sm font-bold tracking-tight">

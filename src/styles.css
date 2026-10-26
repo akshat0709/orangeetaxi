@@ -226,6 +226,9 @@
 
 @utility display-serif {
   font-family: var(--font-display);
+  /* DM Serif Display ships one weight; never let the browser fake a bold. */
+  font-synthesis: none;
+  letter-spacing: -0.01em;
 }
 
 @utility section-shell {

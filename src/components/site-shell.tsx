@@ -1,5 +1,21 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Download, LogOut, Menu, Moon, MoveUpRight, Settings, Sun, User } from "lucide-react";
+import {
+  Banknote,
+  CalendarClock,
+  CarFront,
+  Download,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Moon,
+  MoveUpRight,
+  Sun,
+  User,
+  UserPlus,
+  Wallet,
+  Warehouse,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -73,8 +89,8 @@ export function SiteHeader() {
             <Link
               key={to}
               to={to}
-              className="text-[0.8rem] font-semibold whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground font-bold" }}
+              className="text-sm font-medium whitespace-nowrap shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+              activeProps={{ className: "text-foreground" }}
             >
               {label}
             </Link>
@@ -94,10 +110,8 @@ export function SiteHeader() {
 
           {!loading && user ? (
             <div className="flex items-center gap-2 ml-1">
-              <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-xs">
-                <Link to="/book">
-                  Book Ride <MoveUpRight className="size-3 ml-1" />
-                </Link>
+              <Button asChild size="sm" className="h-9 px-4 text-sm font-semibold">
+                <Link to="/book">Book a ride</Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -111,20 +125,30 @@ export function SiteHeader() {
                     Signed in as <span className="text-foreground font-bold">{user.email}</span>
                   </div>
                   <DropdownMenuItem asChild>
-                    <Link to="/profile">📅 My Rides & Schedule</Link>
+                    <Link to="/profile">
+                      <CalendarClock className="mr-2 size-4" /> My rides
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/wallet">👛 Orange Wallet</Link>
+                    <Link to="/wallet">
+                      <Wallet className="mr-2 size-4" /> Wallet
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/book">🚖 Book a Ride</Link>
+                    <Link to="/book">
+                      <CarFront className="mr-2 size-4" /> Book a ride
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/talk-to-orange">💬 Talk to Orange</Link>
+                    <Link to="/talk-to-orange">
+                      <MessageCircle className="mr-2 size-4" /> Help
+                    </Link>
                   </DropdownMenuItem>
                   {role === "driver" && (
                     <DropdownMenuItem asChild>
-                      <Link to="/driver-console">🚘 Chauffeur Console</Link>
+                      <Link to="/driver-console">
+                        <CarFront className="mr-2 size-4" /> Chauffeur console
+                      </Link>
                     </DropdownMenuItem>
                   )}
                   {role === "admin" && (
@@ -132,17 +156,17 @@ export function SiteHeader() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link to="/admin" search={{ tab: "hub" }}>
-                          ⚙️ Admin Dashboard
+                          <LayoutDashboard className="mr-2 size-4" /> Admin
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/admin" search={{ tab: "fleet" }}>
-                          ⚡ Fleet & Bays
+                          <Warehouse className="mr-2 size-4" /> Fleet & bays
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/admin" search={{ tab: "cash" }}>
-                          💵 Cash Settlements
+                          <Banknote className="mr-2 size-4" /> Cash settlements
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -150,7 +174,7 @@ export function SiteHeader() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/login" search={{ mode: "signup" }}>
-                      ➕ Create Account / Sign Up
+                      <UserPlus className="mr-2 size-4" /> Create another account
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={triggerPWAInstall}>
@@ -169,25 +193,18 @@ export function SiteHeader() {
           ) : (
             !loading && (
               <div className="flex items-center gap-2 ml-1">
-                <Button asChild variant="ghost" size="sm" className="h-8 text-xs px-2.5">
+                <Button asChild variant="ghost" size="sm" className="h-9 px-3 text-sm">
                   <Link to="/login" search={{ mode: "signin" }}>
-                    Sign In
+                    Sign in
                   </Link>
                 </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs px-3 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
-                >
+                <Button asChild variant="outline" size="sm" className="h-9 px-3 text-sm">
                   <Link to="/login" search={{ mode: "signup" }}>
-                    Sign Up
+                    Sign up
                   </Link>
                 </Button>
-                <Button asChild size="sm" className="h-8 text-xs px-3 font-semibold shadow-xs">
-                  <Link to="/book">
-                    Book Ride <MoveUpRight className="size-3 ml-1" />
-                  </Link>
+                <Button asChild size="sm" className="h-9 px-4 text-sm font-semibold">
+                  <Link to="/book">Book a ride</Link>
                 </Button>
               </div>
             )
@@ -232,10 +249,7 @@ export function SiteHeader() {
                       to="/profile"
                       className="border-b border-border py-4 text-xl font-semibold text-primary flex items-center justify-between"
                     >
-                      <span>📅 My Rides & Schedule</span>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
-                        Upcoming
-                      </span>
+                      <span>My rides</span>
                     </Link>
                   </SheetClose>
                 )}
@@ -323,8 +337,8 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-night pt-16 pb-24 sm:pb-20 text-white">
-      <div className="section-shell grid gap-12 lg:grid-cols-[1.3fr_2fr]">
+    <footer className="bg-night pt-16 pb-24 sm:pb-16 text-white">
+      <div className="section-shell grid gap-12 lg:grid-cols-[1.2fr_2fr]">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
@@ -332,36 +346,19 @@ export function SiteFooter() {
             </span>
             <span className="text-sm font-bold tracking-[0.14em] text-white">ORANGE TAXI</span>
           </div>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
-            <strong>ORANGE TAXI LIMITED</strong> — India's zero-emission premium electric mobility
-            network.
+          <p className="mt-4 max-w-xs text-sm leading-6 text-white/65">
+            Electric chauffeur rides across Delhi NCR.
           </p>
-
-          {/* Statutory Corporate Identification under Companies Act, 2013 */}
-          <div className="mt-5 space-y-1.5 border-t border-white/15 pt-4 text-xs text-white/60">
-            <p>
-              <span className="font-semibold text-white/80">CIN:</span> U49224DL2026PLC461350
-            </p>
-            <p>
-              <span className="font-semibold text-white/80">Registered Office:</span> S-210, 2nd
-              Floor, Panchshila Park, South Malviya Nagar, South Delhi, New Delhi 110017, India
-            </p>
-            <p className="pt-1">
-              <span className="font-semibold text-white/80">24x7 Helpline:</span> +91 72940 73222 ·{" "}
-              <span className="font-semibold text-white/80">Support:</span> support@orange-taxi.com
-            </p>
-            <p>
-              <span className="font-semibold text-white/80">Bookings:</span>{" "}
-              bookings@orange-taxi.com ·{" "}
-              <span className="font-semibold text-white/80">Invoicing:</span>{" "}
-              billing@orange-taxi.com
-            </p>
-            <p>
-              <span className="font-semibold text-white/80">Corporate:</span>{" "}
-              business@orange-taxi.com ·{" "}
-              <span className="font-semibold text-white/80">Grievance:</span>{" "}
-              grievance@orange-taxi.com
-            </p>
+          <div className="mt-6 space-y-2 text-sm">
+            <a href="tel:+917294073222" className="block text-white/85 hover:text-white">
+              +91 72940 73222 <span className="text-white/45">· 24x7</span>
+            </a>
+            <a
+              href="mailto:support@orange-taxi.com"
+              className="block text-white/85 hover:text-white"
+            >
+              support@orange-taxi.com
+            </a>
           </div>
         </div>
 
@@ -369,57 +366,46 @@ export function SiteFooter() {
           <FooterGroup
             title="Explore"
             items={[
-              ["Home", "/"],
               ["Experience", "/experience"],
-              ["Electric Fleet", "/electric"],
-              ["For Business", "/business"],
-              ["About Us", "/about"],
+              ["Electric fleet", "/electric"],
+              ["For business", "/business"],
+              ["About us", "/about"],
             ]}
           />
           <FooterGroup
-            title="Services"
+            title="Riders & drivers"
             items={[
-              ["Book a Ride", "/book"],
-              ["My Rides & Schedule", "/profile"],
-              ["Drive With Us", "/drive"],
-              ["Talk to Orange", "/talk-to-orange"],
-              ["Support & Grievance", "/support"],
-              ["Corporate Contact", "/contact"],
+              ["Book a ride", "/book"],
+              ["My rides", "/profile"],
+              ["Drive with us", "/drive"],
+              ["Help & support", "/support"],
+              ["Contact", "/contact"],
             ]}
           />
           <FooterGroup
-            title="Compliance & Legal"
+            title="Legal"
             items={[
-              ["Privacy Policy", "/privacy"],
-              ["Terms & Conditions", "/terms"],
-              ["Cancellation & Refunds", "/refunds"],
-              ["Customer Care & SLA", "/support"],
-              ["Driver Code & Safety", "/drive"],
-              ["Sitemap (XML)", "/sitemap.xml"],
+              ["Privacy policy", "/privacy"],
+              ["Terms & conditions", "/terms"],
+              ["Cancellations & refunds", "/refunds"],
             ]}
           />
         </div>
       </div>
 
-      <div className="section-shell mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>
-            © 2026 ORANGE TAXI LIMITED. All rights reserved. Registered under Companies Act, 2013.
-          </span>
-          <span className="text-white/30">|</span>
-          <a
-            href="https://builtbyakshat.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white/70 hover:text-primary transition-colors underline-offset-4 hover:underline font-medium inline-flex items-center gap-1"
-          >
-            <span>Built by Akshat</span>
-            <span className="text-[10px] text-primary">↗</span>
-          </a>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:pr-48 md:pr-56">
-          <span>Delhi NCR · Licensed Motor Vehicle Aggregator</span>
-        </div>
+      <div className="section-shell mt-12 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs leading-5 text-white/45 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+        <p className="max-w-2xl">
+          © 2026 Orange Taxi Limited · CIN U49224DL2026PLC461350 · S-210, 2nd Floor, Panchshila
+          Park, South Malviya Nagar, New Delhi 110017 · Grievances: grievance@orange-taxi.com
+        </p>
+        <a
+          href="https://builtbyakshat.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-white/55 underline-offset-4 transition-colors hover:text-white hover:underline sm:pr-20"
+        >
+          Built by Akshat
+        </a>
       </div>
     </footer>
   );
@@ -434,7 +420,7 @@ function FooterGroup({
 }) {
   return (
     <div>
-      <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">{title}</h2>
+      <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-white/45">{title}</h2>
       <ul className="mt-4 space-y-3">
         {items.map(([label, to]) => (
           <li key={to}>
