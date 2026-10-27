@@ -3,24 +3,24 @@ import { CompanyGSTProfile, DEFAULT_COMPANY_PROFILE } from "./gst-utils";
 export interface SendInvoicePayload {
   to: string;
   invoiceNumber: string;
-  customerName?: string;
-  customerPhone?: string;
+  customerName?: string | undefined;
+  customerPhone?: string | undefined;
   pickupArea: string;
   dropArea: string;
   completedAt: string;
   vehicleName: string;
-  vehiclePlate?: string;
-  paymentMethod?: string;
+  vehiclePlate?: string | undefined;
+  paymentMethod?: string | undefined;
   subtotal: number;
   cgst: number;
   sgst: number;
   igst: number;
   totalFare: number;
-  distanceKm?: number;
-  durationMinutes?: number;
-  corporateName?: string;
-  corporateGstin?: string;
-  profile?: CompanyGSTProfile;
+  distanceKm?: number | undefined;
+  durationMinutes?: number | undefined;
+  corporateName?: string | undefined;
+  corporateGstin?: string | undefined;
+  profile?: CompanyGSTProfile | undefined;
 }
 
 function escapeHtml(str?: string | number | null): string {

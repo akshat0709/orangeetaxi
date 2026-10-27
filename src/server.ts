@@ -44,7 +44,8 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
-import { generateInvoiceHtml, SendInvoicePayload } from "./lib/send-invoice-email";
+import { generateInvoiceHtml } from "./lib/send-invoice-email";
+import { buildInvoiceEmail } from "./lib/invoice-email";
 import {
   createWalletTopupOrder,
   processRazorpayWebhookEvent,
@@ -82,163 +83,53 @@ function checkInvoiceRateLimit(key: string, limit = 5, windowMs = 60000): boolea
 
 async function handleSendInvoiceApi(request: Request, env: unknown): Promise<Response> {
   try {
-    // 1. Enforce authentication on sensitive outbound email dispatch
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({
-          error: "Unauthorized: Valid authentication token required to dispatch invoices.",
-        }),
-        {
-          status: 401,
-          headers: { "content-type": "application/json" },
-        },
-      );
+    const body = await readJsonBody(request);
+    if (!body) return jsonResponse(400, { error: "Invalid JSON body" });
+    // The invoice is built from the booking in the database; the caller only names the ride,
+    // the recipient and (optionally) their company for a B2B invoice.
+    const built = await buildInvoiceEmail(
+      {
+        accessToken: bearer(request),
+        bookingId: body["bookingId"],
+        to: body["to"],
+        corporateName: body["corporateName"],
+        corporateGstin: body["corporateGstin"],
+      },
+      settlementConfig(env),
+      settlementDeps,
+    );
+    if (!built.ok) return jsonResponse(built.status, { error: built.error });
+    if (!checkInvoiceRateLimit(built.userId, 5, 60000)) {
+      return jsonResponse(429, { error: "Too many invoice emails. Please wait a minute." });
     }
 
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized: Missing authentication bearer token." }),
-        { status: 401, headers: { "content-type": "application/json" } },
-      );
-    }
-
-    // Verify token with Supabase Auth
-    const supabaseUrl =
-      (env as any)?.VITE_SUPABASE_URL ||
-      (typeof process !== "undefined" ? process.env?.["VITE_SUPABASE_URL"] : undefined) ||
-      "https://qcrpzrrzjddwqebaktyu.supabase.co";
-    const supabaseAnonKey =
-      (env as any)?.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      (typeof process !== "undefined"
-        ? process.env?.["VITE_SUPABASE_PUBLISHABLE_KEY"]
-        : undefined) ||
-      "sb_publishable_j3AZt-Mp2AapyNbCTcys4w_gbNzhfrx";
-
-    try {
-      const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: supabaseAnonKey,
-        },
-      });
-
-      // Fail closed: any non-OK answer (or no user id) means the caller is not authenticated.
-      // Previously only 401/403 were rejected and network errors fell back to "token present",
-      // which let any string send company-branded email to any address.
-      if (!userRes.ok) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized: Session invalid or expired." }),
-          { status: 401, headers: { "content-type": "application/json" } },
-        );
-      }
-      const userData = (await userRes.json()) as { id?: string };
-      if (!userData?.id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized: Session invalid or expired." }),
-          { status: 401, headers: { "content-type": "application/json" } },
-        );
-      }
-      if (!checkInvoiceRateLimit(userData.id, 5, 60000)) {
-        return new Response(
-          JSON.stringify({
-            error: "Rate limit exceeded. Maximum 5 invoice dispatches per minute.",
-          }),
-          { status: 429, headers: { "content-type": "application/json" } },
-        );
-      }
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Authentication service unavailable. Please try again." }),
-        { status: 503, headers: { "content-type": "application/json" } },
-      );
-    }
-
-    const body = (await request.json()) as SendInvoicePayload;
-    if (!body || !body.to || !body.invoiceNumber) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields (to, invoiceNumber)" }),
-        {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    }
-
-    // Prevent email header injection
-    if (body.to.includes("\r") || body.to.includes("\n")) {
-      return new Response(JSON.stringify({ error: "Invalid recipient header format." }), {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.to)) {
-      return new Response(JSON.stringify({ error: "Invalid recipient email address" }), {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      });
-    }
-
-    // 2. Retrieve API Key strictly from deployment environment (no hardcoded secret fallbacks)
-    const apiKey =
-      (env as any)?.RESEND_API_KEY ||
-      (typeof process !== "undefined" ? process.env?.["RESEND_API_KEY"] : undefined);
-
+    // API key strictly from the deployment environment (no hardcoded fallback).
+    const apiKey = readEnv(env, "RESEND_API_KEY");
     if (!apiKey) {
       console.error("[Security] RESEND_API_KEY is not configured in server environment.");
-      return new Response(
-        JSON.stringify({
-          error: "Email delivery service unavailable. Contact system administration.",
-        }),
-        {
-          status: 503,
-          headers: { "content-type": "application/json" },
-        },
-      );
+      return jsonResponse(503, { error: "Email delivery is unavailable right now." });
     }
 
-    const html = generateInvoiceHtml(body);
-
+    const payload = built.payload;
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "Orange Taxi Invoices <billing@orange-taxi.com>",
-        to: [body.to],
-        subject: `GST Tax Invoice #${body.invoiceNumber} — Orange Taxi`,
-        html,
+        to: [payload.to],
+        subject: `GST Tax Invoice #${payload.invoiceNumber} — Orange Taxi`,
+        html: generateInvoiceHtml(payload),
       }),
     });
-
-    const resendData = (await resendRes.json()) as any;
+    const resendData = (await resendRes.json().catch(() => ({}))) as { id?: string };
     if (!resendRes.ok) {
-      return new Response(
-        JSON.stringify({ error: resendData?.message || "Failed to dispatch email via Resend" }),
-        {
-          status: resendRes.status,
-          headers: { "content-type": "application/json" },
-        },
-      );
+      console.warn("[invoice] Resend rejected the email:", resendRes.status, resendData);
+      return jsonResponse(502, { error: "The invoice email could not be sent. Please try again." });
     }
-
-    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-  } catch (err: any) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Failed to process invoice email request" }),
-      {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      },
-    );
+    return jsonResponse(200, { success: true, id: resendData.id });
+  } catch (err) {
+    console.error("[invoice] send failed:", err);
+    return jsonResponse(500, { error: "Failed to send the invoice email." });
   }
 }
 
@@ -530,9 +421,7 @@ async function handleCreateRazorpayOrder(request: Request, env: unknown): Promis
       return jsonResponse(503, {
         success: false,
         error: "Pricing is unavailable. Please try again.",
-        reason: bookingNotes
-          ? "Could not read the booking (check SUPABASE_SERVICE_ROLE_KEY on the Worker)."
-          : "Could not get a fare quote from the database (fn_fare_quote).",
+        reason: bookingNotes ? "Could not read the booking." : "Could not get a fare quote.",
       });
     }
     const effectiveFare = bookingNotes
@@ -850,16 +739,58 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   </url>
 </urlset>`;
 
+// Per-IP request limits for the API. Each Cloudflare isolate keeps its own counts, so this stops
+// bursts from one client; a Cloudflare rate-limiting rule covers sustained abuse across the edge.
+const apiHits = new Map<string, { count: number; resetAt: number }>();
+const PAYMENT_PATHS = new Set([
+  "/api/create-razorpay-order",
+  "/api/wallet-topup/order",
+  "/api/qr/ride",
+  "/api/qr/deposit",
+  "/api/pay/ride-link",
+  "/api/pay/tip-link",
+  "/api/admin/refund",
+  "/api/send-invoice",
+]);
+function allowApiRequest(request: Request, pathname: string): boolean {
+  if (!pathname.startsWith("/api/") || pathname === "/api/razorpay-webhook") return true;
+  const ip =
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  const strict = PAYMENT_PATHS.has(pathname) && request.method === "POST";
+  const key = `${strict ? "pay" : "api"}:${ip}`;
+  const limit = strict ? 20 : 120;
+  const now = Date.now();
+  const entry = apiHits.get(key);
+  if (!entry || entry.resetAt < now) {
+    if (apiHits.size > 20000) apiHits.clear();
+    apiHits.set(key, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= limit;
+}
+
 function applySecurityHeaders(res: Response): Response {
   const headers = new Headers(res.headers);
   headers.set("X-Frame-Options", "DENY");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-  headers.set("Permissions-Policy", "camera=(), microphone=(), payment=(self)");
+  headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), payment=(self), usb=(), interest-cohort=()",
+  );
+  headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  // API answers (balances, ride details) must never be stored by shared caches.
+  if ((res.headers.get("content-type") || "").includes("application/json")) {
+    headers.set("Cache-Control", "no-store");
+  }
   headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://lumberjack-rzp.razorpay.com https://maps.googleapis.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; object-src 'none'; base-uri 'self';",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://checkout.razorpay.com https://lumberjack.razorpay.com https://lumberjack-rzp.razorpay.com https://maps.googleapis.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://api.razorpay.com; upgrade-insecure-requests;",
   );
   return new Response(res.body, {
     status: res.status,
@@ -980,6 +911,15 @@ export default {
           const trackTarget = new URL("/track" + url.search, "https://bookings.orange-taxi.com");
           return Response.redirect(trackTarget.toString(), 301);
         }
+      }
+
+      if (!allowApiRequest(request, url.pathname)) {
+        return applySecurityHeaders(
+          new Response(JSON.stringify({ error: "Too many requests. Please wait a minute." }), {
+            status: 429,
+            headers: { "content-type": "application/json", "retry-after": "60" },
+          }),
+        );
       }
 
       if (url.pathname === "/sitemap.xml") {

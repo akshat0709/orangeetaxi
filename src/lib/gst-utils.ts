@@ -1,4 +1,4 @@
-import { getBookingVehiclePlate } from "@/lib/ride-vehicle";
+import { getBookingVehiclePlate } from "./ride-vehicle.ts";
 
 export interface CompanyGSTProfile {
   legalName: string;

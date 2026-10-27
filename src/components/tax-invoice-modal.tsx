@@ -180,27 +180,12 @@ export function TaxInvoiceModal({
 
     setEmailing(true);
     try {
-      const payload: SendInvoicePayload = {
+      // The server builds the invoice from the booking; send only the ride and recipient.
+      const payload = {
+        bookingId: booking.id,
         to: targetEmail,
-        invoiceNumber,
-        customerName: customer?.full_name || booking.customer_name,
-        customerPhone: customer?.phone || booking.customer_phone,
-        pickupArea: booking.pickup_area || "Pickup Location",
-        dropArea: booking.drop_area || "Destination",
-        completedAt: `${formattedDate} ${formattedTime}`,
-        vehicleName: booking.vehicle_name || "Mahindra BE.6",
-        vehiclePlate: getBookingVehiclePlate(booking, driver),
-        paymentMethod: booking.payment_method || "CASH",
-        subtotal: gst.taxableValue,
-        cgst: gst.cgstAmount,
-        sgst: gst.sgstAmount,
-        igst: gst.igstAmount,
-        totalFare: fare,
-        distanceKm: booking.distance_km,
-        durationMinutes: booking.duration_mins,
         corporateName: b2bMode ? corporateName : undefined,
         corporateGstin: b2bMode ? corporateGSTIN : undefined,
-        profile,
       };
 
       let authHeader = "";
