@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   Banknote,
-  Wallet,
-  Receipt,
   CheckCircle2,
   Search,
   X,
   Check,
   RotateCcw,
   AlertTriangle,
-  Building2,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -300,12 +297,12 @@ export function CashSettlementManager({
       />
       {/* Fallback Banner */}
       {isUsingFallback && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border p-4 text-xs text-amber-900 dark:text-amber-200 border-border bg-background">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="font-bold">Settlements database unavailable</p>
-              <p className="text-[11px] opacity-80">
+              <p className="text-xs opacity-80">
                 driver_cash_settlements could not be loaded (it is admin-only; see migration
                 20261022_comprehensive_security_remediation.sql). Entries made now are kept only in
                 this browser and are not a record of cash collected.
@@ -315,36 +312,12 @@ export function CashSettlementManager({
         </div>
       )}
 
-      {/* Operating Model Note */}
-      <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2.5">
-          <Building2 className="size-4 text-blue-600 shrink-0" />
-          <span>
-            <strong>Company Depot Cash Settlement:</strong> Tracking company-salaried fleet drivers
-            depositing trip cash at depot. Partner owner-operators manage their fares independently
-            and are tracked under the <strong>Commission Ledger</strong>.
-          </span>
-        </div>
-      </div>
-
       {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="display-serif text-2xl font-bold">Company Driver Cash Settlement</h2>
-            <Badge
-              variant="outline"
-              className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs"
-            >
-              Depot Operations
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Collect physical cash fares from salaried fleet drivers, settle balances, and maintain a
-            full ledger of handovers.
-          </p>
-        </div>
-
+        <p className="text-sm text-muted-foreground">
+          Cash that salaried company drivers collect and hand in. Commission drivers are under
+          Commission ledger.
+        </p>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => {
@@ -353,7 +326,7 @@ export function CashSettlementManager({
               setCollectionAmount("");
               setCollectionNotes("");
             }}
-            className="gap-2 text-xs font-semibold h-9 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="gap-2 text-xs font-semibold h-9"
           >
             <Banknote className="size-4" /> Collect Cash from Driver
           </Button>
@@ -375,16 +348,11 @@ export function CashSettlementManager({
       {/* 3 Main KPI Metrics */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {/* 1. Cash Dealt */}
-        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-background p-5">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Total Cash Dealt
-            </span>
-            <div className="grid size-8 place-items-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40">
-              <Banknote className="size-4" />
-            </div>
+            <span className="text-xs font-semibold">Total Cash Dealt</span>
           </div>
-          <p className="mt-2 text-3xl font-bold text-foreground">
+          <p className="mt-2 text-3xl font-semibold text-foreground">
             ₹{Math.round(fleetTotalCashDealt)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -393,37 +361,23 @@ export function CashSettlementManager({
         </div>
 
         {/* 2. Cash Taken / Collected */}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm dark:border-emerald-950 dark:bg-emerald-950/20">
-          <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Cash Taken by Admin
-            </span>
-            <div className="grid size-8 place-items-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50">
-              <CheckCircle2 className="size-4" />
-            </div>
+        <div className="rounded-xl border p-5 border-border bg-background">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-semibold">Cash Taken by Admin</span>
           </div>
-          <p className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-400">
-            ₹{Math.round(fleetTotalCashTaken)}
-          </p>
-          <p className="text-xs text-emerald-600/80 dark:text-emerald-400/70 mt-1">
+          <p className="mt-2 text-3xl font-semibold">₹{Math.round(fleetTotalCashTaken)}</p>
+          <p className="text-xs mt-1 text-muted-foreground">
             Deposited into Admin vault across {settlements.length} collections
           </p>
         </div>
 
         {/* 3. Cash to be Taken */}
-        <div className="rounded-xl border border-amber-300 bg-amber-50/50 p-5 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
-          <div className="flex items-center justify-between text-amber-900 dark:text-amber-300">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Cash to be Taken (Holding)
-            </span>
-            <div className="grid size-8 place-items-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/50">
-              <Wallet className="size-4" />
-            </div>
+        <div className="rounded-xl border p-5 border-border bg-background">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-semibold">Cash to be Taken (Holding)</span>
           </div>
-          <p className="mt-2 text-3xl font-bold text-amber-700 dark:text-amber-400">
-            ₹{Math.round(fleetCashToBeTaken)}
-          </p>
-          <p className="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1">
+          <p className="mt-2 text-3xl font-semibold">₹{Math.round(fleetCashToBeTaken)}</p>
+          <p className="text-xs mt-1 text-muted-foreground">
             Currently held in drivers' pockets pending deposit
           </p>
         </div>
@@ -441,12 +395,12 @@ export function CashSettlementManager({
           return (
             <form
               onSubmit={handleCollectCash}
-              className="rounded-xl border border-emerald-400/50 bg-emerald-50/40 p-5 shadow-md  slide-in-from-top-3 duration-200 dark:border-emerald-900 dark:bg-emerald-950/30"
+              className="rounded-xl border p-5 slide-in-from-top-3 duration-200 border-border bg-background"
             >
               <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-900 pb-3">
                 <div className="flex items-center gap-2">
                   <Banknote className="size-5 text-emerald-600" />
-                  <p className="text-sm font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
                     Record Cash Received from Driver
                   </p>
                 </div>
@@ -460,9 +414,7 @@ export function CashSettlementManager({
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase text-muted-foreground">
-                  Driver pays by
-                </span>
+                <span className="text-xs font-semibold text-muted-foreground">Driver pays by</span>
                 {(["cash", "upi"] as const).map((m) => (
                   <button
                     key={m}
@@ -482,7 +434,7 @@ export function CashSettlementManager({
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
                 {/* Driver Selector */}
                 <div className="sm:col-span-4">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Driver Paying Cash *
                   </label>
                   <select
@@ -517,11 +469,11 @@ export function CashSettlementManager({
                 {/* Amount to collect */}
                 <div className="sm:col-span-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    <label className="text-xs font-semibold text-muted-foreground">
                       Amount to Collect (₹) *
                     </label>
                     {selectedDriverId && (
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground font-mono">
                         Max:{" "}
                         <strong
                           className={
@@ -575,13 +527,13 @@ export function CashSettlementManager({
                     />
                   </div>
                   {isExceeding && (
-                    <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
+                    <p className="mt-1 text-xs font-semibold text-destructive flex items-center gap-1">
                       <AlertCircle className="size-3 shrink-0" />
                       Cannot exceed ₹{maxHolding} (driver's cash holding)
                     </p>
                   )}
                   {selectedDriverId && maxHolding <= 0 && (
-                    <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="size-3 shrink-0" />
                       Driver has cleared all cash holdings (₹0 to be paid)
                     </p>
@@ -590,7 +542,7 @@ export function CashSettlementManager({
 
                 {/* Notes / Reason */}
                 <div className="sm:col-span-3">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Handover Notes / Reason
                   </label>
                   <input
@@ -629,7 +581,7 @@ export function CashSettlementManager({
 
               {/* Quick presets for the selected driver */}
               {selectedDriverId && maxHolding > 0 && (
-                <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
+                <div className="mt-3 flex items-center gap-2 flex-wrap text-xs text-muted-foreground pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
                   <span>Quick Preset (Max ₹{maxHolding}):</span>
                   <button
                     type="button"
@@ -657,12 +609,9 @@ export function CashSettlementManager({
         })()}
 
       {/* Driver Cash Holding Breakdown Table */}
-      <div className="rounded-xl border border-border bg-background overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border bg-background overflow-hidden">
         <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary">
-              <Wallet className="size-4" />
-            </span>
             <div>
               <h3 className="font-bold text-sm">Driver Cash Holding Balances</h3>
               <p className="text-xs text-muted-foreground">
@@ -748,19 +697,19 @@ export function CashSettlementManager({
 
                       <td className="px-5 py-3.5 text-xs text-muted-foreground">
                         <p>{d.city || "Delhi NCR"}</p>
-                        <p className="font-mono text-[11px]">{d.phone || "—"}</p>
+                        <p className="font-mono text-xs">{d.phone || "—"}</p>
                       </td>
 
                       <td className="px-5 py-3.5 text-right font-mono font-semibold text-xs text-foreground">
                         ₹{Math.round(stats.totalCashDealt)}
-                        <span className="block text-[10px] text-muted-foreground font-normal">
+                        <span className="block text-xs text-muted-foreground font-normal">
                           {stats.ridesCount} cash ride{stats.ridesCount !== 1 ? "s" : ""}
                         </span>
                       </td>
 
                       <td className="px-5 py-3.5 text-right font-mono font-semibold text-xs text-emerald-600">
                         ₹{Math.round(stats.totalCashTaken)}
-                        <span className="block text-[10px] text-muted-foreground font-normal">
+                        <span className="block text-xs text-muted-foreground font-normal">
                           {stats.settlementsCount} deposit{stats.settlementsCount !== 1 ? "s" : ""}
                         </span>
                       </td>
@@ -771,12 +720,12 @@ export function CashSettlementManager({
                             <span className="rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 font-mono font-bold text-xs text-amber-700 dark:text-amber-300">
                               ₹{Math.round(stats.cashHolding)}
                             </span>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
+                            <span className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
                               To be collected
                             </span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                          <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600">
                             <CheckCircle2 className="size-3" /> Fully Settled
                           </span>
                         )}
@@ -812,12 +761,9 @@ export function CashSettlementManager({
       </div>
 
       {/* Cash Transaction Log / History */}
-      <div className="rounded-xl border border-border bg-background overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border bg-background overflow-hidden">
         <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
-              <Receipt className="size-4" />
-            </span>
             <div>
               <h3 className="font-bold text-sm">Cash Handover Ledger</h3>
               <p className="text-xs text-muted-foreground">
@@ -886,10 +832,10 @@ export function CashSettlementManager({
                       <td className="px-5 py-3 text-xs text-muted-foreground">
                         {s.notes?.includes("UTR") || s.notes?.includes("UPI") ? (
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-[10px] font-bold border border-orange-500/20">
+                            <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 text-xs font-bold border border-orange-500/20">
                               UPI Online Deposit
                             </span>
-                            <span className="font-mono font-semibold text-foreground text-[11px]">
+                            <span className="font-mono font-semibold text-foreground text-xs">
                               {s.notes}
                             </span>
                           </div>

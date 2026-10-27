@@ -1262,7 +1262,7 @@ function AdminPage() {
 
                       {/* Pre-set Quick Date Filters */}
                       <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border">
-                        <span className="text-[10px] font-bold text-muted-foreground px-2 flex items-center gap-1">
+                        <span className="text-xs font-bold text-muted-foreground px-2 flex items-center gap-1">
                           <Calendar className="size-3" /> Date:
                         </span>
                         {[
@@ -1326,7 +1326,7 @@ function AdminPage() {
                                 {formatCompactArea(b.drop_area)}
                               </div>
                               {b.status === "scheduled" && (
-                                <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-primary">
+                                <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary">
                                   <Calendar className="size-3 text-primary shrink-0" />
                                   <span>
                                     {b.scheduled_at
@@ -1346,7 +1346,7 @@ function AdminPage() {
                             <td className="px-4 py-3.5 align-middle text-xs font-medium text-foreground">
                               {formatVehicleDisplay(b.vehicle_name)}
                             </td>
-                            <td className="px-4 py-3.5 align-middle font-semibold text-primary">
+                            <td className="px-4 py-3.5 align-middle font-medium tabular-nums">
                               ₹{Math.round(b.estimated_fare)}
                             </td>
                             <td className="px-4 py-3.5 align-middle">
@@ -1443,11 +1443,11 @@ function AdminPage() {
                                               {d.full_name}
                                             </span>
                                             {d.phone && (
-                                              <span className="text-[11px] font-mono text-muted-foreground">
+                                              <span className="text-xs font-mono text-muted-foreground">
                                                 {d.phone}
                                               </span>
                                             )}
-                                            <span className="font-mono text-[11px] font-bold text-primary">
+                                            <span className="font-mono text-xs text-foreground">
                                               {ridePlate}
                                             </span>
                                           </span>
@@ -1456,7 +1456,7 @@ function AdminPage() {
                                             <span className="font-semibold text-foreground">
                                               Assigned
                                             </span>
-                                            <span className="font-mono text-[11px] font-bold text-primary">
+                                            <span className="font-mono text-xs text-foreground">
                                               {ridePlate}
                                             </span>
                                           </span>
@@ -1468,7 +1468,7 @@ function AdminPage() {
                             </td>
 
                             <td className="px-4 py-3.5 align-middle">
-                              <span className="font-mono text-sm font-bold text-primary">
+                              <span className="font-mono text-sm text-foreground">
                                 {b.ride_otp || "—"}
                               </span>
                             </td>
@@ -1538,7 +1538,7 @@ function AdminPage() {
                                   {b.status.replace("_", " ")}
                                 </span>
                               </div>
-                              <span className="font-bold text-sm text-primary font-mono">
+                              <span className="font-medium text-sm font-mono">
                                 ₹{Math.round(b.estimated_fare)}
                               </span>
                             </div>
@@ -1565,11 +1565,11 @@ function AdminPage() {
                                 {formatVehicleDisplay(b.vehicle_name)}
                               </span>
                               {b.ride_otp && (
-                                <span className="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 text-xs">
+                                <span className="font-mono text-xs text-foreground">
                                   OTP: {b.ride_otp}
                                 </span>
                               )}
-                              <span className="text-[11px] text-muted-foreground font-mono">
+                              <span className="text-xs text-muted-foreground font-mono">
                                 {b.created_at
                                   ? new Date(b.created_at).toLocaleTimeString([], {
                                       hour: "2-digit",
@@ -1609,7 +1609,7 @@ function AdminPage() {
                                       {dr?.full_name || "Assigned"}
                                     </strong>
                                     {dr?.vehicle_number && (
-                                      <span className="ml-1 font-mono text-[11px] text-muted-foreground">
+                                      <span className="ml-1 font-mono text-xs text-muted-foreground">
                                         ({dr.vehicle_number})
                                       </span>
                                     )}
@@ -1656,7 +1656,7 @@ function AdminPage() {
               <TabsContent value="applications">
                 <div className="space-y-4">
                   {/* Applications Control Bar: Omni-Search, Status Filter Pills & CSV Export */}
-                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 lg:flex-row lg:items-center lg:justify-between">
                     {/* Omni Search */}
                     <div className="relative flex-1 max-w-md">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -1761,7 +1761,7 @@ function AdminPage() {
                                     const s = sanitizeDocumentUrl(app.photo_url);
                                     if (s) openLightbox(`Driver Photo — ${app.full_name}`, s, app);
                                   }}
-                                  className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 shadow-sm focus:outline-hidden focus:ring-2 focus:ring-primary"
+                                  className="group relative block size-16 rounded-xl overflow-hidden border-2 border-primary/40 focus:outline-hidden focus:ring-2 focus:ring-primary"
                                   title="Click to inspect photo in lightbox"
                                 >
                                   <KycDocPreview
@@ -1780,7 +1780,7 @@ function AdminPage() {
                                 </div>
                               )}
                               <span
-                                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-[9px] text-white font-bold pointer-events-none"
+                                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center text-xs text-white font-bold pointer-events-none"
                                 title="Submitted Driver Photo"
                               >
                                 ✓
@@ -1797,14 +1797,12 @@ function AdminPage() {
                                 </span>
                                 {/* Operating Model Badge */}
                                 {isPartner ? (
-                                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                    <Handshake className="size-3" /> Partner Owner-Operator (
-                                    {commissionPct}% Comm.)
+                                  <span className="text-xs text-muted-foreground">
+                                    Commission driver · {commissionPct}%
                                   </span>
                                 ) : (
-                                  <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                    <Building2 className="size-3" /> Company Fleet Driver (Fixed
-                                    Salary)
+                                  <span className="text-xs text-muted-foreground">
+                                    Company driver
                                   </span>
                                 )}
                               </div>
@@ -1825,7 +1823,7 @@ function AdminPage() {
                                 (app.vehicle_number || app.vehicle_model || app.chassis_number) && (
                                   <div className="mt-3 rounded-lg bg-muted/40 border border-border p-3 text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5">
                                     <span className="text-muted-foreground font-semibold flex items-center gap-1">
-                                      <Car className="size-3.5 text-primary" /> Partner EV:
+                                      Driver's car:
                                     </span>
                                     <span>
                                       Model:{" "}
@@ -1844,7 +1842,7 @@ function AdminPage() {
                                     {app.vehicle_number && (
                                       <span>
                                         Reg Plate:{" "}
-                                        <strong className="font-mono text-primary uppercase">
+                                        <strong className="font-mono text-foreground">
                                           {app.vehicle_number}
                                         </strong>
                                       </span>
@@ -1852,7 +1850,7 @@ function AdminPage() {
                                     {app.chassis_number && (
                                       <span>
                                         Chassis (VIN):{" "}
-                                        <strong className="font-mono text-foreground uppercase">
+                                        <strong className="font-mono text-foreground">
                                           {app.chassis_number}
                                         </strong>
                                       </span>
@@ -1886,7 +1884,7 @@ function AdminPage() {
                                                 app,
                                               )
                                             }
-                                            className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                            className="text-xs text-primary hover:underline flex items-center gap-0.5"
                                           >
                                             <Maximize2 className="size-3" /> Zoom
                                           </button>
@@ -1927,7 +1925,7 @@ function AdminPage() {
                                                 app,
                                               )
                                             }
-                                            className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                                            className="text-xs text-primary hover:underline flex items-center gap-0.5"
                                           >
                                             <Maximize2 className="size-3" /> Inspect
                                           </button>
@@ -1966,10 +1964,10 @@ function AdminPage() {
                               <div className="flex items-center gap-1.5">
                                 <a
                                   href={`tel:${app.phone.replace(/\s+/g, "")}`}
-                                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground transition-colors shadow-xs"
+                                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground transition-colors"
                                   title={`Call ${app.full_name} (${app.phone})`}
                                 >
-                                  <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <PhoneCall className="size-3.5 text-muted-foreground" />
                                   <span>Call</span>
                                 </a>
                                 <a
@@ -1978,10 +1976,10 @@ function AdminPage() {
                                   )}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-xs font-semibold transition-colors shadow-xs"
+                                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-background text-foreground hover:bg-muted text-xs font-medium transition-colors"
                                   title={`Chat with ${app.full_name} on WhatsApp`}
                                 >
-                                  <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <MessageSquare className="size-3.5 text-muted-foreground" />
                                   <span>WhatsApp</span>
                                 </a>
                               </div>
@@ -2360,7 +2358,7 @@ function AdminPage() {
                       {lightboxDoc.app.vehicle_number && (
                         <div className="flex justify-between">
                           <span className="text-zinc-400">Vehicle Reg:</span>
-                          <span className="font-mono font-bold text-emerald-400 uppercase">
+                          <span className="font-mono font-bold text-emerald-400">
                             {lightboxDoc.app.vehicle_number}
                           </span>
                         </div>
@@ -2424,10 +2422,7 @@ function AdminPage() {
                     ) : (
                       <div className="rounded-lg bg-zinc-800/40 p-2.5 text-center text-xs text-zinc-400">
                         Application has been marked as{" "}
-                        <strong className="text-zinc-200 uppercase">
-                          {lightboxDoc.app.status}
-                        </strong>
-                        .
+                        <strong className="text-zinc-200">{lightboxDoc.app.status}</strong>.
                       </div>
                     )}
                   </div>
@@ -2764,7 +2759,7 @@ function DriverAnalyticsPanel({
     return (
       <div
         key={d.id}
-        className="rounded-xl border border-border bg-background overflow-hidden shadow-xs hover:border-primary/40 transition-colors"
+        className="rounded-xl border border-border bg-background overflow-hidden hover:border-primary/40 transition-colors"
       >
         {/* Driver header */}
         <div className="px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
@@ -2774,7 +2769,7 @@ function DriverAnalyticsPanel({
                 <KycDocPreview
                   src={d.photo_url}
                   alt={d.full_name}
-                  className="size-11 rounded-full object-cover border-2 border-primary/40 shadow-xs"
+                  className="size-11 rounded-full object-cover border-2 border-primary/40"
                   fallbackText={d.full_name.charAt(0).toUpperCase()}
                 />
               ) : (
@@ -2793,40 +2788,36 @@ function DriverAnalyticsPanel({
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-bold text-base text-foreground">{d.full_name}</p>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${d.is_online ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-muted-foreground"}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${d.is_online ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-muted text-muted-foreground"}`}
                 >
-                  {d.is_online ? "● Online" : "Offline"}
+                  {d.is_online ? "Online" : "Offline"}
                 </span>
                 {isPartner ? (
-                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
-                    <Handshake className="size-3" /> Commission Partner ({commissionPct}%)
+                  <span className="text-xs text-muted-foreground">
+                    Commission driver · {commissionPct}%
                   </span>
                 ) : (
-                  <span className="rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1">
-                    <Building2 className="size-3" /> Company Fleet (Fixed Salary)
-                  </span>
+                  <span className="text-xs text-muted-foreground">Company driver</span>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-muted-foreground font-medium">
-                  {d.city || "Bengaluru"}
+                  {d.city || "Delhi NCR"}
                 </span>
                 <span className="text-muted-foreground text-xs">·</span>
                 {isPartner ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                    <Car className="size-3" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span>{d.vehicle_model || "Tata Nexon EV"}</span>
-                    <span className="font-mono font-bold uppercase">
+                    <span className="font-mono text-foreground">
                       {d.vehicle_number && d.vehicle_number !== "Unassigned"
                         ? d.vehicle_number
                         : "Plate not set"}
                     </span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                    <Car className="size-3" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span>{d.vehicle_model || "Mahindra BE.6"}</span>
-                    <span className="font-mono font-bold">
+                    <span className="font-mono text-foreground">
                       {d.vehicle_number && d.vehicle_number !== "Unassigned"
                         ? d.vehicle_number
                         : "No car assigned"}
@@ -2872,10 +2863,10 @@ function DriverAnalyticsPanel({
               <div className="flex items-center gap-1.5">
                 <a
                   href={`tel:${d.phone.replace(/\s+/g, "")}`}
-                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/40 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 text-xs font-bold transition-colors shadow-xs"
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-background text-foreground hover:bg-muted text-xs font-medium transition-colors"
                   title={`Call ${d.full_name} (${d.phone})`}
                 >
-                  <PhoneCall className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <PhoneCall className="size-3.5 text-muted-foreground" />
                   <span>Call</span>
                 </a>
                 <a
@@ -2884,10 +2875,10 @@ function DriverAnalyticsPanel({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300 text-xs font-bold transition-colors shadow-xs"
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border bg-background text-foreground hover:bg-muted text-xs font-medium transition-colors"
                   title={`Chat with ${d.full_name} on WhatsApp`}
                 >
-                  <MessageSquare className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <MessageSquare className="size-3.5 text-muted-foreground" />
                   <span>WhatsApp</span>
                 </a>
               </div>
@@ -2923,7 +2914,7 @@ function DriverAnalyticsPanel({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs gap-1.5 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+                  className="h-8 text-xs gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10 text-muted-foreground"
                   onClick={() => {
                     setEditingPartnerVehicleId(isEditingPartnerVehicle ? null : d.id);
                     setPartnerPlateInput(
@@ -2969,7 +2960,7 @@ function DriverAnalyticsPanel({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                  className="h-8 text-xs gap-1.5"
                   onClick={() => setEditingVehicleId(isEditingVehicle ? null : d.id)}
                 >
                   <Car className="size-3.5" />
@@ -3032,10 +3023,10 @@ function DriverAnalyticsPanel({
 
         {/* Inline Partner Vehicle Editor */}
         {isPartner && isEditingPartnerVehicle && (
-          <div className="border-t border-border bg-emerald-500/5 p-5  slide-in-from-top-2">
+          <div className="border-t border-border bg-emerald-500/5 p-5 slide-in-from-top-2">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                   <Car className="size-4" /> Partner EV Registration — {d.full_name}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -3051,12 +3042,10 @@ function DriverAnalyticsPanel({
               </button>
             </div>
 
-            <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm">
+            <div className="mt-4 rounded-xl border border-border bg-background p-4">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 <div className="sm:col-span-4">
-                  <label className="text-[11px] uppercase font-bold text-foreground">
-                    Partner EV Model
-                  </label>
+                  <label className="text-xs font-bold text-foreground">Partner EV Model</label>
                   <input
                     value={partnerModelInput}
                     onChange={(e) => setPartnerModelInput(e.target.value)}
@@ -3065,14 +3054,14 @@ function DriverAnalyticsPanel({
                   />
                 </div>
                 <div className="sm:col-span-5">
-                  <label className="text-[11px] uppercase font-bold text-foreground">
+                  <label className="text-xs font-bold text-foreground">
                     EV Plate Number (Registration)
                   </label>
                   <input
                     value={partnerPlateInput}
                     onChange={(e) => setPartnerPlateInput(e.target.value)}
                     placeholder="e.g. KA 01 EV 4421"
-                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
+                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary"
                   />
                 </div>
                 <div className="sm:col-span-3">
@@ -3096,10 +3085,10 @@ function DriverAnalyticsPanel({
             const bayVehicles = fleetVehicles.filter((v) => v.status === "in_bay");
 
             return (
-              <div className="border-t border-border bg-primary/5 p-5  slide-in-from-top-2">
+              <div className="border-t border-border bg-primary/5 p-5 slide-in-from-top-2">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-primary flex items-center gap-1.5">
                       <Car className="size-4" /> Daily Vehicle Allocation — {d.full_name}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -3115,17 +3104,17 @@ function DriverAnalyticsPanel({
                   </button>
                 </div>
 
-                <div className="mt-4 rounded-xl border border-border bg-background p-4 shadow-sm space-y-3">
+                <div className="mt-4 rounded-xl border border-border bg-background p-4 space-y-3">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <ParkingSquare className="size-3.5 text-blue-600" />
                         Vehicles in Bay Available to Assign ({bayVehicles.length})
                       </span>
                       {d.vehicle_number && d.vehicle_number !== "Unassigned" && (
-                        <span className="text-[11px] font-normal text-muted-foreground">
+                        <span className="text-xs font-normal text-muted-foreground">
                           Current:{" "}
-                          <strong className="font-mono text-primary">{d.vehicle_number}</strong>
+                          <strong className="font-mono text-foreground">{d.vehicle_number}</strong>
                         </span>
                       )}
                     </label>
@@ -3188,7 +3177,7 @@ function DriverAnalyticsPanel({
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
                     <Zap className="size-3 text-emerald-600 shrink-0" />
                     Assigning a car moves it out of the bay. If {d.full_name} already has an
                     assigned vehicle, the older one is automatically parked back in the bay.
@@ -3201,7 +3190,7 @@ function DriverAnalyticsPanel({
                       onClick={() =>
                         setCustomEntryDriverId(customEntryDriverId === d.id ? null : d.id)
                       }
-                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
                     >
                       {customEntryDriverId === d.id
                         ? "▲ Close manual plate entry"
@@ -3211,7 +3200,7 @@ function DriverAnalyticsPanel({
                     {customEntryDriverId === d.id && (
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end bg-muted/40 p-3 rounded-lg border border-border">
                         <div className="sm:col-span-5">
-                          <label className="text-[10px] uppercase font-semibold text-muted-foreground">
+                          <label className="text-xs font-semibold text-muted-foreground">
                             Model
                           </label>
                           <input
@@ -3221,13 +3210,13 @@ function DriverAnalyticsPanel({
                           />
                         </div>
                         <div className="sm:col-span-4">
-                          <label className="text-[10px] uppercase font-semibold text-muted-foreground">
+                          <label className="text-xs font-semibold text-muted-foreground">
                             Plate Number
                           </label>
                           <input
                             id={`manual-plate-${d.id}`}
                             placeholder="e.g. DL 01 EV 9999"
-                            className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
+                            className="mt-1 w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs font-mono font-bold outline-none focus:border-primary"
                           />
                         </div>
                         <div className="sm:col-span-3">
@@ -3269,28 +3258,25 @@ function DriverAnalyticsPanel({
           {[
             { label: "Total Rides", value: stats.count },
             { label: "Gross Earned", value: `₹${Math.round(stats.total)}` },
-            { label: "UPI", value: `₹${Math.round(stats.upi)}`, color: "text-blue-600" },
+            { label: "UPI", value: `₹${Math.round(stats.upi)}` },
             {
               label: "Cash Collected",
               value: `₹${Math.round(stats.cash)}`,
-              color: "text-green-600",
             },
             {
               label: isPartner ? `${commissionPct}% Company Comm.` : "Today's Rides",
               value: isPartner
                 ? `₹${Math.round((stats.total * commissionPct) / 100)}`
                 : stats.todayCount,
-              color: isPartner ? "text-emerald-600 font-extrabold" : "",
             },
             {
               label: "Today Earned",
               value: `₹${Math.round(stats.todayTotal)}`,
-              color: "text-primary",
             },
           ].map((s) => (
             <div key={s.label} className="bg-background px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{s.label}</p>
-              <p className={`mt-1 text-lg font-bold ${s.color ?? ""}`}>{s.value}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{s.label}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">{s.value}</p>
             </div>
           ))}
         </div>
@@ -3299,7 +3285,7 @@ function DriverAnalyticsPanel({
         {isExpanded && (
           <div className="border-t border-border">
             <div className="px-6 py-3 bg-muted/30 flex items-center justify-between">
-              <p className="text-xs font-bold uppercase text-muted-foreground">
+              <p className="text-xs font-bold text-muted-foreground">
                 Ride History ({rides.length} completed)
               </p>
               {isPartner && (
@@ -3329,7 +3315,7 @@ function DriverAnalyticsPanel({
                             {b.reference}
                           </p>
                           {ridePlate && (
-                            <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                            <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                               {ridePlate}
                             </span>
                           )}
@@ -3351,11 +3337,11 @@ function DriverAnalyticsPanel({
                       </div>
                       <div className="flex items-center gap-2.5 shrink-0 text-right">
                         {isPartner && (
-                          <div className="text-right text-[11px] hidden sm:block">
+                          <div className="text-right text-xs hidden sm:block">
                             <span className="text-emerald-600 font-semibold">
                               Driver: ₹{driverNet}
                             </span>
-                            <span className="text-muted-foreground text-[10px] block">
+                            <span className="text-muted-foreground text-xs block">
                               Comm: ₹{comm}
                             </span>
                           </div>
@@ -3451,18 +3437,6 @@ function DriverAnalyticsPanel({
             </span>
           </button>
         </div>
-
-        {/* Legend */}
-        <div className="text-xs text-muted-foreground hidden md:flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-blue-500" />
-            <strong>Company Fleet:</strong> Fixed Salary · Daily Bay Allocation
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full bg-emerald-500" />
-            <strong>Commission Partner:</strong> {commissionPct}% Platform Split · Own EV
-          </span>
-        </div>
       </div>
 
       {/* Search bar */}
@@ -3487,7 +3461,7 @@ function DriverAnalyticsPanel({
       {/* VIEW: COMPANY OWNED DRIVERS ONLY */}
       {driverSegment === "company" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+          <div className="rounded-2xl border p-5 border-border bg-background">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-blue-900 dark:text-blue-200 flex items-center gap-2">
@@ -3501,19 +3475,17 @@ function DriverAnalyticsPanel({
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Employed</p>
+                  <p className="text-xs font-bold text-muted-foreground">Employed</p>
                   <p className="text-sm font-bold text-foreground">{allCompanyDrivers.length}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Online</p>
+                  <p className="text-xs font-bold text-muted-foreground">Online</p>
                   <p className="text-sm font-bold text-emerald-600">
                     {allCompanyDrivers.filter((d) => d.is_online).length}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">
-                    Car Assigned
-                  </p>
+                  <p className="text-xs font-bold text-muted-foreground">Car Assigned</p>
                   <p className="text-sm font-bold text-blue-600">
                     {
                       allCompanyDrivers.filter(
@@ -3541,7 +3513,7 @@ function DriverAnalyticsPanel({
       {/* VIEW: COMMISSION BASED DRIVERS ONLY */}
       {driverSegment === "commission" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+          <div className="rounded-2xl border p-5 border-border bg-background">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
@@ -3555,19 +3527,17 @@ function DriverAnalyticsPanel({
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Partners</p>
+                  <p className="text-xs font-bold text-muted-foreground">Partners</p>
                   <p className="text-sm font-bold text-foreground">{allCommissionDrivers.length}</p>
                 </div>
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Online</p>
+                  <p className="text-xs font-bold text-muted-foreground">Online</p>
                   <p className="text-sm font-bold text-emerald-600">
                     {allCommissionDrivers.filter((d) => d.is_online).length}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-background px-3 py-1.5 text-center">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">
-                    Comm. Split
-                  </p>
+                  <p className="text-xs font-bold text-muted-foreground">Comm. Split</p>
                   <p className="text-sm font-bold text-emerald-600">
                     {100 - commissionPct}% / {commissionPct}%
                   </p>
@@ -3612,9 +3582,6 @@ function DriverAnalyticsPanel({
                   </span>
                 </h3>
               </div>
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-500/20">
-                Company Fleet
-              </span>
             </div>
 
             {filteredCompanyDrivers.length === 0 ? (
@@ -3645,14 +3612,11 @@ function DriverAnalyticsPanel({
                   <button
                     type="button"
                     onClick={() => onNavigateTab("commissions")}
-                    className="text-xs text-emerald-600 hover:underline font-semibold flex items-center gap-1"
+                    className="text-xs text-primary hover:underline"
                   >
                     View Commission Ledger →
                   </button>
                 )}
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                  {commissionPct}% Commission
-                </span>
               </div>
             </div>
 

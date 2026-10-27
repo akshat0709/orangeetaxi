@@ -2,7 +2,7 @@
 // A fee is added to the passenger's next ride and settled when that ride is paid; admins can waive
 // an unpaid one (e.g. after a complaint). Settled fees are refunded from Support → Refund this ride.
 import { useEffect, useMemo, useState } from "react";
-import { Ban, Loader2, RefreshCw, Search } from "lucide-react";
+import { Loader2, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -119,10 +119,7 @@ export function CancellationFeesManager() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="display-serif text-2xl font-bold flex items-center gap-2">
-            <Ban className="size-6 text-primary" /> Cancellation Fees
-          </h2>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Each fee is added to the passenger&apos;s next ride and marked paid when that ride is
             paid. Waive an unpaid fee here; refund a paid one from Support.
           </p>
@@ -133,17 +130,19 @@ export function CancellationFeesManager() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-amber-300/50 bg-amber-50/40 p-4 dark:bg-amber-950/20">
-          <p className="text-[11px] font-semibold uppercase text-amber-700">Unpaid</p>
-          <p className="text-3xl font-bold text-amber-700">₹{Math.round(totals.due)}</p>
+        <div className="rounded-xl border p-4 border-border bg-background">
+          <p className="text-sm text-muted-foreground">Unpaid</p>
+          <p className="text-3xl font-semibold">₹{Math.round(totals.due)}</p>
         </div>
-        <div className="rounded-xl border border-emerald-300/50 bg-emerald-50/40 p-4 dark:bg-emerald-950/20">
-          <p className="text-[11px] font-semibold uppercase text-emerald-700">Collected</p>
-          <p className="text-3xl font-bold text-emerald-700">₹{Math.round(totals.settled)}</p>
+        <div className="rounded-xl border p-4 border-border bg-background">
+          <p className="text-sm text-muted-foreground">Collected</p>
+          <p className="text-3xl font-semibold">₹{Math.round(totals.settled)}</p>
         </div>
         <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <p className="text-[11px] font-semibold uppercase text-muted-foreground">Waived</p>
-          <p className="text-3xl font-bold text-muted-foreground">₹{Math.round(totals.waived)}</p>
+          <p className="text-sm text-muted-foreground">Waived</p>
+          <p className="text-3xl font-semibold text-muted-foreground">
+            ₹{Math.round(totals.waived)}
+          </p>
         </div>
       </div>
 
@@ -178,7 +177,7 @@ export function CancellationFeesManager() {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-3">Date</th>
                 <th className="p-3">Passenger</th>
@@ -222,7 +221,7 @@ export function CancellationFeesManager() {
                         {STATUS_LABEL[r.status]}
                       </Badge>
                       {r.settled_at && (
-                        <div className="mt-1 text-[11px] text-muted-foreground">
+                        <div className="mt-1 text-xs text-muted-foreground">
                           {new Date(r.settled_at).toLocaleDateString("en-IN")}
                         </div>
                       )}

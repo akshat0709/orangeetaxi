@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import {
-  Percent,
-  BadgeIndianRupee,
   Receipt,
   CheckCircle2,
-  Clock,
   Search,
   Plus,
   X,
@@ -12,13 +9,11 @@ import {
   RotateCcw,
   Users,
   Handshake,
-  Phone,
   ChevronDown,
   ChevronUp,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { isCommissionDriver, partnerLedger } from "@/lib/driver-type";
 import { usePricingSettings } from "@/lib/pricing";
@@ -280,24 +275,11 @@ export function CommissionLedgerManager({
           loadSettlements();
         }}
       />
-      {/* Header & Operating Model Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="display-serif text-2xl font-bold">Partner Commission Management</h2>
-            <Badge
-              variant="outline"
-              className="bg-primary/10 text-primary border-primary/30 text-xs"
-            >
-              {pct}% Platform Commission
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Everything for commission drivers: rides, commission owed on cash rides, their share of
-            online rides, and payments in both directions.
-          </p>
-        </div>
-
+        <p className="text-sm text-muted-foreground">
+          Commission drivers keep {100 - pct}% of each fare; Orange Taxi keeps {pct}%. On cash rides
+          they owe us {pct}%, on online and wallet rides we owe them {100 - pct}%.
+        </p>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => {
@@ -324,78 +306,35 @@ export function CommissionLedgerManager({
         </div>
       </div>
 
-      {/* Model Definition Card */}
-      <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-        <div className="flex items-start gap-3">
-          <div className="size-9 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
-            <Handshake className="size-5" />
-          </div>
-          <div className="space-y-0.5">
-            <p className="font-bold text-sm text-foreground flex items-center gap-2">
-              Partner Owner-Operator Operating Framework
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              Drivers bringing their own EV keep <strong>{100 - pct}%</strong> of each fare; Orange
-              Taxi keeps <strong>{pct}%</strong>. On cash rides the driver owes the company its{" "}
-              {pct}%; on online / wallet rides the company owes the driver their {100 - pct}%.
-              Commission drivers never appear in company cash settlements.
-            </p>
-          </div>
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          <span className="rounded bg-background border border-border px-3 py-1.5 font-mono font-bold text-primary">
-            Split: {100 - pct}% Driver / {pct}% Company
-          </span>
-        </div>
-      </div>
-
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">Gross Fares</span>
-            <BadgeIndianRupee className="size-4 text-primary" />
-          </div>
-          <p className="mt-2 text-2xl font-bold font-mono">
+          <p className="text-sm text-muted-foreground">Gross Fares</p>
+          <p className="mt-2 text-2xl font-semibold font-mono">
             ₹{totalPartnerGrossFare.toLocaleString("en-IN")}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">All partner rides</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Commission Earned
-            </span>
-            <Percent className="size-4 text-blue-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-blue-600">
+          <p className="text-sm text-muted-foreground">Commission Earned</p>
+          <p className="mt-2 text-2xl font-semibold font-mono">
             ₹{totalCommissionEarned.toLocaleString("en-IN")}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{pct}% of all partner rides</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Commission Paid
-            </span>
-            <CheckCircle2 className="size-4 text-emerald-600" />
-          </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-emerald-600">
+          <p className="text-sm text-muted-foreground">Commission Paid</p>
+          <p className="mt-2 text-2xl font-semibold font-mono">
             ₹{totalCommissionPaid.toLocaleString("en-IN")}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">Deposited by partners</p>
         </div>
 
         <div className="rounded-xl border border-border bg-background p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
-              Outstanding Due
-            </span>
-            <Clock className="size-4 text-amber-500" />
-          </div>
-          <p className="mt-2 text-2xl font-bold font-mono text-amber-500">
+          <p className="text-sm text-muted-foreground">Outstanding Due</p>
+          <p className="mt-2 text-2xl font-semibold font-mono">
             ₹{totalCommissionOutstanding.toLocaleString("en-IN")}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -423,12 +362,12 @@ export function CommissionLedgerManager({
           return (
             <form
               onSubmit={handleRecordSettlement}
-              className="rounded-xl border border-primary/40 bg-primary/5 p-5  slide-in-from-top-3 duration-200"
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 slide-in-from-top-3 duration-200"
             >
               <div className="flex items-center justify-between border-b border-primary/20 pb-3">
                 <div className="flex items-center gap-2">
                   <Plus className="size-4 text-primary" />
-                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                  <p className="text-sm font-bold text-primary">
                     Record Partner Commission Deposit
                   </p>
                 </div>
@@ -444,7 +383,7 @@ export function CommissionLedgerManager({
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Driver Select */}
                 <div className="sm:col-span-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Partner Driver *
                   </label>
                   <select
@@ -488,11 +427,11 @@ export function CommissionLedgerManager({
                 {/* Amount */}
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    <label className="text-xs font-semibold text-muted-foreground">
                       Amount Received (₹) *
                     </label>
                     {selectedDriverId && (
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground font-mono">
                         Max:{" "}
                         <strong
                           className={
@@ -544,13 +483,13 @@ export function CommissionLedgerManager({
                     />
                   </div>
                   {isExceeding && (
-                    <p className="mt-1 text-[11px] font-semibold text-destructive flex items-center gap-1">
+                    <p className="mt-1 text-xs font-semibold text-destructive flex items-center gap-1">
                       <AlertCircle className="size-3 shrink-0" />
                       Cannot exceed ₹{maxDue}
                     </p>
                   )}
                   {selectedDriverId && maxDue <= 0 && (
-                    <p className="mt-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="size-3 shrink-0" />
                       Nothing is due in this direction (₹0)
                     </p>
@@ -559,7 +498,7 @@ export function CommissionLedgerManager({
 
                 {/* Direction */}
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Who paid whom *
                   </label>
                   <select
@@ -584,7 +523,7 @@ export function CommissionLedgerManager({
 
                 {/* Payment Mode */}
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Payment Mode *
                   </label>
                   <select
@@ -603,7 +542,7 @@ export function CommissionLedgerManager({
 
                 {/* Reference No */}
                 <div className="sm:col-span-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Transaction Ref / UTR / Receipt No.
                   </label>
                   <input
@@ -617,9 +556,7 @@ export function CommissionLedgerManager({
 
                 {/* Notes */}
                 <div className="sm:col-span-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Admin Notes
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">Admin Notes</label>
                   <input
                     type="text"
                     value={settleNotes}
@@ -632,7 +569,7 @@ export function CommissionLedgerManager({
 
               {/* Quick Presets for Partner Driver */}
               {selectedDriverId && maxDue > 0 && (
-                <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground pt-2 border-t border-primary/20">
+                <div className="mt-3 flex items-center gap-2 flex-wrap text-xs text-muted-foreground pt-2 border-t border-primary/20">
                   <span>Quick Preset (Max ₹{maxDue}):</span>
                   <button
                     type="button"
@@ -712,9 +649,8 @@ export function CommissionLedgerManager({
       <div className="rounded-xl border border-border bg-background overflow-hidden">
         <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Handshake className="size-4 text-primary" />
-            <h3 className="font-bold text-sm">
-              Partner Owner-Operator Accounts ({activePartnerDrivers.length})
+            <h3 className="font-semibold text-sm">
+              Commission drivers ({activePartnerDrivers.length})
             </h3>
           </div>
           <span className="text-xs text-muted-foreground">
@@ -769,82 +705,63 @@ export function CommissionLedgerManager({
 
               return (
                 <div key={d.id} className="hover:bg-muted/15 transition-colors">
-                  <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    {/* Driver & Car info */}
-                    <div className="flex items-center gap-3.5">
-                      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold text-primary">
-                        {d.full_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-bold text-sm text-foreground">{d.full_name}</p>
-                          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                            Partner Owner
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                          <span className="font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                            {d.vehicle_number || "Partner EV"}
-                          </span>
-                          <span>·</span>
-                          <span>{d.vehicle_model || "Electric Vehicle"}</span>
-                          <span>·</span>
-                          {d.phone && (
-                            <a
-                              href={`tel:${d.phone.replace(/\s+/g, "")}`}
-                              className="font-mono text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                            >
-                              <Phone className="size-3" /> {d.phone}
-                            </a>
-                          )}
-                        </div>
-                      </div>
+                  <div className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_auto] lg:items-center">
+                    {/* Driver & car */}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{d.full_name}</p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                        <span className="font-mono text-foreground">
+                          {d.vehicle_number || "No plate"}
+                        </span>
+                        <span>{d.vehicle_model || "Electric vehicle"}</span>
+                        {d.phone && (
+                          <a
+                            href={`tel:${d.phone.replace(/\s+/g, "")}`}
+                            className="font-mono hover:text-primary"
+                          >
+                            {d.phone}
+                          </a>
+                        )}
+                      </p>
                     </div>
 
-                    {/* Financial Metrics Row */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
-                      <div className="rounded-lg bg-muted/40 p-2.5">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground">
-                          Completed Trips
-                        </p>
-                        <p className="mt-1 font-bold text-foreground">{stats.ridesCount} rides</p>
+                    {/* Money */}
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+                      <div>
+                        <dt className="text-muted-foreground">Rides</dt>
+                        <dd className="mt-0.5 font-medium tabular-nums">{stats.ridesCount}</dd>
                       </div>
-
-                      <div className="rounded-lg bg-muted/40 p-2.5">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground">
-                          Gross Fare
-                        </p>
-                        <p className="mt-1 font-bold font-mono text-foreground">
+                      <div>
+                        <dt className="text-muted-foreground">Gross fare</dt>
+                        <dd className="mt-0.5 font-medium tabular-nums">
                           ₹{stats.grossFare.toLocaleString("en-IN")}
-                        </p>
+                        </dd>
                       </div>
-
-                      <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-2.5">
-                        <p className="text-[10px] uppercase font-semibold text-blue-600 dark:text-blue-400">
-                          {pct}% Comm. on cash rides
-                        </p>
-                        <p className="mt-1 font-bold font-mono text-blue-600 dark:text-blue-400">
+                      <div>
+                        <dt className="text-muted-foreground">{pct}% on cash rides</dt>
+                        <dd className="mt-0.5 font-medium tabular-nums">
                           ₹{stats.commissionPayable.toLocaleString("en-IN")}
-                        </p>
+                        </dd>
                       </div>
-
-                      <div
-                        className={`rounded-lg p-2.5 border ${
-                          stats.outstandingCommission > 0
-                            ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                        }`}
-                      >
-                        <p className="text-[10px] uppercase font-semibold">Balance</p>
-                        <p className="mt-1 font-bold font-mono">
+                      <div>
+                        <dt className="text-muted-foreground">Balance</dt>
+                        <dd
+                          className={`mt-0.5 font-medium tabular-nums ${
+                            stats.outstandingCommission > 0
+                              ? "text-amber-700 dark:text-amber-400"
+                              : stats.owedToDriver > 0
+                                ? "text-primary"
+                                : "text-muted-foreground"
+                          }`}
+                        >
                           {stats.outstandingCommission > 0
-                            ? `Driver owes ₹${stats.outstandingCommission.toLocaleString("en-IN")}`
+                            ? `Owes ₹${stats.outstandingCommission.toLocaleString("en-IN")}`
                             : stats.owedToDriver > 0
                               ? `We owe ₹${stats.owedToDriver.toLocaleString("en-IN")}`
-                              : "Cleared ✓"}
-                        </p>
+                              : "Settled"}
+                        </dd>
                       </div>
-                    </div>
+                    </dl>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 shrink-0">
@@ -897,7 +814,7 @@ export function CommissionLedgerManager({
                   {isExpanded && (
                     <div className="border-t border-border bg-muted/20 p-5 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                           <Receipt className="size-3.5 text-primary" /> Settlement History for{" "}
                           {d.full_name}
                         </h4>
@@ -923,7 +840,7 @@ export function CommissionLedgerManager({
                                 <p className="font-mono font-bold text-foreground">
                                   {s.reference_no || s.id}
                                 </p>
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="text-xs text-muted-foreground">
                                   {new Date(s.created_at).toLocaleDateString("en-IN", {
                                     day: "numeric",
                                     month: "short",
@@ -934,7 +851,7 @@ export function CommissionLedgerManager({
                                   · Recorded by {s.collected_by}
                                 </p>
                                 {s.notes && (
-                                  <p className="text-[11px] text-muted-foreground/80 italic">
+                                  <p className="text-xs text-muted-foreground/80 italic">
                                     {s.notes}
                                   </p>
                                 )}
@@ -946,7 +863,7 @@ export function CommissionLedgerManager({
                                   {s.direction === "company_to_driver" ? "Paid out " : "Received "}₹
                                   {Math.round(s.amount).toLocaleString("en-IN")}
                                 </span>
-                                <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">
+                                <p className="text-xs font-semibold text-muted-foreground mt-0.5">
                                   {s.payment_mode?.replace("_", " ")}
                                 </p>
                               </div>

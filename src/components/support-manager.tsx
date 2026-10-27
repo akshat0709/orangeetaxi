@@ -2,7 +2,6 @@
 // requests), and the refunds ledger.
 import { useEffect, useMemo, useState } from "react";
 import {
-  Headphones,
   Loader2,
   Mail,
   Phone,
@@ -199,10 +198,7 @@ export function SupportManager() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="display-serif text-2xl font-bold flex items-center gap-2">
-            <Headphones className="size-6 text-primary" /> Support Desk
-          </h2>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Complaints and refund requests from the website and apps. Acknowledge within 48 hours,
             resolve within 30 days.
           </p>
@@ -215,7 +211,7 @@ export function SupportManager() {
           >
             Tickets
             {counts.open > 0 && (
-              <span className="ml-1.5 rounded-full bg-rose-600 px-1.5 text-[10px] text-white">
+              <span className="ml-1.5 rounded-full bg-primary px-1.5 text-xs text-primary-foreground">
                 {counts.open}
               </span>
             )}
@@ -234,19 +230,17 @@ export function SupportManager() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-rose-300/50 bg-rose-50/40 p-4 dark:bg-rose-950/20">
-          <p className="text-[11px] font-semibold uppercase text-rose-700">Open</p>
-          <p className="text-3xl font-bold text-rose-700">{counts.open}</p>
+        <div className="rounded-xl border p-4 border-border bg-background">
+          <p className="text-sm text-muted-foreground">Open</p>
+          <p className="text-3xl font-semibold">{counts.open}</p>
         </div>
-        <div className="rounded-xl border border-amber-300/50 bg-amber-50/40 p-4 dark:bg-amber-950/20">
-          <p className="text-[11px] font-semibold uppercase text-amber-700">In progress</p>
-          <p className="text-3xl font-bold text-amber-700">{counts.in_progress}</p>
+        <div className="rounded-xl border p-4 border-border bg-background">
+          <p className="text-sm text-muted-foreground">In progress</p>
+          <p className="text-3xl font-semibold">{counts.in_progress}</p>
         </div>
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-[11px] font-semibold uppercase text-primary">
-            Refund requests waiting
-          </p>
-          <p className="text-3xl font-bold text-primary">{counts.refunds}</p>
+        <div className="rounded-xl border border-border bg-background p-4">
+          <p className="text-sm text-muted-foreground">Refund requests waiting</p>
+          <p className="text-3xl font-semibold">{counts.refunds}</p>
         </div>
       </div>
 
@@ -303,7 +297,7 @@ export function SupportManager() {
                             {TYPE_LABEL[t.complaint_type] || t.complaint_type}
                           </Badge>
                           {t.booking_reference && (
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               Ride {t.booking_reference}
                             </span>
                           )}
@@ -311,7 +305,7 @@ export function SupportManager() {
                         <p className="mt-1 truncate text-sm">
                           <strong>{t.name}</strong> · {t.message}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {new Date(t.created_at).toLocaleString("en-IN")}
                         </p>
                       </div>
@@ -377,7 +371,7 @@ export function SupportManager() {
                             Save notes
                           </Button>
                           {t.resolution_at && (
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               Resolved {new Date(t.resolution_at).toLocaleString("en-IN")}
                             </span>
                           )}
@@ -395,7 +389,7 @@ export function SupportManager() {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-3">Date</th>
                 <th className="p-3">Ride</th>

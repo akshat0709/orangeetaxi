@@ -20,7 +20,6 @@ import {
   Building2,
   Handshake,
   ShieldCheck,
-  Sparkles,
   CheckCircle2,
   Trash2,
 } from "lucide-react";
@@ -147,14 +146,14 @@ function BayDropdown({
 
   if (isCustom) {
     return (
-      <div className="flex items-center gap-1 ">
+      <div className="flex items-center gap-1">
         <input
           type="text"
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           placeholder="New Bay..."
           autoFocus
-          className="h-6 w-24 rounded border border-blue-400 bg-background px-1.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-blue-500"
+          className="h-6 w-24 rounded border border-blue-400 bg-background px-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500"
         />
         <button
           type="button"
@@ -192,7 +191,7 @@ function BayDropdown({
             onSelect(e.target.value);
           }
         }}
-        className="h-6 appearance-none rounded-md border border-blue-200 bg-blue-50/90 pl-6 pr-6 text-[11px] font-semibold text-blue-700 outline-none hover:bg-blue-100/80 hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
+        className="h-6 appearance-none rounded-md border border-blue-200 bg-blue-50/90 pl-6 pr-6 text-xs font-semibold text-blue-700 outline-none hover:bg-blue-100/80 hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer transition-colors dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300"
         title="Click to relocate vehicle to another bay"
       >
         {!STANDARD_BAYS.includes(currentBay) && <option value="custom_saved">{currentBay}</option>}
@@ -655,22 +654,26 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
   // Calculate fleet stats
   const totalFleetCount = vehicles.length;
+  // Cars without a battery reading are left out of the average (it used to show "NaN%").
+  const batteryReadings = vehicles
+    .map((v) => Number(v.battery_percentage))
+    .filter((n) => Number.isFinite(n));
   const avgBattery =
-    totalFleetCount > 0
-      ? Math.round(vehicles.reduce((acc, v) => acc + v.battery_percentage, 0) / totalFleetCount)
-      : 0;
-  const lowBatteryCount = vehicles.filter((v) => v.battery_percentage < 30).length;
+    batteryReadings.length > 0
+      ? `${Math.round(batteryReadings.reduce((a, n) => a + n, 0) / batteryReadings.length)}%`
+      : "—";
+  const lowBatteryCount = batteryReadings.filter((n) => n < 30).length;
 
   return (
     <div className="space-y-6">
       {/* Top Banner if using local fallback */}
       {isUsingFallback && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border p-4 text-xs text-amber-900 dark:text-amber-200 border-border bg-background">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="font-bold">Fleet database unavailable</p>
-              <p className="text-[11px] opacity-80">
+              <p className="text-xs opacity-80">
                 The fleet_vehicles table could not be loaded. It is created (admin-only) by
                 migration 20261025130000_audit_remediation_2.sql — apply it with supabase db push.
                 Until then, changes here are kept only in this browser.
@@ -693,8 +696,8 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
             }`}
           >
             <Building2 className="size-4" />
-            <span>Company-Owned Fleet (Depot & Bays)</span>
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
+            <span>Company cars</span>
+            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0 h-4">
               {vehicles.length}
             </Badge>
           </button>
@@ -709,8 +712,8 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
             }`}
           >
             <Handshake className="size-4" />
-            <span>Partner / Driver-Owned Cars</span>
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0 h-4">
+            <span>Drivers' own cars</span>
+            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0 h-4">
               {partnerVehicles.length}
             </Badge>
           </button>
@@ -718,15 +721,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
         <div className="text-xs text-muted-foreground">
           {activeSubTab === "company" ? (
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-blue-500" /> Fixed Salary Drivers · Depot Bays
-              & Charging
-            </span>
+            <span>Company drivers · depot bays and charging</span>
           ) : (
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" /> 15% Platform Commission Model
-              · Owner-Operators
-            </span>
+            <span>Commission drivers · their own cars</span>
           )}
         </div>
       </div>
@@ -735,21 +732,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         <div className="space-y-6">
           {/* Header & Registration CTA */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="display-serif text-2xl font-bold">Fleet & Bay Operations</h2>
-                <Badge
-                  variant="outline"
-                  className="bg-primary/10 text-primary border-primary/30 text-xs"
-                >
-                  Mahindra BE.6 Fleet
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Track EV battery telemetry, manage parked cars in the bay, and assign daily vehicles
-                to drivers.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Company cars: battery, bay and which driver has each car today.
+            </p>
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => setIsRegistering(!isRegistering)}
@@ -772,46 +757,26 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           {/* KPI Stats Grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Total Fleet
-                </span>
-                <Car className="size-4 text-primary" />
-              </div>
-              <p className="mt-2 text-2xl font-bold">{totalFleetCount}</p>
+              <p className="text-sm text-muted-foreground">Total Fleet</p>
+              <p className="mt-2 text-2xl font-semibold">{totalFleetCount}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Mahindra BE.6 EVs</p>
             </div>
 
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Parked in Bay
-                </span>
-                <ParkingSquare className="size-4 text-blue-600" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-blue-600">{inBayVehicles.length}</p>
+              <p className="text-sm text-muted-foreground">Parked in Bay</p>
+              <p className="mt-2 text-2xl font-semibold">{inBayVehicles.length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Available for drivers</p>
             </div>
 
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Active on Shift
-                </span>
-                <Zap className="size-4 text-emerald-600" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-emerald-600">{assignedVehicles.length}</p>
+              <p className="text-sm text-muted-foreground">Active on Shift</p>
+              <p className="mt-2 text-2xl font-semibold">{assignedVehicles.length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Assigned to drivers</p>
             </div>
 
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Avg Battery
-                </span>
-                <BatteryCharging className="size-4 text-primary" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-primary">{avgBattery}%</p>
+              <p className="text-sm text-muted-foreground">Avg Battery</p>
+              <p className="mt-2 text-2xl font-semibold">{avgBattery}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {lowBatteryCount > 0 ? `${lowBatteryCount} low (<30%)` : "All healthy"}
               </p>
@@ -822,12 +787,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           {isRegistering && (
             <form
               onSubmit={handleRegisterVehicle}
-              className="rounded-xl border border-primary/40 bg-primary/5 p-5  slide-in-from-top-3 duration-200"
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 slide-in-from-top-3 duration-200"
             >
               <div className="flex items-center justify-between border-b border-primary/20 pb-3">
                 <div className="flex items-center gap-2">
                   <Plus className="size-4 text-primary" />
-                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                  <p className="text-sm font-bold text-primary">
                     Register New EV into Orange Fleet
                   </p>
                 </div>
@@ -842,7 +807,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Registration Plate *
                   </label>
                   <input
@@ -851,12 +816,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     onChange={(e) => setNewPlate(e.target.value)}
                     placeholder="e.g. DL 01 EV 8092"
                     required
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Vehicle Model
                   </label>
                   <input
@@ -869,9 +834,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Color
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">Color</label>
                   <input
                     type="text"
                     value={newColor}
@@ -882,7 +845,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Initial Battery %
                   </label>
                   <input
@@ -896,7 +859,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Initial Bay Location
                   </label>
                   <input
@@ -974,7 +937,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   }`}
                 >
                   <span>{btn.label}</span>
-                  <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-[10px]">
+                  <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-xs">
                     {btn.count}
                   </span>
                 </button>
@@ -993,9 +956,6 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 <div className="rounded-xl border border-border bg-background overflow-hidden">
                   <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="grid size-7 place-items-center rounded-lg bg-blue-500/10 text-blue-600">
-                        <ParkingSquare className="size-4" />
-                      </span>
                       <div>
                         <h3 className="font-bold text-sm">
                           Vehicles in Bay (Available & Charging)
@@ -1035,7 +995,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                             {/* Card Header */}
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <span className="font-mono text-base font-bold tracking-wider text-foreground">
+                                <span className="font-mono text-base font-bold text-foreground">
                                   {v.plate_number}
                                 </span>
                                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -1089,7 +1049,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                               </div>
 
                               {/* Quick battery adjustments */}
-                              <div className="mt-2.5 flex items-center justify-between gap-1 text-[10px]">
+                              <div className="mt-2.5 flex items-center justify-between gap-1 text-xs">
                                 <span className="text-muted-foreground font-medium">
                                   Quick Adjust:
                                 </span>
@@ -1171,7 +1131,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                   );
                                   if (chosen && older) {
                                     return (
-                                      <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                                      <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
                                         <p className="font-semibold flex items-center gap-1">
                                           <RotateCcw className="size-3 text-amber-600" />
                                           Auto Bay Return:
@@ -1220,9 +1180,6 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 <div className="rounded-xl border border-border bg-background overflow-hidden">
                   <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600">
-                        <Zap className="size-4" />
-                      </span>
                       <div>
                         <h3 className="font-bold text-sm">Assigned Vehicles (On Shift / Road)</h3>
                         <p className="text-xs text-muted-foreground">
@@ -1251,12 +1208,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                         return (
                           <div
                             key={v.id}
-                            className="rounded-xl border border-border bg-background p-4 shadow-sm"
+                            className="rounded-xl border border-border bg-background p-4"
                           >
                             {/* Card Header */}
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <span className="font-mono text-base font-bold tracking-wider text-foreground">
+                                <span className="font-mono text-base font-bold text-foreground">
                                   {v.plate_number}
                                 </span>
                                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -1264,7 +1221,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                 </p>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
                                   ● On Duty
                                 </span>
                                 <BayDropdown
@@ -1284,13 +1241,13 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                   <p className="text-xs font-semibold text-foreground">
                                     {driver ? driver.full_name : "Assigned Driver"}
                                   </p>
-                                  <p className="text-[10px] text-muted-foreground">
+                                  <p className="text-xs text-muted-foreground">
                                     {driver?.phone ? driver.phone : "No phone"} ·{" "}
                                     {driver?.is_online ? "Online" : "Offline"}
                                   </p>
                                 </div>
                               </div>
-                              <span className="text-[10px] font-mono text-muted-foreground">
+                              <span className="text-xs font-mono text-muted-foreground">
                                 {v.assigned_at
                                   ? new Date(v.assigned_at).toLocaleTimeString([], {
                                       hour: "2-digit",
@@ -1303,7 +1260,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                             {/* Battery Level Meter & Telemetry */}
                             <div className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
                               <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="flex items-center gap-1.5 font-semibold text-muted-foreground text-[11px]">
+                                <span className="flex items-center gap-1.5 font-semibold text-muted-foreground text-xs">
                                   <BatteryCharging className="size-3.5 text-primary" />
                                   Live Battery
                                 </span>
@@ -1333,7 +1290,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                 />
                               </div>
 
-                              <div className="mt-2 flex items-center justify-between gap-1 text-[10px]">
+                              <div className="mt-2 flex items-center justify-between gap-1 text-xs">
                                 <span className="text-muted-foreground">Telemetry update:</span>
                                 <div className="flex items-center gap-1">
                                   <button
@@ -1375,7 +1332,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                 </Button>
                               </div>
                             ) : (
-                              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 p-3 space-y-2">
+                              <div className="mt-3 rounded-lg border p-3 space-y-2 border-border bg-background">
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="font-bold text-blue-700 dark:text-blue-300">
                                     Park in Bay
@@ -1388,7 +1345,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                                   </button>
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                                  <label className="text-xs font-semibold text-muted-foreground">
                                     Destination Bay Number
                                   </label>
                                   <input
@@ -1433,21 +1390,9 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
         <div className="space-y-6">
           {/* Header & Registration CTA */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="display-serif text-2xl font-bold">Partner / Driver-Owned Fleet</h2>
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs flex items-center gap-1"
-                >
-                  <Sparkles className="size-3" /> Orange Standard Certified
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Vehicles brought by partner owner-operators under the 15% platform commission model.
-                Segregated from company depot bays.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Cars owned by commission drivers. They are kept apart from the company depot bays.
+            </p>
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => setIsRegisteringPartner(!isRegisteringPartner)}
@@ -1468,48 +1413,16 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           </div>
 
           {/* Partner KPI Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Partner Cars
-                </span>
-                <Car className="size-4 text-primary" />
-              </div>
-              <p className="mt-2 text-2xl font-bold">{partnerVehicles.length}</p>
+              <p className="text-sm text-muted-foreground">Partner Cars</p>
+              <p className="mt-2 text-2xl font-semibold">{partnerVehicles.length}</p>
               <p className="text-xs text-muted-foreground mt-0.5">Driver-owned EVs</p>
             </div>
 
             <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Orange Standard
-                </span>
-                <ShieldCheck className="size-4 text-emerald-600" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-emerald-600">100% BEV</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Zero Emissions & Clean AC</p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Operating Model
-                </span>
-                <Handshake className="size-4 text-blue-600" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-blue-600">15% Comm.</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Partner keeps 85% fare</p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
-                  Active Status
-                </span>
-                <CheckCircle2 className="size-4 text-emerald-600" />
-              </div>
-              <p className="mt-2 text-2xl font-bold text-emerald-600">
+              <p className="text-sm text-muted-foreground">Active Status</p>
+              <p className="mt-2 text-2xl font-semibold">
                 {partnerVehicles.filter((v) => v.status === "active").length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">Onboarded & Approved</p>
@@ -1520,12 +1433,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
           {isRegisteringPartner && (
             <form
               onSubmit={handleRegisterPartner}
-              className="rounded-xl border border-primary/40 bg-primary/5 p-5  slide-in-from-top-3 duration-200"
+              className="rounded-xl border border-primary/40 bg-primary/5 p-5 slide-in-from-top-3 duration-200"
             >
               <div className="flex items-center justify-between border-b border-primary/20 pb-3">
                 <div className="flex items-center gap-2">
                   <Plus className="size-4 text-primary" />
-                  <p className="text-sm font-bold uppercase tracking-wider text-primary">
+                  <p className="text-sm font-bold text-primary">
                     Register Partner-Owned Orange Standard EV
                   </p>
                 </div>
@@ -1540,7 +1453,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Registration Plate (Plate No.) *
                   </label>
                   <input
@@ -1549,12 +1462,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     onChange={(e) => setPartnerPlate(e.target.value)}
                     placeholder="e.g. DL 01 EV 8092"
                     required
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Chassis Number (VIN) *
                   </label>
                   <input
@@ -1563,12 +1476,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     onChange={(e) => setPartnerChassis(e.target.value)}
                     placeholder="e.g. MA3EHB6S7P99999"
                     required
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-mono font-bold outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Vehicle Model *
                   </label>
                   <input
@@ -1582,7 +1495,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Manufacturing Year
                   </label>
                   <input
@@ -1595,7 +1508,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Owner / Driver Full Name *
                   </label>
                   <input
@@ -1609,7 +1522,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Owner Contact Phone *
                   </label>
                   <input
@@ -1688,12 +1601,12 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
               {filteredPartnerVehicles.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-xl border border-border bg-background p-5 hover:border-primary/40 transition-all shadow-xs space-y-3.5"
+                  className="rounded-xl border border-border bg-background p-5 hover:border-primary/40 transition-all space-y-3.5"
                 >
                   {/* Plate & Status */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-mono text-base font-black tracking-wider text-foreground bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-md inline-block">
+                      <span className="font-mono text-base font-black text-foreground bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-md inline-block">
                         {v.plate_number}
                       </span>
                       <p className="text-xs font-semibold text-muted-foreground mt-1.5 flex items-center gap-1.5">
@@ -1702,7 +1615,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                         {v.year && <span className="opacity-70">({v.year})</span>}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="size-3" /> Active
                     </span>
                   </div>
@@ -1710,9 +1623,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   {/* Chassis Number (VIN) */}
                   <div className="rounded-lg bg-muted/40 p-2.5 text-xs flex items-center justify-between gap-2">
                     <div className="space-y-0.5 overflow-hidden">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Chassis / VIN
-                      </p>
+                      <p className="text-xs font-semibold text-muted-foreground">Chassis / VIN</p>
                       <p className="font-mono font-bold text-foreground truncate">
                         {v.chassis_number || "N/A"}
                       </p>
@@ -1750,11 +1661,11 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                   </div>
 
                   {/* Orange Standard Badge & Commission Info */}
-                  <div className="pt-2 border-t border-border/80 flex items-center justify-between gap-2 text-[11px]">
+                  <div className="pt-2 border-t border-border/80 flex items-center justify-between gap-2 text-xs">
                     <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
                       <ShieldCheck className="size-3.5" /> Orange Standard EV
                     </span>
-                    <span className="rounded bg-primary/10 text-primary font-bold px-2 py-0.5 text-[10px]">
+                    <span className="rounded bg-primary/10 text-primary font-bold px-2 py-0.5 text-xs">
                       15% Commission
                     </span>
                   </div>
@@ -1764,7 +1675,7 @@ export function FleetManager({ drivers, onRefresh }: FleetManagerProps) {
                     <button
                       type="button"
                       onClick={() => removePartnerVehicle(v.id, v.plate_number)}
-                      className="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+                      className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
                     >
                       <Trash2 className="size-3" /> Unlink Car
                     </button>

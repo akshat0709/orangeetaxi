@@ -13,7 +13,6 @@ import {
   Navigation,
   RefreshCw,
   ShieldCheck,
-  Radio,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,11 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  detectCityFromCoords,
-  getCityDefaultCenter,
-  SUPPORTED_CITY_HUBS,
-} from "@/lib/city-detector";
+import { detectCityFromCoords, getCityDefaultCenter } from "@/lib/city-detector";
 
 function createDriverMarkerIcon(
   status: "available" | "on_trip" | "offline",
@@ -259,23 +254,6 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
       }
     }
   }, [selectedDriver?.id, selectedDriver?.lat, selectedDriver?.lng]);
-
-  function handleSelectCityFilter(cityId: string) {
-    setSelectedCityHub(cityId);
-    setSelectedDriverId(null);
-    if (cityId !== "all") {
-      const hub = SUPPORTED_CITY_HUBS.find((h) => h.name === cityId || h.id === cityId);
-      if (hub) {
-        setMapTarget({ lat: hub.lat, lng: hub.lng, zoom: 12 });
-      } else {
-        const center = getCityDefaultCenter(cityId);
-        setMapTarget({ lat: center.lat, lng: center.lng, zoom: 12 });
-      }
-    } else {
-      setMapTarget(null);
-    }
-  }
-
   // Overall fleet status counts
   const counts = useMemo(() => {
     let available = 0;
@@ -311,25 +289,8 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Top Header Card */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-            <Radio className="size-5 animate-pulse text-primary" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-foreground">Live Chauffeur Radar</h2>
-              <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-ping" />
-                Live Telematics
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Active GPS tracking of all Mahindra BE.6 vehicles across the metropolitan area
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">Where every online driver is right now.</p>
 
         {/* Status Filter Buttons */}
         <div className="flex flex-wrap items-center gap-2">
@@ -345,7 +306,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             size="sm"
             variant={filterStatus === "available" ? "default" : "outline"}
             onClick={() => setFilterStatus("available")}
-            className="text-xs h-8 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+            className="text-xs h-8 border-emerald-500/30 hover:bg-emerald-500/10 text-muted-foreground"
           >
             Available ({counts.available})
           </Button>
@@ -353,7 +314,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             size="sm"
             variant={filterStatus === "on_trip" ? "default" : "outline"}
             onClick={() => setFilterStatus("on_trip")}
-            className="text-xs h-8 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
+            className="text-xs h-8 border-orange-500/30 hover:bg-orange-500/10 text-muted-foreground"
           >
             On Active Trip ({counts.onTrip})
           </Button>
@@ -379,43 +340,6 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
         </div>
       </div>
 
-      {/* City Hub Quick Filter Bar */}
-      <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card/60 backdrop-blur-sm text-xs">
-        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mr-1">
-          <MapPin className="size-3 text-primary" />
-          City Hub:
-        </span>
-        <button
-          onClick={() => handleSelectCityFilter("all")}
-          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-            selectedCityHub === "all"
-              ? "bg-primary text-primary-foreground shadow-xs"
-              : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-          }`}
-        >
-          All Hubs
-        </button>
-        {SUPPORTED_CITY_HUBS.slice(0, 6).map((hub) => (
-          <button
-            key={hub.id}
-            onClick={() => handleSelectCityFilter(hub.name)}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-              selectedCityHub === hub.name
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {hub.shortName}
-          </button>
-        ))}
-        {selectedCityHub !== "all" && (
-          <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Active Hub Filter: {selectedCityHub}
-          </span>
-        )}
-      </div>
-
       {/* Main Map + Sidebar Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left / Bottom Chauffeur Directory List */}
@@ -439,9 +363,8 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                 </button>
               )}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-2 px-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 px-1">
               <span>Showing {filteredDrivers.length} chauffeurs</span>
-              <span className="font-mono">BE.6 Electric Fleet</span>
             </div>
           </div>
 
@@ -513,7 +436,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground font-mono">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground font-mono">
                         <span className="font-semibold text-foreground">
                           {d.vehicle_number || "BE.6 EV"}
                         </span>
@@ -523,7 +446,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
 
                       {/* Active ride banner if on trip */}
                       {d.activeRide && (
-                        <div className="mt-2 rounded bg-orange-500/10 border border-orange-500/20 p-1.5 text-[10px] text-orange-700 dark:text-orange-300">
+                        <div className="mt-2 rounded bg-orange-500/10 border border-orange-500/20 p-1.5 text-xs text-orange-700 dark:text-orange-300">
                           <div className="font-semibold truncate">
                             Ride #{d.activeRide.reference} · ₹{d.activeRide.estimated_fare}
                           </div>
@@ -533,7 +456,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+                      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <BatteryCharging className="size-3 text-emerald-600" />
                           {d.batteryPercent}%
@@ -557,7 +480,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
 
         {/* Right Map Canvas & Selected Inspector */}
         <div className="lg:col-span-8 flex flex-col gap-3">
-          <div className="relative w-full rounded-xl border border-border overflow-hidden bg-card h-[620px] shadow-sm">
+          <div className="relative w-full rounded-xl border border-border overflow-hidden bg-card h-[620px]">
             <APIProvider apiKey={apiKey} libraries={["places", "geometry"]}>
               <GoogleMap
                 id="orange-taxi-admin-live-radar"
@@ -597,24 +520,22 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
             </APIProvider>
 
             {/* Floating Live Legend Overlay */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5 rounded-lg border border-border bg-card/95 p-3 shadow-md backdrop-blur text-xs">
-              <span className="font-bold text-[11px] text-foreground tracking-wide uppercase">
-                Fleet Radar Status
-              </span>
+            <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5 rounded-lg border border-border bg-card/95 p-3 backdrop-blur text-xs">
+              <span className="font-bold text-xs text-foreground">Fleet Radar Status</span>
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
                 <span className="size-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30" />
                 <span>Available / Idle</span>
-                <span className="ml-auto font-mono text-[10px]">({counts.available})</span>
+                <span className="ml-auto font-mono text-xs">({counts.available})</span>
               </div>
               <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-semibold">
                 <span className="size-2.5 rounded-full bg-orange-500 ring-2 ring-orange-500/30" />
                 <span>On Active Trip</span>
-                <span className="ml-auto font-mono text-[10px]">({counts.onTrip})</span>
+                <span className="ml-auto font-mono text-xs">({counts.onTrip})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground font-semibold">
                 <span className="size-2.5 rounded-full bg-slate-500 ring-2 ring-slate-500/30" />
                 <span>Offline</span>
-                <span className="ml-auto font-mono text-[10px]">({counts.offline})</span>
+                <span className="ml-auto font-mono text-xs">({counts.offline})</span>
               </div>
             </div>
 
@@ -704,9 +625,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                 {/* Chauffeur Telematics Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-border text-xs">
                   <div className="rounded-lg bg-muted/30 p-2">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                      EV Battery
-                    </span>
+                    <span className="text-xs text-muted-foreground font-bold">EV Battery</span>
                     <div className="flex items-center gap-1 font-bold text-foreground mt-0.5">
                       <BatteryCharging className="size-3.5 text-emerald-600" />
                       <span>{selectedDriver.batteryPercent}% · ~310 km</span>
@@ -714,7 +633,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                   </div>
 
                   <div className="rounded-lg bg-muted/30 p-2">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    <span className="text-xs text-muted-foreground font-bold">
                       Current Telematics
                     </span>
                     <div className="flex items-center gap-1 font-bold text-foreground mt-0.5">
@@ -729,10 +648,8 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
 
                   <div className="rounded-lg bg-muted/30 p-2">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                        City Hub
-                      </span>
-                      <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
+                      <span className="text-xs text-muted-foreground font-bold">City Hub</span>
+                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20 flex items-center gap-1 shrink-0">
                         <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
                         Auto-detected
                       </span>
@@ -749,7 +666,7 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
                   </div>
 
                   <div className="rounded-lg bg-muted/30 p-2">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    <span className="text-xs text-muted-foreground font-bold">
                       Chauffeur Mobile
                     </span>
                     <div className="flex items-center gap-1 font-mono font-bold text-foreground mt-0.5">
@@ -761,9 +678,9 @@ export function LiveDriversMap({ drivers, bookings, apiKey, onRefresh }: LiveDri
 
                 {/* If On Active Ride - Show Route Details */}
                 {selectedDriver.activeRide && (
-                  <div className="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
+                  <div className="mt-3 rounded-lg border p-3 border-border bg-background">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-orange-700 dark:text-orange-400 flex items-center gap-1.5">
                         <Navigation className="size-3.5 animate-pulse" />
                         In-Transit Ride #{selectedDriver.activeRide.reference}
                       </span>
