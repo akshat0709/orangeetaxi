@@ -87,8 +87,11 @@ function world(opts: { paymentStatus?: string; paidAmount?: number; driverType?:
       }
       const id = /[?&]id=eq\.([^&]+)/.exec(url)?.[1];
       const pendingOnly = url.includes("status=eq.pending");
+      const kind = /[?&]kind=eq\.([^&]+)/.exec(url)?.[1];
       const match = (r: Record<string, any>) =>
-        (id ? r.id === id : r.booking_id === BOOKING) && (!pendingOnly || r.status === "pending");
+        (id ? r.id === id : r.booking_id === BOOKING) &&
+        (!pendingOnly || r.status === "pending") &&
+        (!kind || r.kind === kind);
       if (method === "PATCH") {
         const rows = qrs.filter(match);
         rows.forEach((r) => Object.assign(r, body));
@@ -157,6 +160,16 @@ test("driver gets a ride QR for the fare, reused when reopened", async () => {
   const again = await createRideQr({ accessToken: "driver", bookingId: BOOKING }, config, w.deps);
   assert.equal(again.body.qr?.id, r.body.qr?.id);
   assert.equal(w.created(), 1);
+});
+
+test("driver gets a real QR even when the passenger already opened a payment link", async () => {
+  const w = world();
+  const link = await createRideLink({ accessToken: "rider", bookingId: BOOKING }, config, w.deps);
+  assert.ok(link.body.qr?.id.startsWith("plink_"));
+  const r = await createRideQr({ accessToken: "driver", bookingId: BOOKING }, config, w.deps);
+  assert.equal(r.status, 200);
+  assert.ok(r.body.qr?.id.startsWith("qr_"), r.body.qr?.id);
+  assert.equal(r.body.qr?.image_url, "https://rzp.io/i/x");
 });
 
 test("someone else's ride is refused", async () => {

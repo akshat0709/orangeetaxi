@@ -212,7 +212,8 @@ export async function createRideQr(
     db<QrRow[]>(
       config,
       deps,
-      `payment_qr_codes?booking_id=eq.${bookingId}&status=eq.pending&order=created_at.desc&limit=1&select=*`,
+      // Only a QR made for the driver: the passenger's payment link or a tip link is not one.
+      `payment_qr_codes?booking_id=eq.${bookingId}&kind=eq.ride&status=eq.pending&order=created_at.desc&limit=1&select=*`,
     ),
   ]);
   if (!uid) return bad(401, "Please sign in again.");
